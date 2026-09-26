@@ -707,26 +707,46 @@ static Variant _tool_find_script_references(const Dictionary &p_args, MCPToolErr
 // ---------------------------------------------------------------------------
 // project_get_scene_dependencies (old `get_scene_dependencies`)
 //
-// batch.rs:519. Reads a scene's external resource list through
-// `ResourceLoader::get_dependencies` - the same call the reference makes from
-// GDScript. The reference let its binding default `add_types` to false and then
-// read the *third* `::` segment as the type, which is where its two defects came
-// from (TASK-024 E-1 + G-2, REPORT-AUDIT-M4c D-8):
+// batch.rs:519 (only category reference: it reads the scene's ext_resource list
+// through `ResourceLoader::get_dependencies`).
 //
-//   * with `add_types = false` an `ext_resource` that carries a `uid=` is
-//     rendered `uid://...::::res://fallback` (`resource_format_text.cpp:960-968`),
-//     so `parts[2]` is the **fallback path**, and the tool answered
-//     `"type": "res://main.gd"` - a path in the type field;
-//   * the same string put a `uid://` in `path`, which no other tool accepts, so
-//     every consumer had to spend an extra round trip on
-//     `project_convert_uid_to_path`.
+// TASK-024b E-1 + G-2 - the entry's `type` and `path`.
 //
-// The engine answers both questions in one call: `p_add_types = true` appends
-// `::<type>` (the real `ext_resource` type name, e.g. `Script`, `PackedScene`,
-// `Texture2D`), and `ResourceUID::get_id_path()` turns the UID into the `res://`
-// path the rest of the module takes. The answer therefore carries **both**
-// `uid` and `path`, and `path` is directly feedable
-// (`project_read_scene_file_content`, `editor_open_scene`, ...).
+// The loader's string layout with `p_add_types = true` is
+// (`scene/resources/resource_format_text.cpp:960-968`)
+//
+//   `res://path::<type>`                       tag without `uid=`
+//   `uid://id::<type>::res://fallback`         tag with `uid=`; the engine stores
+//                                              the tag's own path as
+//                                              `fallback_path` "Used by
+//                                              Dependency Editor, in case uid
+//                                              path fails" (:949)
+//
+// With the default `p_add_types = false` there is no type field, but the
+// fallback field is still appended (`path += "::"` when there is no type, :964-966)
+// - so the *third* field of `uid://id::::res://fallback` is a **path**. Reading
+// it as the type is exactly the D-8 defect the M4c audit measured:
+// `{"path":"uid://c7mt5x5j361vt","type":"res://main.gd"}`.
+//
+// The answer now names every field the engine gave, in the shape a caller can
+// use without string surgery (GDR-25 section 23.1 rule 1):
+//   * `path`       always the `res://` path (never a `uid://` text) so it can be
+//                  fed straight back into any other tool;
+//   * `uid`        the `uid://` text the scene recorded, or `""` when it has
+//                  none (never the path echoed under `uid`);
+//   * `path_source` how `path` was obtained - `"uid"` (the UID registry),
+//                  `"scene_path"` (the path the scene file records: the tag's
+//                  own `path`, which is also the engine's fallback when a UID
+//                  cannot be resolved) or `"unresolved"`;
+//   * `type`       the type the engine reports for the resolved resource
+//                  (`ResourceLoader::get_resource_type`, resource_loader.h:266 -
+//                  for `.tres`/`.tscn` this is a header read, not a load), with
+//                  the `[ext_resource]` tag's own type as the fallback for the
+//                  formats no loader can classify (an imported `.png` says
+//                  `Texture2D` in the tag, and nothing else can say it);
+//   * `declared_type` the tag's type verbatim, so both answers are always
+//                  available and the difference is visible instead of being
+//                  guessed at.
 // ---------------------------------------------------------------------------
 
 static Variant _tool_get_scene_dependencies(const Dictionary &p_args, MCPToolError &r_error) {
@@ -744,51 +764,60 @@ static Variant _tool_get_scene_dependencies(const Dictionary &p_args, MCPToolErr
 		return Variant();
 	}
 
-	List<String> dependency_strings;
-	// `p_add_types = true` is the whole point (see the note above): the loader
-	// appends `::<type>` and, for a UID reference, `::<type>::<fallback path>`
-	// (`scene/resources/resource_format_text.cpp:960-968`).
-	ResourceLoader::get_dependencies(normalized, &dependency_strings, /*p_add_types=*/true);
+	List<String> dependency_paths;
+	ResourceLoader::get_dependencies(normalized, &dependency_paths, /*p_add_types=*/true);
 
 	ResourceUID *uids = ResourceUID::get_singleton();
 
 	Array dependencies;
-	for (const String &dependency : dependency_strings) {
-		// Layout with `add_types = true`:
-		//   no uid:    `<res:// path>::<type>`
-		//   with uid:  `<uid:// text>::<type>::<res:// fallback path>`
-		// The fallback is the *last* element, not `parts[2]`: a missing type
-		// would leave an empty element in the middle and push it to index 3.
+	for (const String &dependency : dependency_paths) {
 		const Vector<String> parts = dependency.split("::", true);
-		const String first = parts.size() > 0 ? parts[0] : dependency;
-		const String type = parts.size() > 1 ? parts[1] : String();
-		String fallback;
-		if (parts.size() > 2) {
-			fallback = parts[parts.size() - 1];
+		const String id_or_path = parts.size() > 0 ? parts[0] : dependency;
+		const String declared_type = parts.size() > 1 ? parts[1] : String();
+		const String fallback_path = parts.size() > 2 ? parts[2] : String();
+
+		String uid;
+		String resolved;
+		String path_source;
+		if (!id_or_path.begins_with("uid://")) {
+			// No `uid=` in the tag. The engine already localized the tag's own
+			// `path` into a resource path (`resource_format_text.cpp:955-958`).
+			resolved = id_or_path;
+			path_source = "scene_path";
+		} else {
+			uid = id_or_path;
+			// `ensure_path_nocheck` is the non-throwing half of the UID service:
+			// it answers the empty string for a well-formed but unregistered UID
+			// instead of the `ERR_FAIL` of `uid_to_path` (`resource_uid.cpp:239-268`).
+			resolved = (uids != nullptr) ? ResourceUID::ensure_path_nocheck(uid) : String();
+			if (!resolved.is_empty()) {
+				path_source = "uid";
+			} else {
+				resolved = fallback_path;
+				path_source = "scene_path";
+			}
+		}
+		if (resolved.is_empty()) {
+			// Neither the registry nor the scene file names the resource. Say so
+			// rather than answering the raw id under `path`, which would break
+			// the one promise `path` makes (a `res://` path the next tool takes).
+			path_source = "unresolved";
 		}
 
-		String path = first;
-		String uid_text;
-		if (first.begins_with("uid://")) {
-			uid_text = first;
-			if (uids != nullptr) {
-				const ResourceUID::ID id = uids->text_to_id(first);
-				if (id != ResourceUID::INVALID_ID && uids->has_id(id)) {
-					path = uids->get_id_path(id);
-				}
-			}
-			// An unregistered UID (a scene checked out without its `.uid` cache,
-			// say) is still answered with the loader's own fallback path - the
-			// one the engine itself would use - so `path` stays feedable.
-			if (path == first && !fallback.is_empty()) {
-				path = fallback;
-			}
+		String type;
+		if (!resolved.is_empty()) {
+			type = ResourceLoader::get_resource_type(resolved);
+		}
+		if (type.is_empty()) {
+			type = declared_type;
 		}
 
 		Dictionary entry;
-		entry["path"] = path;
-		entry["uid"] = uid_text;
+		entry["path"] = resolved;
+		entry["uid"] = uid;
 		entry["type"] = type;
+		entry["declared_type"] = declared_type;
+		entry["path_source"] = path_source;
 		dependencies.push_back(entry);
 	}
 
