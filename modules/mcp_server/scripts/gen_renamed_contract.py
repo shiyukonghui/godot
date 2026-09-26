@@ -754,6 +754,27 @@ DESCRIPTION_OVERRIDES = {
         ),
         "value": "设置项目设置 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
     },
+    # [REBUILT-2C low-confidence: verify] TASK-090 item B (decision D-3),
+    # registered from the measured published text of the round-8 session. The
+    # tool's old description promised "execute GDScript in the running game" and
+    # said nothing about the one boundary that mattered: the generated body used
+    # to compile to `extends RefCounted`, so `self` was in no scene tree at all -
+    # `get_node()`, `$Path`, signals and `get_tree()` did not exist on it (TASK-089
+    # round-7 defect D-3). With the body mounted under the current scene root the
+    # description has to state the reach, the path basis and the lifetime
+    # boundary. Append-only, like every description override in this table: the
+    # old sentence stays first, verbatim.
+    "execute_game_script": {
+        "reason": (
+            "[REBUILT-2C low-confidence: verify] TASK-090 item B（决策 D-3，依据=实测发布文本 + 实测应答）："
+            "旧描述只写「在运行中的游戏内执行 GDScript 代码」，没有写「执行体根本不在场景树里」这条边界；"
+            "TASK-089 第 7 轮实测（D-3）证明 `self` 是裸 `extends RefCounted`，get_node()/$Path/节点属性/信号/get_tree() 全部不可用。"
+            "本任务把执行体改为挂到当前场景根节点下的临时 Node（成功与失败都在返回前移除；无场景树时回退为 RefCounted），"
+            "因此描述必须补上：能触达运行中的场景树、路径以临时节点为基准（绝对路径与 get_tree().current_scene 可达任意节点）、"
+            "调用同步且节点存活不足一帧（_process/_physics_process 不会被触发）、游戏自身节点树不被改动。原文逐字保留在句首。"
+        ),
+        "value": "在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。",
+    },
 }
 # v1.5: a schema override replaces the whole `inputSchema` object (there is
 # nothing to append to), so it must carry `"mode": "replace"` and a `reason` that

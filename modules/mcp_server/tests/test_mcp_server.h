@@ -5256,9 +5256,12 @@ TEST_CASE("[MCPServer] the running_game_script_execution group is game-only and 
 	CHECK(occurrences == 1);
 	if (occurrences == 1) {
 		// TASK-090 (item B): the description now states the scene-tree reach and
-		// its lifecycle boundary; the literal is kept in step with
-		// `docs/tools_list.renamed.json` and with the generated registration block.
-		CHECK(String(listed["description"]) == String::utf8("在运行中的游戏内执行 GDScript 代码。有场景树时，代码体作为一个临时 Node 挂到当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。"));
+		// its lifecycle boundary. It is the generator's append-only override of
+		// the original sentence (`gen_renamed_contract.py`, key
+		// `execute_game_script`), so the old wording stays first, verbatim; the
+		// literal is kept in step with `docs/tools_list.renamed.json` and with the
+		// generated registration block.
+		CHECK(String(listed["description"]) == String::utf8("在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。"));
 		const Dictionary schema = listed["inputSchema"];
 		CHECK(String(schema["type"]) == "object");
 		const Array required = schema["required"];

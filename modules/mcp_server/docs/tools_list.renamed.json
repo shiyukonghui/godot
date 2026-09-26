@@ -1038,7 +1038,7 @@
         "name": "running_game_get_node_property_samples"
       },
       {
-        "description": "在运行中的游戏内执行 GDScript 代码。有场景树时，代码体作为一个临时 Node 挂到当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。",
+        "description": "在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。",
         "inputSchema": {
           "properties": {
             "code": {
@@ -4012,6 +4012,12 @@
         "old_name": "monitor_properties",
         "mode": "replace",
         "reason": "TASK-053 第 2.3 节 M-5（决策者裁决）新增可选整数参数 sample_stride（默认 1，最小 1）：保留采样读取工具 running_game_get_node_property_samples 的“观察网格”（frame_interval 决定每隔几帧观察一次）并把“回传网格”交给 sample_stride（每隔 N 个观察点回传一个，第一个恒回传）。依据：RACING-TEST-PLAN 的 AC-4/AC-5 连续性断言必须用 frame_interval=1（每帧观察），而该调用在 3 属性×180 帧下回 23 020 B（REPORT-AUDIT-RACING-BACKLOG §3.5 已记录该体积风险）。缺省（或显式 1）时响应逐字节与改动前相同：只有 stride>1 时才追加 sample_stride 与 observed_count 两个键；frame_count 的含义不变成“回传样本数”。被移除的 required 成员逐字为 [\"node_path\", \"properties\"]（它并未被移除，仍逐字保留在 required 里）；原有四个属性（frame_count/frame_interval/node_path/properties 的 type/default/description）一字未动，只是新增一个属性。"
+      },
+      {
+        "kind": "description",
+        "old_name": "execute_game_script",
+        "mode": "append",
+        "reason": "[REBUILT-2C low-confidence: verify] TASK-090 item B（决策 D-3，依据=实测发布文本 + 实测应答）：旧描述只写「在运行中的游戏内执行 GDScript 代码」，没有写「执行体根本不在场景树里」这条边界；TASK-089 第 7 轮实测（D-3）证明 `self` 是裸 `extends RefCounted`，get_node()/$Path/节点属性/信号/get_tree() 全部不可用。本任务把执行体改为挂到当前场景根节点下的临时 Node（成功与失败都在返回前移除；无场景树时回退为 RefCounted），因此描述必须补上：能触达运行中的场景树、路径以临时节点为基准（绝对路径与 get_tree().current_scene 可达任意节点）、调用同步且节点存活不足一帧（_process/_physics_process 不会被触发）、游戏自身节点树不被改动。原文逐字保留在句首。"
       },
       {
         "kind": "description",
