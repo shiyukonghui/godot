@@ -291,3 +291,64 @@ python work\task085\run_godot.ps1 -ArgLine '<args>' -Tag <tag>
   wrappers above.
 * No destructive command ran at all in this task: every change is a write over an existing file
   with the recorded text as its source, and no file was removed.
+
+---
+
+# REBUILT-2C MANIFEST — 2c-6 (`H:\rebuild\godot`, branch `feature/mcp-server-module-rebuild`)
+
+* Task: TASK-087 (2c-6) — close TASK-086's step 5, then G6 / G3 / G5 / acceptance.
+* Start HEAD: `d82f621fc1`. Tooling: `work\task087\` (`rep.py` UTF-8 reporter, `merge.py`,
+  `merge2.py` / `merge3.py`, `editchain.py`, `editmatch.py`, `epoch.py`, `sessions.py`,
+  `ps1_parse.ps1`, `verify_dd.py`).
+* Method unchanged where the evidence allows it: **recorded text replayed at its recorded
+  position**. The one new method this batch is allowed to use is *logical rebuild* for spans the
+  evidence genuinely does not carry; every such span is wrapped in
+  `// [REBUILT-2C low-confidence: verify] … // [/REBUILT-2C]` (or the file-appropriate comment
+  syntax) and listed in the table below with its basis and its behaviour risk.
+
+## E-1. `docs/DESIGN-DETAIL.md` — G3, restored byte-exact (no marker needed)
+
+| item | value |
+|---|---|
+| before | 31 531 B / 417 lines (the tree copy stopped inside §15's clause table) |
+| target | **84 486 B** |
+| after | **84 486 B**, sha256 `b8ad40a34a33951b220349ea70ba59fba064ce9fa8b53ed7653b834b33be29c0` |
+| basis | **recorded read-window text, not a logical rebuild.** There is no `events-write` row for this path (`reconstruction.jsonl` records `"NO_WRITE_PAYLOAD"`). The 120 recorded read windows cover line numbers **1–1034 with zero holes**; pass A of `merge.py` keeps, for every line number, the text carried by the newest recorded row that has it. |
+| cross-check | the independently produced TASK-078 staging body `staging\modules\mcp_server\docs\DESIGN-DETAIL.md` is **byte-identical** (same 84 486 B, same sha256). Two reconstructions from the same index agreeing to the byte is the strongest available evidence, so the residual risk is reset to whether the *recording itself* captured the terminal revision — `epoch.py` shows the newest contributing window is `t=1790349324870`, the newest read of any revision, and every later recorded edit is a no-op on this buffer (0 applied, 0 broken). |
+| what was added (the 728 lines the tree had lost) | the §15 clause-table rows for GDR-22/23/24; **§§17–26** in full: GDR-19 B1 framework (17.1–17.4), GDR-20 deferred response channel, GDR-21 input-channel boundary, GDR-22 unified narrowing gate (20.1–20.7), GDR-23 reference-source hierarchy, GDR-24 narrowing-point declaration (22.1–22.4), GDR-25 ergonomics (23.1–23.5), GDR-26 optional server-side call tracing, GDR-27 before/after capture, GDR-28 contract expansion |
+| marker | **none** — no byte of this file was invented |
+| behaviour risk | none: documentation only, no code path reads it |
+
+## E-2. `scripts/accept_m1.ps1` — G6, in progress (see the TASK-087 report §②)
+
+The tree copy is 57 469 B / 1 008 lines and still carries **10** `[Parser]::ParseFile`
+errors. `reconstruction.jsonl` records this path as `"chosen": "read-epoch"`, `"conf": "mid"`,
+`"bytes": 57469`, `"notes": ["REPLAY_UNRELIABLE(5 failed edits)…", "PS1_PARSE_ERRORS(10)"]` —
+i.e. the 10 errors are inherited from the TASK-078 staging body, and the tree and
+`staging\modules\mcp_server\scripts\accept_m1.ps1` are the same 57 469 bytes.
+
+What this batch established:
+
+* the errors are **splice artifacts**, not lost syntax: `Test-Listener`/`Get-ListenerPid` are
+  defined twice (`:250`/`:266` and `:275`/`:287`), the whole `case13` body is duplicated
+  (`:876`–`:895`), the `#  Main` banner appears twice (`:477`, `:545`), and the final
+  `SUMMARY`/exit block is triplicated (`:942`–`:1081`). `Try` at `:644`, the hash literal at
+  `:888` and the trailing braces are the same damage seen from the parser's side.
+* `epoch.py` + `merge3.py` found a **clean** recorded revision: the 1 022-line-lineage window
+  set (27 read rows, every line 1–1022 present, zero holes) reconstructs to 49 502 B and
+  `[Parser]::ParseFile` reports **0 errors** (`work\task087\ps1_e1022.ps1`). It carries the
+  full M1 case list (case1–case19) and the manifest-derived `$ToolNames`.
+* `editmatch.py` scores each candidate against every applied recorded edit's `old` text:
+  1 022-line base **22/73**, tree 7/73, the 1 355-line union 9/73. The 1 022 base is
+  therefore the closest recorded revision, but it predates `case0_repo_exit_code_propagation`
+  and `case20_tools_list_cross_process_restart`, which the tree already names.
+
+## E-3. `scripts/gen_renamed_contract.py` / G5 — in progress (see the TASK-087 report §④)
+
+`staging\modules\mcp_server\scripts\gen_renamed_contract.py` is 118 449 B and its
+`reconstruction.jsonl` row says `"chosen": "write-chain+syntax-fix"`, `"conf": "low"`,
+`"notes": ["REPLAY_UNRELIABLE(47 failed edits)…", "SWAPPED_BY_SYNTAX_CHECK…",
+"DOWNGRADED_TO_LOW(47 failed edits)"]`. The tree copy is the *read-epoch* variant instead —
+`staging` and the tree differ, and the tree's `_meta.overrides` count is what decides which one
+is closer to the pinned contract. That comparison and the regeneration are recorded in the
+TASK-087 report and the 2c-6 section of this manifest when the step lands.
