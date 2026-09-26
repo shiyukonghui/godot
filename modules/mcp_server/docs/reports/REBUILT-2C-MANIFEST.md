@@ -755,4 +755,91 @@ binary's, which is the same source. The 2c-7 declaration on this point stands.
   dry run first, no wildcard and no `..` (3 present, 1 absent each time).
 * Builds and engine runs start from `cmd.exe` (iron rule 4), with `WaitForExit()`.
 
+---
+
+# REBUILT-2C MANIFEST — 2c-9 (`H:\rebuild\godot`, branch `feature/mcp-server-module-rebuild`)
+
+* Task: TASK-090 — (A) the failure answer's `data` payload on the call line,
+  (B) the D-3 ruling: the game-side executor must reach the running scene tree,
+  (C) the round-8 test loop against a purpose-built mini game, (D) the nine gates
+  again plus `accept_m1`.
+* Start HEAD: `b8e0142b81`. Method unchanged: recorded text is replayed at its
+  recorded position; anything written instead is wrapped in
+  `[REBUILT-2C low-confidence: verify] … [/REBUILT-2C]` in the file and listed
+  below with its basis and its behaviour risk.
+* Tooling: `C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task090\`
+  (`task090_build_mono.cmd`, `task090_gate1_module.cmd`, `mcp090_live_evidence.ps1`,
+  `update_contract_description.py`, `analyse_round8.py`, `probe_action.ps1`);
+  `work/task089/run_gates.ps1` is reused verbatim as the gate runner.
+
+## J-1. Written (marked): the failure payload on the call line (item A)
+
+| # | file | what was written | basis | behaviour risk |
+|---|---|---|---|---|
+| 1 | `mcp_trace.h` | `MCPTrace::Record` gains `String error_data_json` and `int error_data_bytes` | the last declared hole of the TASK-089 model: `MCP-TRACEABILITY.md` §3.2 spelled out that `data` (`suggestion` / `parse_error`) never reached the line. Nothing to replay: no recording carries a failure payload | **none on the wire** — the fields only reach `Recorder::_build_line` |
+| 2 | `mcp_trace.cpp` | `_build_line`: inside the existing `tools/call` block, emit `error_data_json` + `_bytes` + `_truncated` for **every** failed call (empty string when the tool attached no payload) | the same object the success half (`result_json`) is written into, and the same `max_args_bytes` bound | **none** when `--mcp-trace` is off. Trace size: one extra (usually empty) field per failed call |
+| 3 | `mcp_jsonrpc.cpp` | `_record_error_data()` next to `_effective_timeout`; called in the deferred-refusal branch and in the immediate tool-error branch | those are the two places a tool error really becomes an answer; the pre-tool refusals (`-32602` "expected an object" …) carry no `data`, and the field is then still written as `""` | **none**: only reads `MCPToolError::data` |
+| 4 | `mcp_http_server.cpp` | `_tick_pending`: the deferred completion writes the same field from `completion.error.data` (empty on `DONE`) | a deferred failure carries the same `data` an immediate one does (`timeout_ms`, a suggestion), and it has to reach the line by the same rule | **none** |
+| 5 | `scripts/mcp_trace_ledger.py` | `error_data` / `error_data_evidence` / `error_flags` per row; `error_data` added to the reconstructible-`FACTS` set; a "failure payloads" section in the text report | the reader half. `error_data_evidence` is decidable because a new build writes the field on every failure: present = recorded, absent on a failure = an older trace | **none**: read-only |
+| 6 | `tests/test_mcp_server.h` | `[MCPServer] a failed tools/call carries its data payload on the trace line`: a refusal with a suggestion, a body that does not compile (`parse_error` with the line and the message) and a success with no failure payload | the wiring, not just the writer: the three shapes the field has to distinguish | **none**: the case creates and removes its own fixture tree |
+
+## J-2. Written (marked): decision D-3, the executor reaches the running scene tree (item B)
+
+**The ruling.** The generated body is compiled to `extends Node` when the running
+game has a reachable scene tree, and the instance is added as the **last child of
+the current scene root** (the tree root when no current scene is set) for the
+duration of the call, then removed again on every path. The alternatives and why
+they lost:
+
+* *inject the scene root into the existing `RefCounted` context* — rejected: it
+  cannot deliver the capability. `get_node()` is a `Node` method, so the body
+  would still have to spell every access `root.get_node(...)`, i.e. a second
+  vocabulary for what the engine already spells `get_node(...)`.
+* *attach the generated script to the existing scene root (`set_script`)* —
+  rejected: restoring the previous script afterwards rebuilds its script
+  instance, so the game's own `_ready`/`_init` state is lost. That is real
+  pollution, not a temporary mount.
+* *a mount point of our own, removed before control returns* — chosen: one
+  `add_child`, one `remove_child`, one delete, on the success path and on both
+  failing ones, with the game's tree provably unchanged (round-8 evidence: the
+  scene-tree snapshot is byte-identical before the executor batch, right after
+  it, and at the end of the session).
+
+**Declared boundary.** The node lives for less than one frame, so `_process` /
+`_physics_process` do not tick; `func _ready()` in the body does run (it is
+called when the node enters the tree), which is ordinary Godot semantics.
+`$Path` / `get_node()` resolve relative to the temporary node, whose parent is
+the scene root; absolute paths and `get_tree().current_scene` reach anywhere.
+A process with no reachable scene tree keeps the previous `extends RefCounted`
+behaviour byte for byte.
+
+| # | file | what was written | basis | behaviour risk |
+|---|---|---|---|---|
+| 1 | `tools/tool_helpers.h` | `build_execute_gdscript_source()` gains a trailing `bool p_node_base = false`; **and the duplicate declaration block after `namespace MCPTools` is deleted** | the trailing default keeps every existing caller's call site and bytes unchanged; the deleted block is TASK-089's D-4 (two declarations of a function defined inside the namespace, ambiguous for an unqualified call in a file with `using namespace MCPTools;`), which the signature change would otherwise have had to edit a second time | **low**: removing a stale declaration can only break a caller that relied on the global-scope name, and none exists (both callers name `MCPTools::` or are inside the namespace) |
+| 2 | `tools/tool_helpers.cpp` | the prelude's base class is `p_node_base ? "Node" : "RefCounted"`; everything else (three layout rules, entry-point name, `body_start_line` arithmetic) untouched | one place decides the base class | **none with the default** |
+| 3 | `tools/running_game_script_execution.{h,cpp}` | the tool body is split into `execute_gdscript_code(code, tool_script, mount_point, error)` (exported for the doctest) plus the argument half; the mounted path `memnew(Node)` + `set_script` + `add_child` + call + `remove_child` + delete, with a `queue_free`-aware delete and a single cleanup before the call-error return | the cleanup must be unconditional, and the doctest binary has no `SceneTree`, so the mount point has to be an argument | **the intended change**: a body now runs as an in-tree `Node`. A call that relied on `self` being a `RefCounted` (or on `get_node()` *failing*) changes; every existing success shape (`{"result","result_type"}`, singletons, statements, lifted `func`s) is unchanged, pinned by the TASK-010 doctest |
+| 4 | `tools/running_game_script_execution.cpp` (generated span) | re-emitted by `scripts/gen_b2_game_schema.py --group running_game_script_execution --in-place` after the contract description changed | the generated span is the byte-exact copy of `docs/tools_list.renamed.json`; re-running the generator is a no-op (measured) | **none** |
+| 5 | `docs/tools_list.renamed.json` | the `running_game_execute_gdscript` description now states the scene-tree reach, the path basis and the lifetime boundary | the contract must say what the tool really does; the old text promised "execute GDScript in the running game" without the boundary | **none**: one JSON string; the rewrite script asserts one changed line and a byte-exact round trip elsewhere |
+| 6 | `tests/test_mcp_server.h` | `[MCPServer] running_game_execute_gdscript reaches a live scene tree and leaves it alone`: a hand-built scene root + child, read of the child's property through `get_parent().get_node(...)`, a write that lands on the real node, the mount visible from inside (child count 2), the mount gone after the call, a body that does not compile, a body that fails after mounting, and the no-mount-point fallback | the three claims the task makes, decidable in-process; the `run_test_scenario`-style live half is the round-8 session | **none**: the case builds and frees its own node tree |
+| 7 | `tests/test_mcp_server.h` | the pinned description literal of the `running_game_script_execution` group case is updated to the new text | that case compares the live `tools/list` entry against the contract | **none** |
+
+## J-3. Written (marked): the round-8 defects, and the ones that were fixed
+
+See the round-8 defect list in the task report and in §H-5's successor (the
+session's own artefacts). The three fixes land in:
+
+| # | file | what was written | basis | behaviour risk |
+|---|---|---|---|---|
+| 1 | `tools/running_game_test_execution.cpp` | an `input` step's result entry gains `action` + `in_input_map` | round-8 defect: the injected `mcp_right` action never moved the player. Root cause (probe + engine source): the event *is* delivered to `_input`, but `InputEvent::is_action_pressed` resolves through `InputMap::event_get_action_status`, which returns false for an action the InputMap does not declare (`core/input/input_map.cpp:291-292`). `editor_simulate_input_action` already answers `in_input_map` for exactly this reason, so the game-side step was the inconsistent one | **additive** in the result body; no schema, no existing key changed |
+| 2 | `scripts/mcp_trace_ledger.py` | `result_flags` also reads a scenario summary: `scenario_passed` / `scenario_assertion_failed` / `scenario_errors` / `scenario_asserted_nothing` | round-8 defect: `running_game_run_test_scenario` answers `all_passed` / `passed` / `failed` / `errors` and nests a verdict per step, so the ledger could not answer "did the scenario's assertions hold" | **none**: read-only |
+| 3 | `H:\rebuild\projects\mcpplay8` (outside the repo) | the project declares `mcp_right` in its InputMap in `_ready()` | the harness half of defect 1: the tool cannot declare a game's actions, and the game must for `is_action_pressed` to see them | n/a (test project) |
+
+**Not fixed, by design** (declared, with the measured numbers): the capture's
+`changed_pixels` uses `max(|dr|,|dg|,|db|) > 10` (`mcp_capture.cpp:68`), so an
+independent recomputation that counts *any* difference disagrees with it on a
+text change (1464 vs 1363 for game `seq=8`); with the engine's own rule the
+recomputation reproduces all 28 pairs exactly. The deferred channel's
+`scene_effect=unavailable` / `file_effect=not_tracked` is the declared boundary
+and is why `facts_complete` is 28/30 on the game endpoint.
+
 

@@ -33,6 +33,7 @@
 #include "tool_builder.h"
 #include "tool_helpers.h"
 
+#include "core/config/engine.h"
 #include "core/input/input.h"
 #include "core/input/input_event.h"
 #include "core/input/input_map.h"
@@ -106,6 +107,33 @@ static bool _resolve_scenario_keycode(const String &p_key, Key &r_out, MCPToolEr
 	r_out = keycode;
 	return true;
 }
+
+// TASK-090 (item C, round-8 defect): the frame cost of one step, **measured**
+// rather than assumed.
+//
+// Both drivers of this file advance one step (scenario) or one iteration
+// (stress test) per frame, so a deadline built from a hard-coded frame time is a
+// deadline that silently shrinks whenever the game's main loop is slow. Measured
+// in the round-8 session: one game run answered every call in 250-530 ms (a
+// ~4 fps loop), and a 0.4 s, 3-step scenario **that did exactly what it was
+// asked** was killed by its own 1150 ms estimate before it could answer
+// (`-32000`, `data.timeout_ms: 1150`). The estimate now reads the process' own
+// frame rate, with the previous constants as the floor, so a game at 60 fps
+// keeps exactly the deadline it always had and a slow one gets the time its
+// frames really take. `Engine` is the source because every main loop updates it;
+// a process without one (0 fps) falls back to the old floor.
+// [REBUILT-2C low-confidence: verify] TASK-090 item C: written, not replayed;
+// REBUILT-2C-MANIFEST.md section 2c-9 (J-3).
+static uint64_t _frame_cost_ms() {
+	const Engine *engine = Engine::get_singleton();
+	const int fps = engine != nullptr ? engine->get_frames_per_second() : 0;
+	if (fps <= 0) {
+		return 16;
+	}
+	const double frame_ms = 1000.0 / (double)fps;
+	return frame_ms < 16.0 ? 16u : (uint64_t)(frame_ms + 0.5);
+}
+// [/REBUILT-2C]
 
 static Ref<InputEventAction> _make_scenario_action(const StringName &p_action, bool p_pressed, double p_strength) {
 	Ref<InputEventAction> event;
@@ -223,7 +251,14 @@ static void _inject_scenario_event(const ScenarioEvent &p_event) {
 //     injects nothing rather than half a scenario;
 //   * `scene_path` is refused with `-32602` (see the block above);
 //   * an `input` step injects `action` and/or `keycode` with `pressed`
-//     (default true) and `strength` (default 1.0);
+//     (default true) and `strength` (default 1.0); its result entry carries
+//     `injected` (how many events were handed to `Input`) and, for an `action`
+//     event, `action` + `in_input_map` - **TASK-090 item C**: an action the
+//     running InputMap does not declare is still injected and still reaches
+//     `_input`, but it cannot move that action's state, so a game that reads it
+//     through `event.is_action_pressed(...)` will not see it. The field says so
+//     instead of leaving `injected: 1` to look like success, and it is the same
+//     field `editor_simulate_input_action` already answers;
 //   * a `wait` step with `seconds` (a finite number >= 0) waits that long on the
 //     frame clock; a `wait` step with `node_path` polls `resolve_game_node` until
 //     the node exists or `timeout` (default 5.0) seconds have passed, and answers
@@ -250,8 +285,11 @@ static void _inject_scenario_event(const ScenarioEvent &p_event) {
 //     same assertions in the aggregate;
 //   * the framework deadline is the scenario's own estimate
 //     (`Task::get_timeout_ms`: the sum of the declared waits plus a per-step
-//     margin) clamped to the framework ceiling; a scenario that outruns it is
-//     `-32000` with `data.timeout_ms`, never a silent truncation.
+//     margin of four frames of *this process'* frame time, floored at 250 ms)
+//     clamped to the framework ceiling; a scenario that outruns it is
+//     `-32000` with `data.timeout_ms`, never a silent truncation. The margin is
+//     frame-based because a step advances one per frame - TASK-090 item C, see
+//     `_frame_cost_ms()`;
 // ---------------------------------------------------------------------------
 
 // A `wait` step's two forms, resolved up front so the tick has no parsing left.
@@ -429,6 +467,29 @@ public:
 				_inject_scenario_event(step.events[i]);
 			}
 			entry["injected"] = step.events.size();
+			// TASK-090 (item C, round-8 defect): the event is *always* injected -
+			// it reaches every `_input` listener - but an action the running
+			// InputMap does not declare cannot move that action's state, because
+			// `InputEvent::is_action_pressed()` resolves through
+			// `InputMap::event_get_action_status()`, which answers false for an
+			// unknown action before it ever looks at the event
+			// (`core/input/input_map.cpp:291-292`). Without this field the step
+			// answered `injected: 1` and the game silently did nothing, which is
+			// exactly the "leave the caller to guess" shape
+			// `editor_simulate_input_action` already refuses with `in_input_map`
+			// (`tests/test_mcp_server.h` pins that answer). Same field name, same
+			// meaning, so the two tools cannot disagree.
+			// [REBUILT-2C low-confidence: verify] TASK-090 item C: written, not
+			// replayed; REBUILT-2C-MANIFEST.md section 2c-9 (J-3).
+			const InputMap *input_map = InputMap::get_singleton();
+			for (int i = 0; i < step.events.size(); i++) {
+				if (step.events[i].kind == ScenarioEvent::ACTION) {
+					entry["action"] = step.events[i].name;
+					entry["in_input_map"] = input_map != nullptr && input_map->has_action(step.events[i].name);
+					break;
+				}
+			}
+			// [/REBUILT-2C]
 		} else if (step.type == "wait") {
 			if (step.wait_by_time) {
 				if (wait_deadline_ms < 0) {
@@ -658,14 +719,20 @@ static MCPDeferred::Task *_tool_run_test_scenario(const Dictionary &p_args, MCPT
 	}
 
 	// The scenario's own deadline: the declared waits plus a generous per-step
-	// margin (a wait step's `node_path` form can poll for its `timeout`),
-	// clamped by the framework anyway (GDR-20 point 4).
+	// margin (a wait step's `node_path` form can poll for its `timeout`), clamped
+	// by the framework anyway (GDR-20 point 4).
+	//
+	// TASK-090 (item C): the per-step margin is four frames of *this process'*
+	// own frame time, floored at the 250 ms it always was. A step can only be
+	// advanced once per frame, so a fixed margin is a deadline that the frame
+	// clock can outrun (measured: the round-8 run above).
 	uint64_t estimated_ms = 0;
+	const uint64_t per_step_ms = MAX((uint64_t)250, _frame_cost_ms() * 4u);
 	for (int i = 0; i < steps.size(); i++) {
 		if (steps[i].type == "wait") {
 			estimated_ms += (uint64_t)((steps[i].wait_by_time ? steps[i].wait_seconds : steps[i].wait_timeout_seconds) * 1000.0 + 0.5);
 		}
-		estimated_ms += 250;
+		estimated_ms += per_step_ms;
 	}
 	return memnew(TestScenarioTask(steps, (uint64_t)OS::get_singleton()->get_ticks_msec(), estimated_ms));
 }
@@ -821,8 +888,10 @@ static MCPDeferred::Task *_tool_run_stress_test(const Dictionary &p_args, MCPToo
 		return nullptr;
 	}
 
-	// One frame per iteration plus a margin for the whole run.
-	const uint64_t estimated_ms = (uint64_t)count * 16u + 2000u;
+	// One frame per iteration plus a margin for the whole run. TASK-090 (item C):
+	// the frame is this process' own, not the 16 ms the estimate used to assume -
+	// the same root cause the scenario's deadline had, in its sibling.
+	const uint64_t estimated_ms = (uint64_t)count * _frame_cost_ms() + 2000u;
 	return memnew(StressTestTask(actions, (int)count, (uint64_t)OS::get_singleton()->get_ticks_msec(), estimated_ms));
 }
 
