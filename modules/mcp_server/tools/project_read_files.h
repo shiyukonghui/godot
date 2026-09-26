@@ -50,6 +50,33 @@
 // the per-group split (TASK-002 section 2.2.1): porting agents never touch the
 // same file (PLAYBOOK section 17.1).
 void register_project_read_files_tools(MCPToolRegistry &r_registry);
+
+namespace MCPTools {
+
+// ---------------------------------------------------------------------------
+// TASK-050 N-2: `project_validate_script` has to be able to tell three
+// situations apart, and only one of them is a compilation verdict.
+//
+// The defect (found by the racing-backlog audit, N-2, and reproduced on 9888
+// before this change): the tool resolved the language from the file's extension
+// and, when that language was absent, **fell back to GDScript**
+// (`project_read_files.cpp`, old `get_language_for_extension("gd")` fallback).
+// In a `module_mono_enabled=no` build `get_language_for_extension("cs")` is null,
+// so a legitimate C# file was parsed as GDScript and its parser error was
+// reported as `{"valid": false, "error_text": "ERR_PARSE_ERROR", "message":
+// "Compilation failed..."}` - "this build has no C# backend" was published as
+// "your script does not compile".
+//
+// The classification below is the whole decision, and it is a pure function so
+// that every combination is testable in a process that has no language at all
+// (the `--test` process, where `ScriptServer::init_languages()` was never
+// called):
+//
+//   * no script language server      -> STRUCTURAL: the documented bracket check
+//     (unreachable in a real editor/game process, which always initialises its
+//     languages; it is what the doctest process can observe);
+//   * a server, but not for `ext`    -> LANGUAGE_UNAVAILABLE: honest refusal,
+//     never a borrowed verdict;
 //   * a server that has `ext`        -> COMPILE: the real `reload()`.
 // ---------------------------------------------------------------------------
 enum class MCPValidateScriptMode {
