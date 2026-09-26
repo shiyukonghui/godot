@@ -205,6 +205,13 @@ verdict       = failed                   ok=false（带 error_code/error_message
   实际磁盘工作发生在应答之后（运输层逐帧 tick），同步的每调用缓冲看不到它。声明的边界。
   它的**失败载荷**则是在完成处写的（上面那条），两者不矛盾：载荷由运输层知道，磁盘副作用由
   同步缓冲知道，而后者看不到。
+* **延迟调用的 `result_json`：已补**（TASK-090 item C）。TASK-089 只在**立即**成功分支写这个字段，
+  于是每一个 deferred 调用行只有 `result_bytes`——而场景（`running_game_run_test_scenario`）与
+  压力（`running_game_run_stress_test`）这两个工具**整个答案就是判定**（`all_passed` / 每步
+  `passed`），台账因此无法回答「断言成立吗」，无论读取侧怎么写。现在 `_tick_pending` 在
+  `CompletionKind::DONE` 时从 `completion.result` 写同族字段——那正是 `build_deferred_body`
+  用 `content_result` 包起来的**同一个 Variant**，所以调用行与 wire body 字节同源。
+  画面侧与磁盘侧**仍然**不可观测（上一段），三者互不替代。
 * `args` 超过 4096 B 会被截断（`args_bytes` 仍给真实值，`args_truncated=true`）；`result_json`
   与 `error_data_json` 用同一上限（各自的 `_bytes` 给真实值）；`error_message` 上限 512 B。
   这四条是刻意的。
@@ -284,6 +291,99 @@ diff={"type":"line_head_tail","lines":{"before":9,"after":3},"same_head_lines":0
 python modules\mcp_server\scripts\mcp_trace_ledger.py <trace.jsonl> --text out.txt --json out.json
 python modules\mcp_server\scripts\mcp_trace_ledger.py <trace.jsonl> --only-ineffective
 ```
+
+### 4.3 TASK-090 第 8 轮试测（真实小游戏工程，27 + 30 次调用，多步编排）
+
+驱动：`…\work\task090\mcp090_live_evidence.ps1`。工程 `H:\rebuild\projects\mcpplay8`
+（`Node2D` + `main.gd`，含一个 `ColorRect` 玩家、一个 `Label` HUD、一个 Button；`_input` 响应
+`mcp_right`，`_ready` 里把该 action 注册进 InputMap）。编辑器 9888 + 游戏 9889，两侧都开
+`--mcp-trace` + `--mcp-capture=every_call` + `--mcp-capture-viewport=2d`。工程每次会话前被重置到
+同一份 `project.godot` / `main.tscn` / `main.gd`，所以同一批调用可以重放做前后对比。
+
+| 产物 | 路径（`…\work\task090\`） | 实测摘要 |
+|---|---|---|
+| 最终会话 trace | `live-after3\trace-editor.jsonl` / `trace-game.jsonl` | 55 338 B / 56 行、59 950 B / 61 行 |
+| 最终会话截图 | `live-after3\shots-editor\` / `shots-game\` | 54 / 56 个 PNG |
+| 台账 | `live-after3\ledger-{editor,game}.{txt,json}` | 见下 |
+| 工具外像素复核 | `live-after3\analysis.json`（`analyse_round8.py`） | 28 对 PNG 全部重算，与 trace **逐对相等** |
+| 场景树快照对比 | 同上 | 执行器批量调用前 / 后 / 会话末尾各 5 个节点，**逐字节相同** |
+
+台账逐行实测（最终会话）：
+
+```
+编辑器：calls=27 malformed_lines=0
+        verdicts: failed=3, ok_effect_observed=1, ok_file_effect_observed=10, ok_no_effect_observed=13
+        file_effects: changed=10, none=13, unchanged=4      facts_complete 27/27
+        error_data_evidence: not_applicable=24, recorded_in_trace=3
+游戏：  calls=30 malformed_lines=0
+        verdicts: failed=3, ok_effect_observed=6, ok_effect_unavailable=2, ok_file_effect_observed=5, ok_no_effect_observed=14
+        file_effects: changed=5, none=22, not_tracked=2, unchanged=1      facts_complete 28/30
+        error_data_evidence: not_applicable=27, recorded_in_trace=3
+```
+
+**失败载荷实测（item A）**：编辑器 `seq=12/13/15`（trace 行 23/25/29）逐字给出建议：
+
+```
+seq=12 req_id=112 project_create_resource err=-32000 |
+  {"suggestion":"Set overwrite=true to replace the existing file"}
+seq=13 req_id=113 project_create_scene_file err=-32000 |
+  {"suggestion":"Delete it first with project_delete_scene_file, or choose another path"}
+seq=15 req_id=115 project_delete_scene_file err=-32001 |
+  {"suggestion":"Use project_get_filesystem_tree to list the .tscn files of the project"}
+```
+
+游戏 `seq=14`（trace 行 28）给出完整的 `parse_error`（行与消息都在；列如实在 §2 说明的边界上为 null）：
+
+```
+{"parse_error":{"generated_line":4,"in_caller_code":true,"line":1,
+  "message":"Parse Error: Expected grouping expression.","messages":[...]},"parse_error_column":null,
+ "suggestion":"Parameter 'code' accepts a string (required); ..."}
+```
+
+**场景树可达性实测（item B）**：游戏 `seq=3..12`（trace 行 6..24），全部为
+`running_game_execute_gdscript`：
+
+```
+seq=3  return get_parent().name                     -> "Main"                     (+0 px)
+seq=4  return get_parent().get_node("Player").position.x -> 100.0                 (+0 px)
+seq=5  Player.position.x += 120                     -> 220.0                      (+12 800 px)
+seq=6  同上再来一次                                  -> 340.0                      (+12 800 px)
+seq=7  return Player.get_path()                     -> "/root/Main/Player"        (+0 px)
+seq=8  set_hud("HUD from executor")                 -> "HUD from executor"        (+1 363 px)
+seq=9  return get_path()                            -> "/root/Main/@Node@8"       (+0 px)
+seq=10 return get_tree().current_scene.name         -> "Main"                     (+0 px)
+seq=11 Player.color = (0.1,0.9,0.1,1)               -> Color(...)                 (+6 400 px)
+seq=12 同色再写一次                                  -> Color(...)                 (+0 px)
+```
+
+`seq=9` 是这条能力的直接证据：执行体自己报出的路径就是 `/root/Main/<临时节点>`——它在运行中的场景树里，
+父节点是当前场景根；而 `seq=1/13/30`（trace 行 2/26/60）三次场景树快照完全相同，说明它**没有留下来**。
+
+**多步编排实测（item C③）**：`running_game_simulate_button_click_by_text`（`seq=22`，trace 行 44，
++1 600 px）→ `running_game_assert_node_state`（`seq=23`，`passed:true`；
+`seq=21` 是故意写错的期望，`assertion_failed`）。deferred 编排 `seq=25/26`（trace 行 51/53）：
+
+```
+seq=25 req_id=325  result_json = {"all_passed":true,"passed":1,"failed":0,"errors":0,
+       "results":[{"action":"mcp_right","in_input_map":true,"injected":1,"step":0,"type":"input"},
+                  {"step":1,"type":"wait","waited_seconds":0.4},
+                  {"actual":{"x":95.0,"y":420.0},"expected":{"x":95.0,"y":420.0},"passed":true,...}]}
+       -> 台账 flags = scenario_passed
+seq=26 req_id=326  result_json = {"all_passed":false,"passed":0,"failed":1,...}
+       -> 台账 flags = scenario_assertion_failed
+```
+
+**工具外核验（像素）**：`analyse_round8.py` 把 capture 行指到的 28 对 PNG 读回来重算像素差
+（规则与引擎一致：`max(|dr|,|dg|,|db|) > 10`，`mcp_capture.cpp:68` + `tool_helpers.cpp:1223`），
+**28/28 与 trace 的 `changed_pixels` 完全相等**（其中 6 对 `changed=True`：12 800 / 12 800 / 1 363 /
+6 400 / 12 800 / 1 600）。若按「任意差异 > 0」重算，`seq=8` 会是 1 464 而不是 1 363——差的就是
+阈值以下的抗锯齿像素；这条口径写在读数侧而不是靠 trace 自证。
+
+**工具外核验（文件）**：`live-after3\live-session.txt` 末尾的独立快照（`Get-FileHash`）与
+`file_effects` 逐条相同。例：`res://scratch/box.tscn` 由编辑器 `seq=10`（req 110，trace 行 19）
+创建为 `after.sha256=9E4B4985…`，同一 sha 又出现在 `seq=14`（req 114，trace 行 27）的删除行里
+（`kind=delete`，`before=9E4B4985…`，`after=ABSENT`，
+`abs_path=H:\rebuild\projects\mcpplay8\scratch\box.tscn`）——「建了又删」在盘上和日志上是同一对 sha。
 
 ---
 

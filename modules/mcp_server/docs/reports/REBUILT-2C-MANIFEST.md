@@ -833,6 +833,8 @@ session's own artefacts). The three fixes land in:
 | 1 | `tools/running_game_test_execution.cpp` | an `input` step's result entry gains `action` + `in_input_map` | round-8 defect: the injected `mcp_right` action never moved the player. Root cause (probe + engine source): the event *is* delivered to `_input`, but `InputEvent::is_action_pressed` resolves through `InputMap::event_get_action_status`, which returns false for an action the InputMap does not declare (`core/input/input_map.cpp:291-292`). `editor_simulate_input_action` already answers `in_input_map` for exactly this reason, so the game-side step was the inconsistent one | **additive** in the result body; no schema, no existing key changed |
 | 2 | `scripts/mcp_trace_ledger.py` | `result_flags` also reads a scenario summary: `scenario_passed` / `scenario_assertion_failed` / `scenario_errors` / `scenario_asserted_nothing` | round-8 defect: `running_game_run_test_scenario` answers `all_passed` / `passed` / `failed` / `errors` and nests a verdict per step, so the ledger could not answer "did the scenario's assertions hold" | **none**: read-only |
 | 3 | `H:\rebuild\projects\mcpplay8` (outside the repo) | the project declares `mcp_right` in its InputMap in `_ready()` | the harness half of defect 1: the tool cannot declare a game's actions, and the game must for `is_action_pressed` to see them | n/a (test project) |
+| 4 | `mcp_http_server.cpp` | `_tick_pending` writes `result_json` / `result_json_bytes` from `completion.result` on `CompletionKind::DONE` | round-8 defect 4: TASK-089's "the tool's own answer" was filled only on the immediate path, so a deferred call line carried `result_bytes` and nothing else - and the scenario/stress drivers' whole answer **is** a verdict (`all_passed`, a `passed` per step), so the ledger could not judge them however it was written | **additive**: the field is the same one the immediate path already writes, from the same Variant `build_deferred_body` wraps (`content_result`), so the line and the wire body carry the same bytes |
+| 5 | `running_game_test_execution.cpp` | both drivers' deadlines: `_frame_cost_ms()` (the process' own frame rate, floored at the old 16 ms) replaces the hard-coded per-step 250 ms and per-iteration 16 ms | round-8 defect 3: a driver advances one step / iteration **per frame**, so a fixed margin is a deadline the frame clock can outrun. Measured: a 250-530 ms-per-call run killed a 0.4 s, 3-step scenario that did exactly what it was asked (`-32000`, `data.timeout_ms: 1150`, `completed_steps` lost) | **behaviour change, bounded**: at 60 fps the estimate is byte-identical to the old one (`MAX(250, 4*16) == 250`, `count*16`); a slower loop gets a proportionally larger estimate, still clamped by the framework ceiling |
 
 **Not fixed, by design** (declared, with the measured numbers): the capture's
 `changed_pixels` uses `max(|dr|,|dg|,|db|) > 10` (`mcp_capture.cpp:68`), so an
@@ -841,5 +843,57 @@ text change (1464 vs 1363 for game `seq=8`); with the engine's own rule the
 recomputation reproduces all 28 pairs exactly. The deferred channel's
 `scene_effect=unavailable` / `file_effect=not_tracked` is the declared boundary
 and is why `facts_complete` is 28/30 on the game endpoint.
+
+## J-4. Gate ledger (task-090, real output)
+
+Both variants were rebuilt at the final source HEAD `8604fcf9e` (they share
+`bin\obj`, so the builds ran serially from `cmd.exe`:
+`work/task090/task090_build_both.cmd`). Self-reported versions:
+`4.8.dev.mono.custom_build.8604fcf9e` and `4.8.dev.custom_build.8604fcf9e`.
+Gate runner `work/task089/run_gates.ps1 -Tag task090_final3`; logs
+`logs/task090_final3_g0*.stdout.txt`, summary `logs/task090_final3.summary.txt`.
+
+| # | gate | result |
+|---|---|---|
+| 1 | module doctest | **exit 0** — `150/150 passed`, `6510/6510` assertions, `SUCCESS!` (was 148 at 2c-8) |
+| 2 | full doctest | **exit 0** — `1576/1576 passed / 3 skipped`, `430823/430823` assertions |
+| 3 | group manifests | **exit 0** — `TOOL-GROUPS CHECK PASS`, `BYTES 5681`, `SHA256 b83d79d3…` (byte-identical to 2c-8) |
+| 4 | contract subset (live) | **exit 0** — `3/3 checks passed`; `editor tools=154`, `game tools=73`, `guard_user_port_9877` PASS |
+| 5 | rename map | **exit 0** — `RESULT: PASS (all checks green)` |
+| 6 | tautologies | **exit 0** — `TAUTOLOGY CHECK PASS` |
+| 7 | exit-code propagation | **exit 0** — `PROBES: 10/10` |
+| 8 | hardcoded counts | **exit 0** — `UNCLASSIFIED = 0` |
+| 9 | engine anchor | **exit 0** — `ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL`, `diff_count=0`, `RESULT PASS` |
+| + | M1 acceptance | **exit 0** — **`22/22 cases passed`** (`logs/task090_accept_m1.stdout.txt`) |
+
+**Two real intermediate failures, kept because they are the useful part:**
+
+* gate 9 judged `ANCHOR_STALE_COMPILED` while the binary predated HEAD and the
+  diff contained `COMPILE_INPUT:modules/mcp_server/mcp_http_server.cpp`; the
+  script's own exit code was 0 either way, so the judge is what has to be read.
+* `accept_m1` came back `21/22` with
+  `case12_game_process_endpoint … running_game_execute_gdscript: description differs
+  | game verbatim 72/73`. `scripts/accept_m1.ps1:53` runs the **non-mono**
+  binary, and the description change of item B is contract-visible, so that
+  variant had to be rebuilt too (TASK-089 had declared it stale). After the
+  rebuild: 22/22.
+
+## J-5. Iron rules
+
+* Only `H:\rebuild\godot`, `H:\rebuild\projects\` and
+  `C:\Users\wyl\AppData\Local\Temp\mcp-recovery\` were written.
+* `F:` was **never** written; pre-flight and post-flight measured byte-identical
+  (`F:\moonbit-hof-rs\DECISIONS.md` 537 251 B sha `114B2A82…`;
+  `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` 48 749 B sha `8F8051C4…`).
+  The generator reads that fixture and prints its own
+  `old contract sha256 = 8f8051c4…` as an independent recomputation.
+* No shell redirection anywhere: every log is written by
+  `Start-Process -RedirectStandardOutput/-RedirectStandardError`, every text file
+  by `Set-Content`/a Python writer/the `write` tool.
+* No destructive command ran in this task at all: the round-8 driver's resets are
+  `Remove-Item` on **named, absolute** paths under a single whitelisted prefix
+  (`H:\rebuild\projects\mcpplay8\`), one entry at a time, no wildcard and no `..`;
+  every engine start and every build went through `cmd.exe` (iron rule 4) with
+  `WaitForExit()`.
 
 
