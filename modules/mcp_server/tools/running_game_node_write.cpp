@@ -1,3 +1,32 @@
+/**************************************************************************/
+/*  running_game_node_write.cpp                                           */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 #include "running_game_node_write.h"
 
 #include "tool_builder.h"
@@ -6,6 +35,7 @@
 #include "core/object/class_db.h"
 #include "core/object/object.h"
 #include "core/string/string_name.h"
+#include "core/templates/list.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
 #include "scene/main/node.h"
@@ -49,6 +79,18 @@ using namespace MCPTools;
 //     back from the object after `Object::set()`, so a property that silently
 //     refuses the value (a setter that clamps, a read-only property) shows up as
 //     a `new_value` that did not become `value` instead of a false success.
+//
+// TASK-014 D-1 (the M2 acceptance's honesty defect): this tool used to answer a
+// **success shape** for a property the node does not have -
+// `{"old_value":null,"new_value":null}` - because `property_type_of` answers
+// `Variant::NIL` for an unknown name, `Object::set()` on an unknown name is a
+// silent no-op and the read-back therefore also answers null. A caller that only
+// branches on "error or not" read "nothing happened" as "written". The migration
+// source is worse rather than better here (its `mcp_runtime_agent.gd:159-160`
+// answers an unconditional `set: true`), so this is not a divergence from the
+// reference but the "the tool really works" standard of PLAYBOOK section 6.6 -
+// recorded there as its seventh measured case. `write_node_property` now asks
+// the object whether the property exists before it writes anything.
 //
 // Deviation from the migration source: it parsed the incoming value against
 // `typeof(old_value)` with its own hand-written dictionary->Vector/Color
@@ -186,6 +228,21 @@ Variant vector_from_dictionary(const Dictionary &p_value, Variant::Type p_target
 			// an unfit value.
 			return Rect2((real_t)(double)p_value["x"], (real_t)(double)p_value["y"], (real_t)(double)p_value["width"], (real_t)(double)p_value["height"]);
 		}
+		// TASK-033 (B5 batch 1): the `Quaternion` spelling, added to the table
+		// together with `vector_component_hint` and the read side in
+		// `serialize_variant` - the three parts of the round trip section 23.4
+		// requires. It is what makes a rotation animation key readable *and*
+		// writable in one shape.
+		case Variant::QUATERNION: {
+			if (!p_value.has("x") || !p_value.has("y") || !p_value.has("z") || !p_value.has("w")) {
+				return Variant();
+			}
+			// MCP-NARROWING: G24-NW-COMPONENTS - every component was rebuilt by
+			// `_check_components` with the `REAL_T` slot above (the four members of
+			// a `Quaternion` are `real_t`), so the four casts on the line below
+			// cannot narrow an unfit value.
+			return Quaternion((real_t)(double)p_value["x"], (real_t)(double)p_value["y"], (real_t)(double)p_value["z"], (real_t)(double)p_value["w"]);
+		}
 		default: {
 			// Not a vector-shaped type: nothing to map, and no component naming
 			// to demand. The caller passes objects of every other type straight
@@ -213,6 +270,13 @@ String vector_component_hint(Variant::Type p_target_type) {
 			return "\"x\", \"y\" and \"z\"";
 		case Variant::VECTOR4:
 		case Variant::VECTOR4I:
+			return "\"x\", \"y\", \"z\" and \"w\"";
+		// TASK-033 (B5 batch 1): the four members of a `Quaternion`, the shape
+		// `serialize_variant` answers for one since this batch. Without this case
+		// the object the read side produces is refused by
+		// `coerce_to_property_type` (`can_convert(DICTIONARY, QUATERNION)` is
+		// false), which is the round-trip gap section 23.4 forbids.
+		case Variant::QUATERNION:
 			return "\"x\", \"y\", \"z\" and \"w\"";
 		case Variant::COLOR:
 			return "\"r\", \"g\" and \"b\"";
@@ -330,6 +394,17 @@ static int _vector_components(Variant::Type p_target_type, _VectorComponent *r_o
 			r_out[count++] = _VectorComponent{ "g", Variant::FLOAT, COMPONENT_WIDTH_FLOAT32 };
 			r_out[count++] = _VectorComponent{ "b", Variant::FLOAT, COMPONENT_WIDTH_FLOAT32 };
 			r_out[count++] = _VectorComponent{ "a", Variant::FLOAT, COMPONENT_WIDTH_FLOAT32 };
+		} break;
+		// TASK-033 (B5 batch 1): `Quaternion`'s four `real_t` members
+		// (`core/math/quaternion.h: real_t x, y, z, w`). The read side answers
+		// this shape for a rotation animation key, so the write side has to take
+		// it back; the components run through the same `REAL_T` gate as a
+		// `Vector4`'s.
+		case Variant::QUATERNION: {
+			r_out[count++] = _VectorComponent{ "x", Variant::FLOAT, COMPONENT_WIDTH_REAL };
+			r_out[count++] = _VectorComponent{ "y", Variant::FLOAT, COMPONENT_WIDTH_REAL };
+			r_out[count++] = _VectorComponent{ "z", Variant::FLOAT, COMPONENT_WIDTH_REAL };
+			r_out[count++] = _VectorComponent{ "w", Variant::FLOAT, COMPONENT_WIDTH_REAL };
 		} break;
 		// TASK-025 E-3: the two halves of a `Rect2`/`Rect2i`, named exactly the
 		// way `serialize_variant` spells them (`position.x`, `position.y`,
@@ -842,6 +917,36 @@ static bool _resolve_property_path(const Object *p_object, const String &p_prope
 			r_error = MCPToolError::invalid_params(vformat(
 					"Property path '%s' cannot be followed: '%s' is a %s, which has no named members to index",
 					p_property, walked, type_name));
+			_add_path_suggestion(r_error,
+					vformat("A sub-property path can only walk through an Object property (a nested resource or node), a "
+							"Dictionary, or the named members of an engine built-in type (a Vector2's 'x'/'y', a "
+							"Rect2's 'position'/'size'/'end', a Color's 'r'/'g'/'b'/'a'). Write the whole property '%s' "
+							"instead, or address a member the engine's own Object::set_indexed accepts.",
+							walked));
+			return false;
+		}
+		if (!member.valid) {
+			if (i == 0) {
+				// The module's existing one-property refusal, unchanged: the first
+				// segment is an object property, not a sub-property.
+				r_error = MCPToolError::not_found(
+						vformat("Property '%s' on node '%s'", p_segments[0], wire_node_path(p_object)),
+						"Use running_game_get_node_properties to list the properties this node has");
+				return false;
+			}
+			String suggestion;
+			if (member.base_object != nullptr) {
+				suggestion = vformat("Use running_game_get_node_properties on '%s' to list the properties it has", walked);
+			} else {
+				suggestion = vformat("'%s' has these members: %s", member.base_type_name, _member_list_hint(base.get_type()));
+			}
+			r_error = MCPToolError::not_found(
+					vformat("Sub-property '%s' of the property path '%s' on node '%s' ('%s' is a %s)",
+							p_segments[i], p_property, wire_node_path(p_object), walked, member.base_type_name),
+					suggestion);
+			return false;
+		}
+		if (i == p_segments.size() - 1) {
 			r_type = member.type;
 			r_slot = member.slot;
 			r_base_object = member.base_object;
@@ -950,11 +1055,70 @@ Variant write_node_property(Object *p_object, const String &p_property, const Va
 	const Variant new_value = _read_path_value(p_object, segments);
 	const Variant parent_new_value = is_path ? _read_path_value(p_object, parent_segments) : Variant();
 
+	// -----------------------------------------------------------------------
+	// TASK-037 D2 (self-audit of the node-write family): "the engine stored what
+	// I asked for" is a **read-back** question here too.
+	//
+	// `new_value` alone is honest but easy to misread: a caller that branches on
+	// "is there an error" sees `code=0` and a success object, and the fact that
+	// the engine's own setter clamped the request is only visible to a caller
+	// that compares `new_value` with the value it sent. Measured on this tree:
+	// `editor_set_node_property(path=Sprite, property=hframes, value=0)` answers
+	// `new_value: 1` - `Sprite2D::set_hframes` floors it - with nothing else
+	// saying so. The resource writers and the particle/theme writers already name
+	// such an entry under `ignored` with `requested` / `stored` / `reason`
+	// (DESIGN-DETAIL section 20.6), so this family answers the same shape:
+	// `ignored: {<property>: {requested, stored, reason}}`, present (and empty)
+	// only when the write really stored the request.
+	//
+	// The comparison is made on the **converted** value, not on the raw JSON: the
+	// declared deterministic conversions of section 20.4 (`1.9 -> 1` for an int
+	// target, `"#ff0000"` for a Color, an object dropped to a vector's components)
+	// are not clamps and must not be reported as "the engine changed my value".
+	// `requested` therefore carries the value as the write submitted it.
+	// -----------------------------------------------------------------------
+	Dictionary ignored;
+	Dictionary entry;
+	if (!is_path) {
+		const bool finite_float = converted.get_type() != Variant::FLOAT || (double)converted != 0.0;
+		Variant request_image;
+		bool matches = false;
+		if (converted.get_type() == Variant::FLOAT && finite_float) {
+			// MCP-NARROWING: G24-NW-SET-WIDTH - the `(real_t)` casts below are the
+			// comparison's own width, exactly like the resource writers'
+			// `G24-RESOURCE-SET-WIDTH`: a single-precision member keeps the nearest
+			// `float`, so `(double)(float)0.1 != 0.1` and comparing doubles would
+			// report a perfectly good write as "ignored". The requested side
+			// reached this function through `coerce_to_property_type` (the
+			// `REAL_T` slot for a `FLOAT` target), so no value the gate accepted
+			// can be lost here.
+			request_image = Variant((double)(real_t)(double)converted);
+			// MCP-NARROWING: G24-NW-SET-WIDTH - see the cast above.
+			matches = (real_t)new_value == (real_t)converted;
+		} else {
+			request_image = serialize_variant(converted);
+			matches = request_image == serialize_variant(new_value);
+		}
+		if (!matches) {
+			entry["requested"] = request_image;
+			entry["stored"] = serialize_variant(new_value);
+			entry["reason"] = "the engine's own property setter stored a different value for this property "
+							  "(it clamps or refuses input outside its own range), so it is not stored as asked";
+			ignored[p_property] = entry;
+		}
+	} else {
+		// A sub-property path is written through `set_indexed`, which writes the
+		// whole compound back; comparing the component alone would report a
+		// mismatch every time the engine normalises a sibling component. The
+		// `parent_*` pair below is what shows such a normalisation.
+	}
+
 	Dictionary result;
 	result["node_path"] = _node_path_for_result(p_object);
 	result["property"] = p_property;
 	result["old_value"] = serialize_variant(old_value);
 	result["new_value"] = serialize_variant(new_value);
+	result["ignored"] = ignored;
 	if (is_path) {
 		String parent_property;
 		for (int i = 0; i < parent_segments.size(); i++) {
@@ -1172,3 +1336,4 @@ void register_running_game_node_write_tools(MCPToolRegistry &r_registry) {
 		builder.register_into(r_registry);
 	}
 	// END generated
+}

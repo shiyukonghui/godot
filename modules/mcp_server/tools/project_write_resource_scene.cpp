@@ -1,3 +1,32 @@
+/**************************************************************************/
+/*  project_write_resource_scene.cpp                                      */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 #include "project_write_resource_scene.h"
 
 #include "tool_builder.h"
@@ -68,6 +97,16 @@ static bool _optional_properties(const Dictionary &p_args, Dictionary &r_out, MC
 
 // ---------------------------------------------------------------------------
 // TASK-026 (E-9, third surface of E-3): the three steps every *other* write path
+// of the module takes.
+//
+// `property_value_from_json` -> `shape_vector_from_json` -> `coerce_to_property_type`
+// is the exact sequence of `MCPTools::prepare_node_property_value`
+// (tools/running_game_node_write.cpp:664-680), which the editor node writer, the
+// batch writer, the cross-scene writer and `project_set_setting` all use. The
+// two resource writers used only the first and the third step, so every value
+// the module's own read side answers as an *object* or as an array of objects -
+// `{"x":..,"y":..}` for a `Vector2`, `{"r":..,"g":..,"b":..,"a":..}` for a
+// `Color`, `[{x,y},..]` for a `PackedVector2Array`, all of them GDR-25 section
 // 23.4's read-back shapes - was refused with `-32602` here while the same value
 // was accepted on the node path. That is section 23.4's closure rule failing
 // *between two tools of one module*: `project_read_resource` now answers those
@@ -298,6 +337,34 @@ static Variant _tool_create_resource(const Dictionary &p_args, MCPToolError &r_e
 
 	Dictionary result;
 	result["path"] = path;
+	result["type"] = resource->get_class();
+	result["properties_set"] = properties_set;
+	result["ignored"] = ignored;
+	// TASK-037 D2: the same "was anything not stored as asked?" counter the
+	// sibling `project_edit_resource` answers, so a caller can branch on one
+	// number instead of walking the bag.
+	result["ignored_count"] = ignored.size();
+	result["changed"] = changed;
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// project_create_scene_file (old `create_scene`, scene.rs:171)
+//
+// `path` is required; `root_type` (default "Node2D") and `root_name` (default:
+// the file stem) are optional. The root type has to be an instantiable `Node`
+// subclass. Unlike the migration source this tool **refuses to replace an
+// existing file** (-32000 + suggestion): the contract has no `overwrite`
+// argument, and a write tool that silently replaces a scene is not something a
+// caller can opt out of. Everything else - the packing, the root name default,
+// the "Node" fallback of the reference's `unwrap_or` - is unchanged.
+//
+// Returns `{"path","root_type","root_name","created":true}`.
+// ---------------------------------------------------------------------------
+
+static Variant _tool_create_scene_file(const Dictionary &p_args, MCPToolError &r_error) {
+	String raw_path;
+	if (!require_string(p_args, "path", raw_path, r_error)) {
 		return Variant();
 	}
 	String path;
@@ -488,6 +555,31 @@ static bool _write_resource_properties(const Ref<Resource> &p_resource, const Di
 //
 // Returns `{"path","type","changed":{<name>:{"old","new"}},"ignored":{...},
 // "properties_set":[...]}`. An **empty** `properties` bag still answers the
+// reference's `{"path","changed":{},"message":"No properties were changed"}`
+// shape and writes nothing: "the caller named no property at all" is a
+// different statement from "a name the caller gave does not exist", and only the
+// second one is an error.
+// ---------------------------------------------------------------------------
+
+static bool _require_properties(const Dictionary &p_args, Dictionary &r_out, MCPToolError &r_error) {
+	const Variant value = p_args.get("properties", Variant());
+	if (value.get_type() == Variant::NIL) {
+		r_error = MCPToolError::invalid_params("Missing required parameter: properties");
+		return false;
+	}
+	if (value.get_type() != Variant::DICTIONARY) {
+		r_error = MCPToolError::invalid_params(vformat("Parameter 'properties' must be an object, got %s",
+				Variant::get_type_name(value.get_type())));
+		return false;
+	}
+	r_out = value;
+	return true;
+}
+
+static Variant _tool_edit_resource(const Dictionary &p_args, MCPToolError &r_error) {
+	String raw_path;
+	if (!require_string(p_args, "path", raw_path, r_error)) {
+		return Variant();
 	}
 	String path;
 	if (!normalize_project_path(raw_path, path, r_error)) {
@@ -528,3 +620,116 @@ static bool _write_resource_properties(const Ref<Resource> &p_resource, const Di
 	// which is the TASK-037 D2 fix - the old code answered this same success
 	// shape for `{"no_such_property": 1}` and left the caller unable to tell the
 	// two apart.
+	if (changed.is_empty()) {
+		Dictionary result;
+		result["path"] = path;
+		result["changed"] = Dictionary();
+		result["message"] = "No properties were changed";
+		return result;
+	}
+
+	const Error save_error = _save_resource_atomically(resource, path);
+	if (save_error != OK) {
+		r_error = MCPToolError::internal(vformat("Failed to save resource: %s", error_names[(int)save_error]));
+		return Variant();
+	}
+
+	Dictionary result;
+	result["path"] = path;
+	result["type"] = resource->get_class();
+	result["changed"] = changed;
+	result["properties_set"] = properties_set;
+	// DESIGN-DETAIL section 20.6: an attribute the engine's setter stored
+	// differently is named here, with the requested value, the stored value and
+	// the reason, so a `changed` entry is never read as "the value I asked for".
+	result["ignored"] = ignored;
+	result["ignored_count"] = ignored.size();
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// Registration
+// ---------------------------------------------------------------------------
+
+// The authoritative `description` and `inputSchema` of each tool are the contract
+// entries of docs/tools_list.renamed.json, character for character. The schemas
+// are parsed from the exact contract JSON instead of being rebuilt as a
+// hand-written Dictionary - a hand transcription is where a description byte or
+// the type of a `"default": false` drifts, and gate 1 compares all three fields
+// verbatim. Godot's JSON has a single number type, so integral numbers are
+// folded back to INT (`"default": 256` would otherwise be written `256.0`).
+static Variant _fold_integral_numbers(const Variant &p_value) {
+	switch (p_value.get_type()) {
+		case Variant::FLOAT: {
+			const double number = p_value;
+			if (number >= -9.0e15 && number <= 9.0e15) {
+				const int64_t truncated = (int64_t)number;
+				if ((double)truncated == number) {
+					return Variant(truncated);
+				}
+			}
+			return p_value;
+		}
+		case Variant::DICTIONARY: {
+			const Dictionary source = p_value;
+			Dictionary out;
+			const Array keys = source.keys();
+			for (int i = 0; i < keys.size(); i++) {
+				out[keys[i]] = _fold_integral_numbers(source[keys[i]]);
+			}
+			return out;
+		}
+		case Variant::ARRAY: {
+			const Array source = p_value;
+			Array out;
+			for (int i = 0; i < source.size(); i++) {
+				out.push_back(_fold_integral_numbers(source[i]));
+			}
+			return out;
+		}
+		default:
+			return p_value;
+	}
+}
+
+static Dictionary _schema_from_json(const char *p_json) {
+	JSON json;
+	if (json.parse(String::utf8(p_json)) != OK) {
+		ERR_PRINT("MCPTools: invalid inputSchema literal in project_write_resource_scene.cpp");
+		return Dictionary();
+	}
+	return _fold_integral_numbers(json.get_data());
+}
+
+void register_project_write_resource_scene_tools(MCPToolRegistry &r_registry) {
+	// Order follows docs/tool-groups.json. The order is not a contract, but it
+	// has to be stable and append-only. Every tool is channel `project`,
+	// `mutating = true` (the only mutating group of B1) and `scope = BOTH`.
+	{
+		ToolBuilder builder("project_create_resource", String::utf8(R"desc(创建新资源文件)desc"));
+		builder.channel("project").verb("create").scope(MCPToolScope::BOTH).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"overwrite":{"default":false,"description":"是否覆盖已存在的文件","type":"boolean"},"path":{"description":"保存路径 (res://)","type":"string"},"properties":{"description":"初始属性字典","type":"object"},"type":{"description":"资源类型","type":"string"}},"required":["path","type"],"type":"object"})schema"));
+		builder.handler(_tool_create_resource).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("project_create_scene_file", String::utf8(R"desc(创建新场景文件)desc"));
+		builder.channel("project").verb("create").scope(MCPToolScope::BOTH).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"description":"保存路径 (res://)","type":"string"},"root_name":{"description":"根节点名称 (可选)","type":"string"},"root_type":{"default":"Node2D","description":"根节点类型","type":"string"}},"required":["path"],"type":"object"})schema"));
+		builder.handler(_tool_create_scene_file).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("project_delete_scene_file", String::utf8(R"desc(删除场景文件)desc"));
+		builder.channel("project").verb("delete").scope(MCPToolScope::BOTH).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"description":"要删除的场景文件路径 (res://)","type":"string"}},"required":["path"],"type":"object"})schema"));
+		builder.handler(_tool_delete_scene_file).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("project_edit_resource", String::utf8(R"desc(编辑资源文件属性并保存)desc"));
+		builder.channel("project").verb("edit").scope(MCPToolScope::BOTH).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"description":"资源文件路径 (res://)","type":"string"},"properties":{"description":"要修改的属性字典","type":"object"}},"required":["path","properties"],"type":"object"})schema"));
+		builder.handler(_tool_edit_resource).register_into(r_registry);
+	}
+}

@@ -282,6 +282,66 @@ private:
 static MCPDeferred::Task *_tool_get_node_property_samples(const Dictionary &p_args, MCPToolError &r_error) {
 	String node_path;
 	if (!require_string(p_args, "node_path", node_path, r_error)) {
+		return nullptr;
+	}
+	if (node_path.strip_edges().is_empty()) {
+		r_error = MCPToolError::invalid_params("Parameter 'node_path' must not be empty");
+		return nullptr;
+	}
+	Vector<String> properties;
+	if (!_require_string_array(p_args, "properties", properties, r_error)) {
+		return nullptr;
+	}
+	int64_t frame_count = 0;
+	if (!_require_at_least_one(p_args, "frame_count", 60, frame_count, r_error)) {
+		return nullptr;
+	}
+	int64_t frame_interval = 0;
+	if (!_require_at_least_one(p_args, "frame_interval", 1, frame_interval, r_error)) {
+		return nullptr;
+	}
+
+	SceneTree *tree = SceneTree::get_singleton();
+	if (tree == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return nullptr;
+	}
+	Node *root = tree->get_current_scene();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return nullptr;
+	}
+	Node *node = resolve_game_node(tree, root, node_path);
+	if (node == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Node '%s'", node_path),
+				"Use running_game_get_scene_tree to list the nodes of the running scene");
+		return nullptr;
+	}
+
+	// The frame the request arrived in is already the frame the dispatching
+	// transport is in; the task's first observation therefore lands on the next
+	// frame (the queue never ticks a task in its own start frame).
+	return memnew(NodePropertySamplesTask(node->get_instance_id(), node_path, properties,
+			_int_clamped(frame_count), _int_clamped(frame_interval), (int64_t)tree->get_frame()));
+}
+
+// ---------------------------------------------------------------------------
+// running_game_find_node_when_available (old `wait_for_node`)
+//
+// Observable contract (as implemented):
+//   * `node_path` (string, required; blank -> -32602), `poll_frames` (integer,
+//     default 5, >= 1), `timeout` (number, default 5.0, must be positive and
+//     finite -> -32602 otherwise);
+//   * the node is looked up every `poll_frames` frames with the shared
+//     `resolve_game_node` semantics; the first hit answers
+//     `{"found": true, "node_path": <resolved absolute path>, "type": ...,
+//     "name": ...}`;
+//   * an absolute `/root/...` path is looked up even while the game has no
+//     current scene yet (that is how an autoload or a scene being loaded is
+//     awaited); a relative path waits for a current scene;
+//   * the wait ends with `-32000`, `data.suggestion` and `data.timeout_ms` when
+//     `timeout` seconds pass without the node appearing;
+//   * no SceneTree at all -> `-32000` immediately (there is nothing to poll in
 //     this process), mistyped arguments -> `-32602`.
 //
 // **Deviation from the migration source (deliberate, task-book mandated):** the
@@ -552,3 +612,124 @@ static MCPDeferred::Task *_tool_capture_frames(const Dictionary &p_args, MCPTool
 		return nullptr;
 	}
 	if (!game_framebuffer_available()) {
+		r_error = CaptureFramesTask::framebuffer_error();
+		return nullptr;
+	}
+
+	return memnew(CaptureFramesTask(_int_clamped(count), _int_clamped(frame_interval), half_resolution, (int64_t)tree->get_frame()));
+}
+
+// ---------------------------------------------------------------------------
+// Registration
+//
+// Order follows docs/tool-groups-b2.json. Every declaration comes from
+// docs/tool-rename-map.json (`channel = running_game`, `scope = game`,
+// `mutating = false`); the description and the `inputSchema` are a byte-exact
+// copy of the entries of docs/tools_list.renamed.json, emitted from that file by
+// `scripts/gen_b2_game_schema.py` and not retyped; re-running that script
+// reproduces this block byte for byte.
+//
+// These are the module's first `pending_handler()` registrations: the builder
+// refuses a tool that declares both halves, so "this tool answers across frames"
+// is a declaration and not a convention.
+// ---------------------------------------------------------------------------
+
+void register_running_game_frame_observation_tools(MCPToolRegistry &r_registry) {
+	// BEGIN generated
+	// (scripts/gen_b2_game_schema.py: docs/tools_list.renamed.json entries copied byte for byte;
+	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
+	//  --in-place reproduces this span byte for byte.)
+	{
+		ToolBuilder builder("running_game_get_node_property_samples", String::utf8("监控运行中游戏节点的属性随时间的变化"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("default")] = 60;
+		v1[String::utf8("description")] = String::utf8("采集帧数");
+		v1[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("frame_count")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = 1;
+		v2[String::utf8("description")] = String::utf8("采集间隔帧数");
+		v2[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("frame_interval")] = v2;
+		Dictionary v3;
+		v3[String::utf8("description")] = String::utf8("节点路径");
+		v3[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("node_path")] = v3;
+		Dictionary v4;
+		v4[String::utf8("description")] = String::utf8("要监控的属性列表");
+		Dictionary v5;
+		v5[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("items")] = v5;
+		v4[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("properties")] = v4;
+		schema[String::utf8("properties")] = v0;
+		Array v6;
+		v6.push_back(String::utf8("node_path"));
+		v6.push_back(String::utf8("properties"));
+		schema[String::utf8("required")] = v6;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("get").scope(MCPToolScope::GAME).mutating(false).schema(schema).pending_handler(_tool_get_node_property_samples);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_find_node_when_available", String::utf8("等待运行中游戏的指定节点出现"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("要等待的节点路径");
+		v1[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("node_path")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = 5;
+		v2[String::utf8("description")] = String::utf8("每隔多少帧检查一次");
+		v2[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("poll_frames")] = v2;
+		Dictionary v3;
+		v3[String::utf8("default")] = 5.0;
+		v3[String::utf8("description")] = String::utf8("超时时间（秒）");
+		v3[String::utf8("type")] = String::utf8("number");
+		v0[String::utf8("timeout")] = v3;
+		schema[String::utf8("properties")] = v0;
+		Array v4;
+		v4.push_back(String::utf8("node_path"));
+		schema[String::utf8("required")] = v4;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("find").scope(MCPToolScope::GAME).mutating(false).schema(schema).pending_handler(_tool_find_node_when_available);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_capture_frames", String::utf8("连续截取运行中游戏的帧画面"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("default")] = 5;
+		v1[String::utf8("description")] = String::utf8("截取帧数");
+		v1[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("count")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = 10;
+		v2[String::utf8("description")] = String::utf8("帧间隔");
+		v2[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("frame_interval")] = v2;
+		Dictionary v3;
+		v3[String::utf8("default")] = true;
+		v3[String::utf8("description")] = String::utf8("是否使用半分辨率");
+		v3[String::utf8("type")] = String::utf8("boolean");
+		v0[String::utf8("half_resolution")] = v3;
+		schema[String::utf8("properties")] = v0;
+		Array v4;
+		schema[String::utf8("required")] = v4;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("capture").scope(MCPToolScope::GAME).mutating(false).schema(schema).pending_handler(_tool_capture_frames);
+		builder.register_into(r_registry);
+	}
+	// END generated
+}

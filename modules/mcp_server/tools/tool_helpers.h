@@ -840,6 +840,356 @@ Ref<Image> game_viewport_image(bool p_half_resolution);
 // the engine's own `Variant::can_convert(STRING, COLOR)` - but
 // `"Vector2(1,2)"` is now refused with `-32602` and the structured object
 // (`{"x": 1, "y": 2}`) is the way to send a vector.
+Variant property_value_from_json(const Variant &p_value, Variant::Type p_target_type);
+
+// ---------------------------------------------------------------------------
+// GDR-22 (TASK-022 D-4): the **one** slot-width gate.
+//
+// "Can this Variant fall into the target type?" and "does the value survive the
+// C++ member the target type is stored in?" are two different questions, and the
+// second one has now been missed three times in a row: TASK-021 A-2 patched the
+// packed container *element*, A-4 patched the composite value's *component*, and
+// the plain scalar member (`Node2D.rotation`, a `real_t` == `float` in this
+// build) was still copied through `Object::set()` unwarned - `1e300` was stored
+// as `inf` and `1e-300`/`1e-46` as `0.0`, each next to a `code=0`, and the
+// `project_set_node_property_across_scenes` path wrote that `inf` to disk.
+//
+// Patching shape-by-shape has been proven to keep missing cases, so the
+// judgement now exists **once**, as this enum plus `value_fits_slot`, and every
+// place the module knows a narrower slot calls it:
+//
+//   * a scalar property member  -> `coerce_to_property_type`'s default slot,
+//     which maps a `FLOAT` target type to `ValueSlot::REAL_T`;
+//   * a composite **component** -> `running_game_node_write.cpp`'s component
+//     table (`ValueSlot::REAL_T` / `ValueSlot::FLOAT32` / `ValueSlot::INT32`);
+//   * a packed **element**      -> `coerce_to_property_type`'s element half
+//     (`UINT8` / `INT32` / `REAL_T` / `FLOAT32`, `WIDE` for the 64-bit
+//     containers);
+//   * a `ProjectSettings` value -> `ValueSlot::WIDE`: settings are stored as
+//     Variants, not in typed C++ members, so nothing is narrowed.
+//
+// GDR-24 (TASK-023 D-7), the fourth shape of the same defect, is **not** a new
+// slot but a new *coverage* rule, and it is the reason this file also documents
+// the genre: the gate above only ran where `coerce_to_property_type` ran, so a
+// path that computed a `Vector3`/`Color` from JSON and then called a **dedicated
+// setter** (`Camera3D::set_global_position`, `Environment::set_bg_color`) bypassed
+// it entirely and still answered `code=0`. Every such narrowing point is now
+// listed and machine-checked (`scripts/check_narrowing_points.py`, PLAYBOOK gate
+// 6), and the slot a `Color` component is stored in is `FLOAT32`, never `REAL_T`
+// (see the enum below).
+//
+// The judgement is a *width* judgement and nothing else: the "declared
+// deterministic conversions" of PLAYBOOK section 7.7 (`FLOAT -> INT` truncation,
+// `INT -> FLOAT`, stringification into a String target, the component mapping's
+// folding) are **not** in this class and are unchanged.
+// ---------------------------------------------------------------------------
+enum class ValueSlot {
+	// The value is written into a C++ member whose declared Variant type is the
+	// `p_target_type` the caller passed: a `FLOAT` member is a `real_t` (a
+	// `float` here) and is judged as one; every other member is exactly as wide
+	// as its Variant type. Used by every property-member writer and by
+	// `coerce_to_property_type`'s default.
+	FROM_TARGET_TYPE,
+	// The slot is exactly as wide as the Variant type the conversion relation
+	// already judged: a `double` member, an `int64_t` member, a
+	// `PackedFloat64Array`/`PackedInt64Array` element, a `ProjectSettings`
+	// value (stored as a Variant), a String. Nothing to add.
+	WIDE,
+	// A `real_t`: a `float` in a single-precision build (this one), a `double`
+	// otherwise. Used for `FLOAT` members, `Vector2`/`Vector3`/`Vector4`
+	// components and `PackedFloat32Array` elements *in a build whose `real_t` is
+	// a `float`* - the packed case is `FLOAT32` below, because its element is
+	// always a `float`.
+	REAL_T,
+	// A **`float` regardless of the build's `real_t`** (GDR-24, TASK-023 D-15):
+	// a `Color` component (`core/math/color.h:39-42` declares `float r,g,b,a`)
+	// and a `PackedFloat32Array` element (`PackedFloat32Array::operator[]` is a
+	// `float`). Before this slot existed both were judged as `REAL_T`, whose
+	// `#ifdef REAL_T_IS_DOUBLE` branch accepted everything - so in a
+	// `precision=double` build `{"r":1e300}` would have been written as
+	// `Color(inf,0,0,1)` and a packed float32 element as `inf`, exactly the
+	// silent wrong value this gate exists to remove. The judgement is therefore
+	// **independent of the build configuration by construction**.
+	FLOAT32,
+	// An `int32_t`.
+	INT32,
+	// A `uint8_t`.
+	UINT8,
+};
+
+// The slot a **property member** of `p_target_type` is stored in: `REAL_T` for a
+// `FLOAT` member (the `real_t` of this build), `WIDE` for everything else.
+//
+// The `INT` answer is deliberately `WIDE`, and that is the honest boundary of
+// this gate rather than an omission: `PropertyInfo` carries a Variant type, not a
+// C++ width, so an `int` member cannot be told from an `int64_t` member from the
+// outside. Guessing "every INT member is 32-bit" would refuse legitimate 64-bit
+// members, and the alternative - the engine's own clamping - is already reported
+// honestly by every path here (the answer carries the value `Object::get()` reads
+// back after the write, which the M4b audit confirmed for `z_index`). The one
+// place the width *is* knowable is a container element or a component, and both
+// go through the same `value_fits_slot`.
+ValueSlot scalar_member_slot(Variant::Type p_target_type);
+
+// True when `p_value` survives a copy into a slot of width `p_slot`.
+//
+// `p_value` is an already-typed value (the output of the type conversion), so
+// this function judges **only** the width: a `double` that does not survive being
+// narrowed to a `float` (overflow to `inf`, or a non-zero value underflowing to
+// `0`), an integer outside `int32_t`/`uint8_t`. On a refusal `r_error` is a
+// `-32602` that names the parameter, states the value the engine's own copy
+// would have stored and gives the acceptable range; `p_slot_context` names the
+// slot in the caller's own words ("the 32-bit float component this property
+// stores"), so one message shape still tells the caller *where* the value was
+// going.
+//
+// A `WIDE` slot accepts everything, and so does a `REAL_T` slot in a
+// double-precision build (the member really is a `double`): this function never
+// refuses a value the C++ member can really hold. A `FLOAT32` slot is judged as
+// 32 bits **whatever the build is** (GDR-24).
+bool value_fits_slot(const Variant &p_value, ValueSlot p_slot, const String &p_parameter_name,
+		const String &p_slot_context, MCPToolError &r_error);
+
+// The value handed to `Object::set()`, coerced to the property's own type.
+//
+// `VariantUtilityFunctions::type_convert` is exactly the engine's own
+// `@GlobalScope.type_convert` (the conversion the GDScript `Object.set()` path
+// ends up in). Non-finite numbers are refused explicitly: converting `inf` to an
+// integer is undefined behaviour, not a conversion. `p_parameter_name` names the
+// caller's argument in the refusal message, so every caller keeps its own
+// wording (`properties` / `resource_properties` / `value`).
+//
+// TASK-018 section 1: the second refusal. `type_convert` is *not* the engine's
+// own conversion relation - `Variant::can_convert` is - and for every pair the
+// relation does not list, `type_convert` reaches a `Variant::operator <T>()`
+// whose `else` branch is the **default-constructed** `<T>`. That is how
+// `{"position": 1e20}` answered `status: ok` while really writing `Vector2(0,0)`
+// (`Variant::operator Vector2()` has no FLOAT case, variant.cpp:1790), and the
+// same silent-default shape exists for every struct/composed target (Vector2i,
+// Vector3, Rect2, Transform2D, Color from a FLOAT, an ARRAY from a scalar, ...).
+// When `can_convert(p_value's type, p_target_type)` is false the value cannot
+// fall into the target type at all, so it is refused with `-32602` here - in the
+// one place every write path of the module goes through - and nothing is written.
+//
+// TASK-020 sections 1 and 2 add the two remaining silent-default surfaces the M4
+// acceptance measured, both *inside* a pair `can_convert` declares convertible:
+//
+//   * `STRING -> FLOAT/INT` (`can_convert` answers true for every string, and
+//     `String::to_float("abc")` answers `0`), so a string that does not, as a
+//     whole, spell the number the target type receives is refused instead of
+//     written as `0`. The `#rrggbb` colour string is a different pair and is
+//     untouched;
+//   * an `ARRAY` element of a packed container target: the element type is pushed
+//     through this same function, so `[{"x":"abc","y":1}]` for a
+//     `PackedVector2Array` and `["abc"]` for a `PackedFloat64Array` are refused
+//     rather than folded into `(0,0)` / `0.0` by the element conversion.
+//
+// TASK-021 closes the three surfaces of the same family that TASK-020 recorded as
+// residual:
+//
+//   * `STRING -> BOOL`: `can_convert` lists the pair, and the conversion behind
+//     it (`Variant::booleanize()`) answers `true` for **every non-empty string**,
+//     so `visible: "abc"` / `"false"` / `"0"` all wrote `true`. A string is now
+//     accepted only when it spells a boolean (`"true"`/`"false"`/`"1"`/`"0"`,
+//     case insensitive for the words) and the value written is the boolean the
+//     spelling names;
+//   * the **element width** of a packed container: the element gate judged the
+//     element's Variant *type*, not the width of the slot it is copied into, so
+//     `PackedByteArray` wrote `300` as `44` and `-1` as `255`, `PackedInt32Array`
+//     truncated a 64-bit integer and `PackedFloat32Array` wrote `inf`/`0` for
+//     `1e300`/`1e-300` - all next to a success. An element that does not fit is
+//     now `-32602`;
+//   * `STRING -> COLOR`: `Color(const String &)` answers `Color()` (black) for a
+//     string that is neither an HTML code nor a named colour, so
+//     `modulate: "notacolor"` wrote black. Only the two grammars the engine's own
+//     constructor really reads are accepted now (`Color::html_is_valid` or
+//     `Color::find_named_color`).
+// TASK-022 makes the width judgement a step of this function itself, so that no
+// write path can reach `Object::set()` without it. `p_slot` is the width of the
+// C++ member the converted value is about to be copied into; its default,
+// `ValueSlot::FROM_TARGET_TYPE`, is the property-member rule (`FLOAT` -> the
+// `real_t` of this build, everything else as declared). A caller whose storage is
+// not a member of the declared type passes an explicit slot - `WIDE` for a
+// `ProjectSettings` value, `REAL_T`/`INT32`/`UINT8` for a slot the caller knows
+// is narrower - and the element half below passes the container's element slot.
+// See `ValueSlot` above for the one-place rule this implements (GDR-22).
+//
+// TASK-027 D-8: `p_expected_class` is the class the *property* declares for its
+// Object value (see `object_property_class_hint`), when the caller knows it. The
+// OBJECT target is answered by `_object_value_from_json` - `null` clears, a
+// `res://` string loads, `{"type","path"}` loads and checks `type`, `{}` is
+// `-32602`, an unloadable path is `-32001` (GDR-25 section 23.5).
+bool coerce_to_property_type(const Variant &p_value, Variant::Type p_target_type, Variant &r_out,
+		MCPToolError &r_error, const String &p_parameter_name,
+		ValueSlot p_slot = ValueSlot::FROM_TARGET_TYPE, const String &p_expected_class = String());
+
+// The class specification an Object-valued property declares for its value, or
+// the empty string when it declares none (TASK-027 D-8).
+//
+// `PropertyInfo::class_name` carries it - the `hint_string` of a
+// `PROPERTY_HINT_RESOURCE_TYPE` (`Texture2D` for `Sprite2D.texture`, or a comma
+// separated list with optional `-Excluded` entries, e.g. `CanvasItem.material`'s
+// `"CanvasItemMaterial,ShaderMaterial"`), or the declared class of a
+// `PROPERTY_HINT_NODE_TYPE`. The caller (`coerce_to_property_type`) reads it as
+// the engine's own grammar: a positive list is a disjunction, a `-Name` entry is
+// an exclusion, and an empty specification means "no check".
+String object_property_class_hint(const Object *p_object, const StringName &p_name);
+
+// The module's wire spelling of a node (TASK-027 E-2/E-8): relative to the
+// edited scene root when the object belongs to it (the editor case), the
+// engine's own `Node::get_path()` otherwise (a running game), the class name for
+// a non-`Node`, and the empty string for a node that is not inside a tree.
+//
+// This is `Node::get_path_to(edited_scene_root(), node)` in the editor instead of
+// `Node::get_path()`, which walks to the editor's own UI root
+// (`/root/@EditorNode@<id>/.../@SubViewport@<id>/Main/Actor`) - a path that is not
+// reproducible, not creation-semantics and not usable as an input to any tool.
+String wire_node_path(const Object *p_object);
+
+// The declared type of one of the object's properties, or `Variant::NIL` when the
+// object does not have it.
+//
+// The current value answers first (that is the rule `project_write` always
+// relied on); only when it is `nil` is the declared type looked up in
+// `get_property_list()` (the rule `editor_write` always relied on). Both former
+// behaviours are preserved, and the one case that changes - a property whose
+// current value is `null` - now reports its declared type instead of `NIL`.
+Variant::Type property_type_of(const Object *p_object, const StringName &p_name);
+
+// True when a `get_property_list()` entry is an *inspector label* instead of a
+// value: a group, a subgroup or a class category.
+//
+// TASK-032 D3 (M4d). Such an entry always carries `Variant::NIL`, so a listing
+// that enumerated it answered a fake `null` property (12 of them for a
+// `Node2D`), and one of them - the CanvasItem group "Material" - differed from
+// the real property `material` only by case, which makes the whole response
+// unparsable for a case-insensitive JSON client (PowerShell's
+// `ConvertFrom-Json`: "contains the duplicated keys 'Material' and 'material'").
+//
+// The three bits are the engine's own rule rather than an invention: its
+// consumers test exactly GROUP | SUBGROUP | CATEGORY
+// (core/object/script_language.cpp:726, editor/doc/doc_tools.cpp:550,
+// scene/debugger/scene_debugger_object.cpp:91). It is deliberately *not*
+// "neither STORAGE nor EDITOR": in Godot 4 a plain script `var` carries
+// PROPERTY_USAGE_SCRIPT_VARIABLE and neither of those two bits, so that test
+// would silently drop every script variable (the defect REPORT-010 section 5
+// measured on the game side).
+bool property_is_label(const PropertyInfo &p_property);
+
+// True when the dictionary already holds a key that differs from `p_name` only
+// by case. Backs the output-key rule of both property listings (TASK-032 D3):
+// the engine's own spelling is kept and a key that would collide with an
+// existing one under a case-insensitive comparison is left out, *first
+// occurrence in the property table's order winning*. Labels are filtered before
+// this rule runs, so within one class table it can only be reached by two
+// genuine properties whose names differ only by case - which a script can
+// produce (`var Material` next to the engine's `material`). Dropping the later
+// one is the documented trade-off: an answer a case-insensitive client cannot
+// parse at all is worse than an answer with one documented omission.
+bool dictionary_has_key_ignoring_case(const Dictionary &p_dict, const String &p_name);
+
+// ---------------------------------------------------------------------------
+// GDScript source builder (hoisted by TASK-018 section 3).
+//
+// TASK-010 wrote the module's one "compile the caller's code for real" rule as
+// file-private helpers of `tools/running_game_script_execution.cpp`
+// (`_split_code_lines` / `_space_indent_unit` / `_build_source`). TASK-018's
+// `editor_execute_gdscript` is the same capability in the editor process, and a
+// group may not copy another group's file-private helper (PLAYBOOK section 2.4):
+// if the two executors did not share this, "what counts as a function body today"
+// would have two answers. They share it here.
+//
+// The body is a verbatim move: same three rules (the smallest positive space
+// indent becomes one tab, a `func` at column 0 is lifted to class level with the
+// blank/tab-indented lines that belong to it, everything else is indented into
+// `_mcp_execute`), same `extends RefCounted` prelude, same deliberate
+// untyped `func _mcp_execute():`. `running_game_execute_gdscript`'s doctest and
+// its wire evidence pin the move as behaviour preserving.
+// ---------------------------------------------------------------------------
+
+// The method the generated script exposes. Both executors answer
+// `{"result","result_type"}` and both find the entry point by this name.
+const char *execute_gdscript_method_name();
+
+// Builds `@tool` (editor only) + `extends RefCounted` + optional lifted
+// functions + `func _mcp_execute()`.
+//
+// `p_tool_script` is the one thing the two executors may *not* share. Godot
+// refuses to instantiate a non-`@tool` script **while the editor is running**:
+//
+//     bool GDScript::can_instantiate() const {
+//         return valid && (is_tool() || !Engine::get_singleton()->is_editor_hint());
+//     }
+//
+// so the editor executor compiles its source with `@tool` and the game executor
+// without it (where the annotation is unnecessary and the generated source
+// stays byte-identical to the one TASK-010's evidence pinned). Measured on the
+// wire before the fix: every `editor_execute_gdscript` call answered `-32602
+// "does not compile: OK"` - `reload()` succeeded, so the message was nonsense,
+// and the real reason was this predicate.
+bool build_execute_gdscript_source(const String &p_code, bool p_tool_script, String &r_source);
+
+// ---------------------------------------------------------------------------
+// Screen-text observation (TASK-019, `running_game_assert_screen_text`).
+//
+// The migration source's assertion delegates to `find_ui_elements` and reads an
+// `element["text"]` key, but its own `_find_ui_recursive`
+// (`mcp_runtime_agent.gd:422-428`) emits only `{name, path, type}` - the key it
+// then reads never exists, so **every textual assertion failed** no matter what
+// was on screen. TASK-019 therefore has to decide what "the screen's text"
+// means, and it uses the engine's own answer instead of a key that was never
+// written:
+//
+//   * the current scene is walked depth first (the migration source's order);
+//   * only `Control` nodes that are `is_visible_in_tree()` are considered - a
+//     label under a hidden parent is not on screen;
+//   * a node's text is its `text` property when it declares one (that is what
+//     `Label`, `Button`, `LineEdit`, `RichTextLabel`, `TextEdit` and
+//     `LinkButton` register), and `get_text()` otherwise when the class exposes
+//     it (`AcceptDialog`/`ConfirmationDialog` register `dialog_text` but answer
+//     `get_text()`), so a dialog's text is found as well;
+//   * empty text is skipped and each entry is `{"name", "path", "type", "text"}`
+//     - `find_ui_elements`' own four-key answer plus the text, so the two tools
+//     describe the same node with the same wording.
+//
+// This is *tree* text, not pixels: `--headless` renders nothing, so a
+// pixel-level text assertion would be unanswerable there. The distinction is
+// stated in the tool's answer (`source: "control_tree"`).
+// ---------------------------------------------------------------------------
+
+// Every visible text-bearing Control of the subtree, in depth-first order.
+Array collect_visible_texts(Node *p_root);
+
+// ---------------------------------------------------------------------------
+// Assertion comparison (TASK-019, shared by `running_game_assert_node_state` and
+// the `assert` steps of `running_game_run_test_scenario`).
+//
+// One definition so a scenario step and the standalone assertion cannot disagree
+// about what `eq` means. The migration source's semantics
+// (`mcp_game_inspector_service.gd:1646-1667`) are kept, including their two
+// deliberate oddities:
+//
+//   * `eq` / `neq` compare the **string spellings first** (`str(actual) ==
+//     str(expected)`) and only then the variants. That is what makes `10` and
+//     `10.0` equal across the JSON boundary (Godot's JSON has one number type, so
+//     a caller's `10` for an int property can arrive as `10.0`), and it is kept;
+//   * `gt`/`lt`/`gte`/`lte` coerce both sides with `float()`, `contains`
+//     compares the string spellings, and `type_is` accepts either the engine's
+//     numeric type id or its type name.
+//
+// `r_error` is filled and false returned when `p_operator` is not one of the
+// eight names; the message lists them, which is the migration source's own
+// refusal. A non-finite operand in an ordering comparison is refused as well:
+// `float(inf) > 1` is not a meaningful assertion verdict.
+// ---------------------------------------------------------------------------
+
+// The eight operator names, in the order the contract documents them.
+const char *const *assert_operator_names();
+int assert_operator_count();
+
+// The comparison's "string spelling" of a value, i.e. what the GDScript side of
+// the migration source meant by `str(value)`.
+//
 // `Variant::operator String()` is **not** that: it answers `stringify()`
 // (variant.cpp:1590), so an `INT` 10 turns into `"10"` only by luck of
 // `stringify`'s own spelling, while a `FLOAT` 10.0 turns into `"10"` too - which
