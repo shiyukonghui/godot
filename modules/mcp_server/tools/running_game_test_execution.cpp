@@ -416,12 +416,12 @@ public:
 	MCPDeferred::TickResult tick(int64_t p_frame, uint64_t p_now_ms) override {
 		(void)p_frame;
 		if (next >= steps.size()) {
-					entry["found"] = true;
-					entry["node_path"] = String(found->get_path());
-					wait_deadline_ms = -1;
-				}
-			}
-		} else {
+			return MCPDeferred::TickResult::done(build_result(p_now_ms));
+		}
+
+		const ScenarioStep &step = steps[next];
+		Dictionary entry;
+		entry["step"] = next;
 		entry["type"] = step.type;
 
 		if (step.type == "input") {
@@ -472,27 +472,74 @@ public:
 			} else {
 				const Dictionary verdict = _run_node_assertion(step);
 				entry.merge(verdict, true);
+			}
+			const bool passed = entry.get("passed", Variant()).get_type() == Variant::BOOL && (bool)entry.get("passed", Variant());
+			if (passed) {
+				pass_count++;
+			} else {
+				fail_count++;
+			}
+			// The aggregate report and the scenario must not be able to disagree
+			// about one assertion: the same record goes into both.
+			record_test_result(entry);
+		}
+
+		results.push_back(entry);
+		next++;
+		if (next >= steps.size()) {
+			return MCPDeferred::TickResult::done(build_result(p_now_ms));
+		}
+		return MCPDeferred::TickResult::pending();
+	}
+
+	uint64_t get_timeout_ms() const override {
+		return timeout_ms;
+	}
+
+	String describe() const override {
+		return vformat("running a %d step(s) scenario", steps.size());
+	}
+
+private:
+	Dictionary _run_text_assertion(const ScenarioStep &p_step) const {
+		Node *root = nullptr;
+		SceneTree *tree = nullptr;
+		MCPToolError ignored;
+		if (!game_current_scene(root, tree, ignored)) {
+			Dictionary verdict;
+			verdict["expected_text"] = p_step.assert_text_value;
+			verdict["partial"] = p_step.assert_partial;
+			verdict["case_sensitive"] = p_step.assert_case_sensitive;
+			verdict["source"] = "control_tree";
+			verdict["passed"] = false;
+			verdict["error"] = "No current scene";
+			return verdict;
 		}
 		const Array elements = collect_visible_texts(root);
 		const String search_text = p_step.assert_case_sensitive ? p_step.assert_text_value : p_step.assert_text_value.to_lower();
 		bool found = false;
+		Dictionary matched_element;
 		Array visible_texts;
+		Array visible_elements;
 		for (int i = 0; i < elements.size(); i++) {
 			const Dictionary element = elements[i];
 			const String element_text = element.get("text", String());
 			visible_texts.push_back(p_step.assert_case_sensitive ? element_text : element_text.to_lower());
+			visible_elements.push_back(element);
 			const String compare_text = p_step.assert_case_sensitive ? element_text : element_text.to_lower();
 			const bool hit = p_step.assert_partial ? compare_text.contains(search_text) : compare_text == search_text;
 			if (hit && !found) {
 				found = true;
-				verdict["matched_element"] = element;
+				matched_element = element;
 			}
 		}
-		verdict["passed"] = found;
-		verdict["visible_texts"] = visible_texts;
-		if (!found) {
-			verdict["reason"] = vformat("screen text %s '%s' was not found in the %d visible text(s) of the control tree",
-					p_step.assert_partial ? "containing" : "equal to", p_step.assert_text_value, visible_texts.size());
+		// TASK-020 section 4 (D-3): the verdict - including the failure `reason` -
+		// is the shared assertion field set, the very object the standalone
+		// `running_game_assert_screen_text` answers with.
+		Dictionary verdict = screen_text_step_verdict(p_step.assert_text_value, p_step.assert_partial,
+				p_step.assert_case_sensitive, visible_texts, visible_elements, found);
+		if (found) {
+			verdict["matched_element"] = matched_element;
 		}
 		return verdict;
 	}
@@ -510,53 +557,6 @@ public:
 			verdict["passed"] = false;
 			verdict["expected"] = serialize_variant(p_step.assert_expected);
 			verdict["error"] = "No current scene";
-			return verdict;
-		}
-		Node *node = resolve_game_node(tree, root, p_step.assert_node_path);
-		if (node == nullptr || !object_has_property(node, p_step.assert_property)) {
-			verdict["passed"] = false;
-			verdict["expected"] = serialize_variant(p_step.assert_expected);
-			verdict["reason"] = node == nullptr
-					? vformat("node '%s' does not exist in the running scene", p_step.assert_node_path)
-					: vformat("node '%s' does not have the property '%s'", String(node->get_path()), p_step.assert_property);
-			return verdict;
-		}
-		const Variant actual = node->get(p_step.assert_property);
-		// The expectation as it is really compared (see
-		// `MCPTools::assertion_expectation_for`): a `{"x":3,"y":4}` object against
-		// a vector property is compared as the vector, and echoed as the vector.
-		const Variant expected = assertion_expectation_for(actual, p_step.assert_expected);
-		verdict["actual"] = serialize_variant(actual);
-		verdict["expected"] = serialize_variant(expected);
-		verdict["resolved_node_path"] = String(node->get_path());
-
-		bool passed = false;
-		MCPToolError error;
-		if (!evaluate_assertion(p_step.assert_operator, actual, p_step.assert_expected, passed, error)) {
-			verdict["passed"] = false;
-			verdict["reason"] = error.message;
-			return verdict;
-		}
-		verdict["passed"] = passed;
-		if (!passed) {
-			verdict["reason"] = vformat("expected %s %s %s, found %s",
-					p_step.assert_property, p_step.assert_operator,
-					assertion_text_of(expected), assertion_text_of(actual));
-		}
-		return verdict;
-	}
-
-	Dictionary build_result(uint64_t p_now_ms) const {
-		Dictionary result;
-		result["total_steps"] = steps.size();
-		result["completed_steps"] = results.size();
-		result["passed"] = pass_count;
-		result["failed"] = fail_count;
-		result["errors"] = error_count;
-		// `passed > 0` on purpose: a scenario whose steps were all input and wait
-		// asserted nothing, and "nothing was asserted" must not be reported as
-		// "everything passed".
-		result["all_passed"] = fail_count == 0 && error_count == 0 && pass_count > 0;
 			return verdict;
 		}
 		Node *node = resolve_game_node(tree, root, p_step.assert_node_path);
@@ -652,21 +652,41 @@ static MCPDeferred::Task *_tool_run_test_scenario(const Dictionary &p_args, MCPT
 
 	SceneTree *tree = SceneTree::get_singleton();
 	if (tree == nullptr) {
-			return MCPDeferred::TickResult::done(build_result(p_now_ms, true));
+		// Nothing can be driven in a process without a SceneTree.
+		r_error = MCPToolError::no_scene();
+		return nullptr;
+	}
+
+	// The scenario's own deadline: the declared waits plus a generous per-step
+	// margin (a wait step's `node_path` form can poll for its `timeout`),
+	// clamped by the framework anyway (GDR-20 point 4).
+	uint64_t estimated_ms = 0;
+	for (int i = 0; i < steps.size(); i++) {
+		if (steps[i].type == "wait") {
+			estimated_ms += (uint64_t)((steps[i].wait_by_time ? steps[i].wait_seconds : steps[i].wait_timeout_seconds) * 1000.0 + 0.5);
 		}
+		estimated_ms += 250;
+	}
+	return memnew(TestScenarioTask(steps, (uint64_t)OS::get_singleton()->get_ticks_msec(), estimated_ms));
+}
 
-	// The clock comes from `OS`, not from `Time`: the `Time` singleton is null in
-	// a `--test` process (see the note in `tools/running_game_assertion.cpp`).
-		const uint64_t iteration_start = (uint64_t)OS::get_singleton()->get_ticks_msec();
-		const StringName action = actions[iterations % actions.size()];
-		input->parse_input_event(_make_scenario_action(action, true, 1.0));
-		input->parse_input_event(_make_scenario_action(action, false, 0.0));
-		events_sent += 2;
-		total_iteration_ms += (int64_t)((uint64_t)OS::get_singleton()->get_ticks_msec() - iteration_start);
-		iterations++;
-
-		if (iterations >= count) {
-			return MCPDeferred::TickResult::done(build_result(p_now_ms, true));
+// ---------------------------------------------------------------------------
+// running_game_run_stress_test (old `run_stress_test`)
+//
+// Observable contract (as implemented):
+//   * `count` (integer, default 10, 1..100000) - the number of iterations. A
+//     non-positive count is `-32602`: it injects nothing and would report a
+//     finished test that never ran;
+//   * `action` (string, optional, not blank when present) - the action pressed
+//     and released once per iteration. Absent means the migration source's own
+//     rotation over `ui_up`, `ui_down`, `ui_left`, `ui_right`, `ui_accept`;
+//   * one iteration per frame, so the game really processes the event between two
+//     of them (the migration source wrote a file and slept 50 ms on the editor's
+//     main thread; both the file and the sleep are gone);
+//   * `{"completed", "crashed", "iterations", "iterations_completed",
+//     "events_sent", "elapsed_ms", "average_iteration_ms", "game_still_running",
+//     "actions"}`. `crashed` is only ever true when the game process itself went
+//     away mid-run, which inside the game process means the request could not be
 //     answered at all (`completed: true, crashed: false` is therefore the only
 //     reachable answer, and `game_still_running` reports what was observed at the
 //     last iteration rather than an assumption);
@@ -823,7 +843,7 @@ void register_running_game_test_execution_tools(MCPToolRegistry &r_registry) {
 	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
 	//  --in-place reproduces this span byte for byte.)
 	{
-		ToolBuilder builder("running_game_run_test_scenario", String::utf8("运行测试场景并执行一系列测试步骤 wait 步骤的入参名是 seconds（steps[i].seconds，契约 schema 里唯一的等待时长成员），结果里每个 wait 条目的回显字段叫 waited_seconds（真正等到的秒数，如 {\"step\":1,\"type\":\"wait\",\"waited_seconds\":1.5}）；两者在**不同的对象**里，waited_seconds 不是入参（把它写进请求的 step 不生效，seconds 才是入参），入参名与结果字段名都未改动、既有调用不受影响。"));
+		ToolBuilder builder("running_game_run_test_scenario", String::utf8("运行测试场景并执行一系列测试步骤"));
 
 		Dictionary schema;
 		Dictionary v0;
@@ -875,19 +895,29 @@ void register_running_game_test_execution_tools(MCPToolRegistry &r_registry) {
 		v4[String::utf8("strength")] = v13;
 		Dictionary v14;
 		v14[String::utf8("description")] = String::utf8("期望文本（assert 类型使用）");
-		v4[String::utf8("type")] = v13;
+		v14[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("text")] = v14;
+		Dictionary v15;
+		v15[String::utf8("description")] = String::utf8("步骤类型");
+		Array v16;
+		v16.push_back(String::utf8("input"));
+		v16.push_back(String::utf8("wait"));
+		v16.push_back(String::utf8("assert"));
+		v15[String::utf8("enum")] = v16;
+		v15[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("type")] = v15;
 		v3[String::utf8("properties")] = v4;
-		Array v15;
-		v15.push_back(String::utf8("type"));
-		v3[String::utf8("required")] = v15;
+		Array v17;
+		v17.push_back(String::utf8("type"));
+		v3[String::utf8("required")] = v17;
 		v3[String::utf8("type")] = String::utf8("object");
 		v2[String::utf8("items")] = v3;
 		v2[String::utf8("type")] = String::utf8("array");
 		v0[String::utf8("steps")] = v2;
 		schema[String::utf8("properties")] = v0;
-		Array v16;
-		v16.push_back(String::utf8("steps"));
-		schema[String::utf8("required")] = v16;
+		Array v18;
+		v18.push_back(String::utf8("steps"));
+		schema[String::utf8("required")] = v18;
 		schema[String::utf8("type")] = String::utf8("object");
 
 		builder.channel("running_game").verb("run").scope(MCPToolScope::GAME).mutating(true).schema(schema).pending_handler(_tool_run_test_scenario);

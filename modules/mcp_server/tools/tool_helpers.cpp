@@ -168,51 +168,6 @@ Variant serialize_variant(const Variant &p_value) {
 			out["z"] = value.z;
 			return out;
 		}
-		case Variant::VECTOR4: {
-			// TASK-024 E-3: `Vector4` had no branch and fell into `default:` ->
-			// `stringify()`, so the *same* readback answered an object for
-			// `position` (Vector2/Vector3) and a string for `v4`, and a consumer
-			// had to branch on the shape. `Vector4i` is the same shape one line
-			// below; a write of `{x,y,z,w}` can now be read back and fed back in.
-			const Vector4 value = p_value;
-			Dictionary out;
-			out["x"] = value.x;
-			out["y"] = value.y;
-			out["z"] = value.z;
-			out["w"] = value.w;
-			return out;
-		}
-		case Variant::VECTOR4I: {
-			const Vector4i value = p_value;
-			Dictionary out;
-			out["x"] = value.x;
-			out["y"] = value.y;
-			out["z"] = value.z;
-			out["w"] = value.w;
-			return out;
-		}
-		// -----------------------------------------------------------------------
-		// TASK-033 (B5 batch 1, GDR-25 section 23.4): `Quaternion` joins the
-		// read/write matrix. `editor_get_animation_info` reads back a rotation
-		// track's keys, and the engine stores those as `Quaternion`
-		// (`Animation::RotationTrack` -> `TKey<Quaternion>`), so the read side had
-		// to name the four members the write side now accepts
-		// (`MCPTools::vector_component_hint` / `_vector_components` /
-		// `vector_from_dictionary` in `running_game_node_write.cpp`). Before this,
-		// the value was `stringify()`d into a `"Quaternion(...)"` string - a shape
-		// the write side can never take - which is exactly the string surgery
-		// section 23.1 forbids. The members are the engine's own and are `real_t`
-		// (`core/math/quaternion.h`: `real_t x, y, z, w`).
-		// -----------------------------------------------------------------------
-		case Variant::QUATERNION: {
-			const Quaternion value = p_value;
-			Dictionary out;
-			out["x"] = value.x;
-			out["y"] = value.y;
-			out["z"] = value.z;
-			out["w"] = value.w;
-			return out;
-		}
 		case Variant::COLOR: {
 			const Color value = p_value;
 			Dictionary out;
@@ -262,6 +217,28 @@ Variant serialize_variant(const Variant &p_value) {
 		}
 		case Variant::VECTOR4I: {
 			const Vector4i value = p_value;
+			Dictionary out;
+			out["x"] = value.x;
+			out["y"] = value.y;
+			out["z"] = value.z;
+			out["w"] = value.w;
+			return out;
+		}
+		// -----------------------------------------------------------------------
+		// TASK-033 (B5 batch 1, GDR-25 section 23.4): `Quaternion` joins the
+		// read/write matrix. `editor_get_animation_info` reads back a rotation
+		// track's keys, and the engine stores those as `Quaternion`
+		// (`Animation::RotationTrack` -> `TKey<Quaternion>`), so the read side had
+		// to name the four members the write side now accepts
+		// (`MCPTools::vector_component_hint` / `_vector_components` /
+		// `vector_from_dictionary` in `running_game_node_write.cpp`). Before this,
+		// the value was `stringify()`d into a `"Quaternion(...)"` string - a shape
+		// the write side can never take - which is exactly the string surgery
+		// section 23.1 forbids. The members are the engine's own and are `real_t`
+		// (`core/math/quaternion.h`: `real_t x, y, z, w`).
+		// -----------------------------------------------------------------------
+		case Variant::QUATERNION: {
+			const Quaternion value = p_value;
 			Dictionary out;
 			out["x"] = value.x;
 			out["y"] = value.y;
@@ -384,132 +361,6 @@ Variant serialize_variant(const Variant &p_value) {
 			Array out;
 			for (int i = 0; i < source.size(); i++) {
 				out.push_back(serialize_variant(source[i]));
-			}
-			return out;
-		}
-		// -------------------------------------------------------------------
-		// TASK-024 E-3: the packed containers.
-		//
-		// Every one of them used to fall into `default:` -> `stringify()`, so a
-		// single readback mixed shapes: `position` was an object while `v4` was
-		// `"(5.0, 6.0, 7.0, 8.0)"` and `pv2` was `"[(1.0, 2.0)]"`. Each branch
-		// below answers the JSON shape a consumer can feed straight back into
-		// the write side (`coerce_to_property_type` accepts an `ARRAY` for every
-		// one of these targets, and an `OBJECT`-shaped element for the four
-		// composite ones), so **no branch on the consumer's side is needed any
-		// more**.
-		//
-		// The element spellings follow the engine's own semantics, which is also
-		// what its `Array(packed)` conversion produces:
-		//   * `PackedByteArray` -> a JSON array of integers in 0..255 (its
-		//     element is a `uint8_t`, and the write side takes `[1,2,3]` - the
-		//     same shape a `PackedByteArray` round-trips through). It is
-		//     deliberately *not* base64: this is a value readback, and base64
-		//     would be a third shape no other container uses, and one no write
-		//     path accepts.
-		//   * `PackedStringArray` -> a JSON array of strings (its element is a
-		//     `String`; the engine keeps them as text, so they stay text).
-		//   * the four composite containers -> an array of the *same* object the
-		//     scalar branch above emits for that type.
-		// -------------------------------------------------------------------
-		case Variant::PACKED_BYTE_ARRAY: {
-			const PackedByteArray value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				out.push_back((int64_t)value[i]);
-			}
-			return out;
-		}
-		case Variant::PACKED_INT32_ARRAY: {
-			const PackedInt32Array value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				out.push_back((int64_t)value[i]);
-			}
-			return out;
-		}
-		case Variant::PACKED_INT64_ARRAY: {
-			const PackedInt64Array value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				out.push_back(value[i]);
-			}
-			return out;
-		}
-		case Variant::PACKED_FLOAT32_ARRAY: {
-			const PackedFloat32Array value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				out.push_back((double)value[i]);
-			}
-			return out;
-		}
-		case Variant::PACKED_FLOAT64_ARRAY: {
-			const PackedFloat64Array value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				out.push_back((double)value[i]);
-			}
-			return out;
-		}
-		case Variant::PACKED_STRING_ARRAY: {
-			const PackedStringArray value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				out.push_back((String)value[i]);
-			}
-			return out;
-		}
-		case Variant::PACKED_VECTOR2_ARRAY: {
-			const PackedVector2Array value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				const Vector2 element = value[i];
-				Dictionary entry;
-				entry["x"] = element.x;
-				entry["y"] = element.y;
-				out.push_back(entry);
-			}
-			return out;
-		}
-		case Variant::PACKED_VECTOR3_ARRAY: {
-			const PackedVector3Array value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				const Vector3 element = value[i];
-				Dictionary entry;
-				entry["x"] = element.x;
-				entry["y"] = element.y;
-				entry["z"] = element.z;
-				out.push_back(entry);
-			}
-			return out;
-		}
-		case Variant::PACKED_VECTOR4_ARRAY: {
-			const PackedVector4Array value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				const Vector4 element = value[i];
-				Dictionary entry;
-				entry["x"] = element.x;
-				entry["y"] = element.y;
-				entry["z"] = element.z;
-				entry["w"] = element.w;
-				out.push_back(entry);
-			}
-			return out;
-		}
-		case Variant::PACKED_COLOR_ARRAY: {
-			const PackedColorArray value = p_value;
-			Array out;
-			for (int i = 0; i < value.size(); i++) {
-				const Color element = value[i];
-				Dictionary entry;
-				entry["r"] = element.r;
-				entry["g"] = element.g;
-				entry["b"] = element.b;
-				entry["a"] = element.a;
-				out.push_back(entry);
 			}
 			return out;
 		}

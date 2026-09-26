@@ -81,18 +81,9 @@ bool _is_script_extension(const String &p_extension) {
 			return true;
 		}
 	}
-	return json.get_data();
+	return false;
 }
 
-void register_project_validate_scripts_tools(MCPToolRegistry &r_registry) {
-	{
-		ToolBuilder builder("project_validate_scripts",
-				String::utf8(R"desc(Validate every script of the project in one call and answer a per-file verdict, so a batch of edited scripts can be checked without one call per file. The categories are `ok` (the file's own language compiled it), `invalid` (it did not compile - for a `.cs` file that is a project-level build of its .csproj that project_build_csharp ran and recorded, and the item carries the compiler's own diagnostic text), `not_compiled` (no build of this source is loaded: the file was modified after the loaded .NET assembly was built, or that assembly has no class for the script's path - deliberately not `invalid`, because the engine has no C# compiler and CSharpScript::reload() returns OK unconditionally), `language_unavailable` (this build has no script backend for the extension) and `unverifiable` (the engine could not load the file as a Script resource); `valid` is published only for `ok` and `invalid`, and `count` is always the sum of the per-category counters.)desc"));
-		builder.channel("project").verb("validate").scope(MCPToolScope::BOTH).mutating(false);
-		builder.schema(_schema_from_json(R"schema({"properties":{"include_errors_only":{"default":false,"type":"boolean"},"paths":{"items":{"type":"string"},"type":"array"}},"required":[],"type":"object"})schema"));
-		builder.handler(_tool_validate_scripts).register_into(r_registry);
-	}
-}
 
 Array _discover_scripts() {
 	Vector<String> extensions;
@@ -376,7 +367,7 @@ static Dictionary _schema_from_json(const char *p_json) {
 void register_project_validate_scripts_tools(MCPToolRegistry &r_registry) {
 	{
 		ToolBuilder builder("project_validate_scripts",
-				String::utf8(R"desc(Validate every script of the project in one call and answer a per-file verdict, so a batch of edited scripts can be checked without one call per file. A file this process can load but cannot compile through the script API is reported as `unverifiable` with a `reason` and no `valid` value at all: Godot's CSharpScript::reload() returns OK unconditionally and never compiles the source (modules/mono/csharp_script.cpp:2588-2621), so a `.cs` file in a Mono build gets no verdict here (the single-file project_validate_script refuses the same file with -32000); use project_build_csharp for a C# verdict.)desc"));
+				String::utf8(R"desc(Validate every script of the project in one call and answer a per-file verdict, so a batch of edited scripts can be checked without one call per file. The categories are `ok` (the file's own language compiled it), `invalid` (it did not compile - for a `.cs` file that is a project-level build of its .csproj that project_build_csharp ran and recorded, and the item carries the compiler's own diagnostic text), `not_compiled` (no build of this source is loaded: the file was modified after the loaded .NET assembly was built, or that assembly has no class for the script's path - deliberately not `invalid`, because the engine has no C# compiler and CSharpScript::reload() returns OK unconditionally), `language_unavailable` (this build has no script backend for the extension) and `unverifiable` (the engine could not load the file as a Script resource); `valid` is published only for `ok` and `invalid`, and `count` is always the sum of the per-category counters.)desc"));
 		builder.channel("project").verb("validate").scope(MCPToolScope::BOTH).mutating(false);
 		builder.schema(_schema_from_json(R"schema({"properties":{"include_errors_only":{"default":false,"type":"boolean"},"paths":{"items":{"type":"string"},"type":"array"}},"required":[],"type":"object"})schema"));
 		builder.handler(_tool_validate_scripts).register_into(r_registry);

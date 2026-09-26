@@ -332,91 +332,41 @@ Array MCPToolRegistry::build_tools_list(bool p_is_editor) const {
 }
 
 // ---------------------------------------------------------------------------
-// TASK-063 (b): the node-path alias hint.
+// TASK-050 O-1 (the missing-required half) + N-7 (the rest of the family):
+// every `-32602` this module answers carries `data.suggestion`.
 //
-// The unknown-argument gate knows which member names a tool declares, but not
-// what they *mean*. A caller who guessed the sibling tool's spelling - `node_path`
-// where this tool declares `path` - therefore got only the accepted-parameter
-// list: it names the right member and says nothing about what a path is. That is
-// the measured first half of TASK-060 D-5 (`-32602 Unknown parameter
-// 'node_path'`), and the 20 single writes it cost are why the second half is now
-// spelled out.
+// Why this lives in the registry and not in the ~30 handlers: `call_tool()` and
+// `call_deferred_tool()` are the only two ways a handler can be reached (the
+// transport, the deferred channel and the doctests all go through them - GDR-19
+// section 17.2) and both already hold the tool's `MCPToolDef`, i.e. its contract
+// `inputSchema`. A per-handler fix would have to be written 171 times and would
+// rot at the first new tool; here it is one rule, for every tool, current and
+// future. N-7's "no `-32602` may carry an empty suggestion" is therefore a
+// property of the registry, not a convention.
 //
-// The hint is keyed by an explicit table rather than by a name heuristic: an
-// editor tool that declares `path` for something that is NOT a node path
-// (`editor_open_scene`'s scene path), and every `project_*` tool that takes a
-// `res://` path, must not get advice about the edited scene root. The table is
-// the decision, so the decision is auditable and cannot misfire elsewhere.
+// What may and may not move (TASK-050 section 4):
+//   * the error **code** and the **message text** are untouched - a `-32602`
+//     keeps its code and its exact wording, only `data` grows;
+//   * the suggestion is only ever *added*: an error that already carries a
+//     non-empty `data.suggestion` keeps it byte for byte (that is what keeps the
+//     TASK-032 unknown-argument suggestion and the batch rollback envelope -
+//     `data.batch` *and* a suggestion in one payload - unchanged);
+//   * the accepted-parameter list is read from the live `inputSchema` and is
+//     therefore in the schema's own order, exactly like the TASK-032 gate's.
+//
+// The generator is schema-driven on purpose: it never guesses a per-tool
+// vocabulary. When the schema does not declare enough (a bare `array` with no
+// `items` shape, a member no schema declares) it says so *and* still lists the
+// accepted parameters, which is N-7's "explain the reason, never leave it empty".
 // ---------------------------------------------------------------------------
-struct _NodePathAliasTool {
-	const char *tool;
-	// The spelling this tool really requires.
-	const char *parameter;
-	// How many paths it takes, and where they live.
-	const char *shape;
-};
 
-static const _NodePathAliasTool NODE_PATH_ALIAS_TOOLS[] = {
-	{ "editor_set_node_property", "path", "one node path" },
-	{ "editor_get_node_properties", "path", "one node path" },
-	{ "editor_set_node_script_batch", "node_paths", "an array of node paths" },
-	{ "editor_set_node_property_updates", "updates", "one 'path' per entry of the 'updates' array" },
-};
-
-static const char *const NODE_PATH_ALIASES[] = { "path", "paths", "node_path", "node_paths" };
-
-static bool _is_node_path_alias(const String &p_name) {
-	for (int i = 0; i < 4; i++) {
-		if (p_name == NODE_PATH_ALIASES[i]) {
-			return true;
-		}
+static bool _has_non_empty_suggestion(const Variant &p_data) {
+	if (p_data.get_type() != Variant::DICTIONARY) {
+		return false;
 	}
-	return false;
+	const Variant suggestion = ((Dictionary)p_data).get("suggestion", Variant());
+	return suggestion.get_type() == Variant::STRING && !String(suggestion).is_empty();
 }
-
-// The text appended to the accepted-parameter list, or an empty string when the
-// unknown name says nothing about a node path.
-static String _node_path_alias_hint(const MCPToolDef &p_def, const Vector<String> &p_unknown) {
-	const String tool = String(p_def.name);
-	const _NodePathAliasTool *record = nullptr;
-	for (int i = 0; i < 4; i++) {
-		if (tool == NODE_PATH_ALIAS_TOOLS[i].tool) {
-			record = &NODE_PATH_ALIAS_TOOLS[i];
-			break;
-		}
-	}
-	if (record == nullptr) {
-		return String();
-	}
-	String alias;
-	for (int i = 0; i < p_unknown.size(); i++) {
-		if (_is_node_path_alias(p_unknown[i]) && p_unknown[i] != String(record->parameter)) {
-			alias = p_unknown[i];
-			break;
-		}
-	}
-	if (alias.is_empty()) {
-		return String();
-	}
-	return vformat("; '%s' is not a parameter of this tool: its node path is spelled '%s' (%s), and every node "
-				   "path of the editor node tools is resolved relative to the edited scene root - an absolute "
-				   "scene-tree path such as '/root/Main/Car' is not accepted",
-			alias, String(record->parameter), String(record->shape));
-}
-
-// ---------------------------------------------------------------------------
-// TASK-032 D4 (M4d): every argument a tool accepts is declared by its contract
-// `inputSchema`. A name outside that set is not "an extra the tool ignores" but
-// a caller's mistake: `project_get_settings` documents `prefix`, and a caller
-// who spelled it `filter` used to get `code: 0` plus the *unfiltered* list of 981
-// settings - a plausible-looking answer to a question that was never asked.
-//
-// The check lives here, in the registry, because this is the one entry point
-// every caller goes through: the immediate JSON-RPC path, the deferred channel
-// and the doctests all reach a handler through `call_tool()` /
-// `call_deferred_tool()`. A gate in the transport would leave the in-process
-// paths able to violate the rule.
-//
 
 // The accepted-parameter list of the TASK-032 gate and of every TASK-050
 // suggestion. A tool that declares nothing says so instead of listing an empty
@@ -487,6 +437,156 @@ static String _schema_type_phrase(const Variant &p_node, int p_depth) {
 		if (items.get_type() == Variant::DICTIONARY && p_depth < 3) {
 			return "an array of " + _schema_type_phrase(items, p_depth + 1);
 		}
+		return "an array";
+	}
+	if (type == "object" || type == "dictionary") {
+		const Variant members_value = node.get("properties", Variant());
+		if (members_value.get_type() == Variant::DICTIONARY && !((Dictionary)members_value).is_empty() && p_depth < 3) {
+			String phrase = vformat("an object with members {%s}", _schema_member_list(members_value));
+			const String required = _schema_required_list(node);
+			if (!required.is_empty()) {
+				phrase += vformat(", requiring {%s}", required);
+			}
+			return phrase;
+		}
+		return "an object";
+	}
+	if (type == "string" || type == "number" || type == "boolean") {
+		return String("a ") + type;
+	}
+	if (type == "integer") {
+		return "an integer";
+	}
+	if (type.is_empty()) {
+		return "any value";
+	}
+	return type;
+}
+
+// The acceptable *form* of one declared parameter: its type and its `enum` when
+// the contract declares one. Requiredness is added by `_schema_form` below and
+// deliberately left out of the bare phrase: a "Missing required parameter"
+// refusal already says which parameter is missing, and repeating "(required)"
+// inside its own parentheses is noise.
+static String _schema_options_phrase(const Variant &p_node) {
+	String phrase = _schema_type_phrase(p_node, 0);
+	if (p_node.get_type() == Variant::DICTIONARY) {
+		const Variant enum_value = ((Dictionary)p_node).get("enum", Variant());
+		if (enum_value.get_type() == Variant::ARRAY) {
+			const Array values = enum_value;
+			Vector<String> spellings;
+			for (int i = 0; i < values.size() && i < MCP_SUGGESTION_MEMBER_CAP; i++) {
+				spellings.push_back(values[i].get_type() == Variant::STRING ? String(values[i]) : JSON::stringify(values[i]));
+			}
+			if (!spellings.is_empty()) {
+				phrase += ", one of: " + String("|").join(spellings);
+			}
+		}
+	}
+	return phrase;
+}
+
+static String _schema_form(const Variant &p_node, bool p_required) {
+	String form = _schema_options_phrase(p_node);
+	if (p_required) {
+		form += " (required)";
+	} else if (p_node.get_type() == Variant::DICTIONARY && ((Dictionary)p_node).has("default")) {
+		form += vformat(", optional (default %s)", JSON::stringify(((Dictionary)p_node)["default"]));
+	} else {
+		form += " (optional)";
+	}
+	return form;
+}
+
+// The walk of one parameter path (`events[0].type`) through the contract schema.
+struct _SchemaPathLookup {
+	// The leaf member was found and `node` describes it.
+	bool resolved = false;
+	// Set when the path indexed an array whose schema declares no `items`: the
+	// value is the name of the member that carries that bare array, which is the
+	// fact the suggestion has to report instead of inventing a shape.
+	String array_name;
+	Variant node;
+	bool required = false;
+};
+
+static _SchemaPathLookup _lookup_schema_path(const Dictionary &p_properties, const Array &p_required, const String &p_path) {
+	_SchemaPathLookup lookup;
+	Dictionary members = p_properties;
+	Array required = p_required;
+	String rest = p_path;
+	// The last member name resolved, used for the "declares 'x' as a bare array"
+	// sentence.
+	String last_member;
+	bool have_node = false;
+	Variant node;
+
+	while (!rest.is_empty()) {
+		if (rest[0] == '.') {
+			rest = rest.substr(1);
+			continue;
+		}
+		if (rest[0] == '[') {
+			if (!have_node || node.get_type() != Variant::DICTIONARY) {
+				return lookup;
+			}
+			const Variant items = ((Dictionary)node).get("items", Variant());
+			if (items.get_type() != Variant::DICTIONARY) {
+				lookup.array_name = last_member;
+				return lookup;
+			}
+			node = items;
+			const Dictionary item_node = items;
+			members = item_node.get("properties", Dictionary());
+			required = item_node.get("required", Array());
+			const int close = rest.find("]");
+			rest = close < 0 ? String() : rest.substr(close + 1);
+			continue;
+		}
+		int end = rest.length();
+		for (int i = 0; i < rest.length(); i++) {
+			const char32_t c = rest[i];
+			if (c == '.' || c == '[') {
+				end = i;
+				break;
+			}
+		}
+		const String name = rest.substr(0, end);
+		rest = rest.substr(end);
+		if (name.is_empty() || !members.has(name)) {
+			return lookup;
+		}
+		node = members[name];
+		have_node = true;
+		last_member = name;
+		lookup.required = required.has(name);
+		if (node.get_type() == Variant::DICTIONARY) {
+			const Dictionary child = node;
+			members = child.get("properties", Dictionary());
+			required = child.get("required", Array());
+		} else {
+			members = Dictionary();
+			required = Array();
+		}
+	}
+	if (!have_node) {
+		return lookup;
+	}
+	lookup.resolved = true;
+	lookup.node = node;
+	return lookup;
+}
+
+// The parameter a `-32602` message is about, as a schema path. Only the module's
+// own spellings are recognised; anything else returns an empty string and the
+// caller falls back to the explicit "we cannot narrow it further" sentence.
+static String _parameter_name_in_message(const String &p_message) {
+	const String missing_prefix("Missing required parameter: ");
+	if (p_message.begins_with(missing_prefix)) {
+		return p_message.substr(missing_prefix.length()).strip_edges();
+	}
+	// `Parameter 'events[0].keycode' must be a string, got float`.
+	const int marker = p_message.find("Parameter '");
 	if (marker >= 0) {
 		const int start = marker + String("Parameter '").length();
 		const int close = p_message.find("'", start);
@@ -608,6 +708,79 @@ static Variant _unknown_tool_suggestion_data(const StringName &p_name) {
 }
 
 // ---------------------------------------------------------------------------
+// TASK-063 (b): the node-path alias hint.
+//
+// The unknown-argument gate knows which member names a tool declares, but not
+// what they *mean*. A caller who guessed the sibling tool's spelling - `node_path`
+// where this tool declares `path` - therefore got only the accepted-parameter
+// list: it names the right member and says nothing about what a path is. That is
+// the measured first half of TASK-060 D-5 (`-32602 Unknown parameter
+// 'node_path'`), and the 20 single writes it cost are why the second half is now
+// spelled out.
+//
+// The hint is keyed by an explicit table rather than by a name heuristic: an
+// editor tool that declares `path` for something that is NOT a node path
+// (`editor_open_scene`'s scene path), and every `project_*` tool that takes a
+// `res://` path, must not get advice about the edited scene root. The table is
+// the decision, so the decision is auditable and cannot misfire elsewhere.
+// ---------------------------------------------------------------------------
+struct _NodePathAliasTool {
+	const char *tool;
+	// The spelling this tool really requires.
+	const char *parameter;
+	// How many paths it takes, and where they live.
+	const char *shape;
+};
+
+static const _NodePathAliasTool NODE_PATH_ALIAS_TOOLS[] = {
+	{ "editor_set_node_property", "path", "one node path" },
+	{ "editor_get_node_properties", "path", "one node path" },
+	{ "editor_set_node_script_batch", "node_paths", "an array of node paths" },
+	{ "editor_set_node_property_updates", "updates", "one 'path' per entry of the 'updates' array" },
+};
+
+static const char *const NODE_PATH_ALIASES[] = { "path", "paths", "node_path", "node_paths" };
+
+static bool _is_node_path_alias(const String &p_name) {
+	for (int i = 0; i < 4; i++) {
+		if (p_name == NODE_PATH_ALIASES[i]) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// The text appended to the accepted-parameter list, or an empty string when the
+// unknown name says nothing about a node path.
+static String _node_path_alias_hint(const MCPToolDef &p_def, const Vector<String> &p_unknown) {
+	const String tool = String(p_def.name);
+	const _NodePathAliasTool *record = nullptr;
+	for (int i = 0; i < 4; i++) {
+		if (tool == NODE_PATH_ALIAS_TOOLS[i].tool) {
+			record = &NODE_PATH_ALIAS_TOOLS[i];
+			break;
+		}
+	}
+	if (record == nullptr) {
+		return String();
+	}
+	String alias;
+	for (int i = 0; i < p_unknown.size(); i++) {
+		if (_is_node_path_alias(p_unknown[i]) && p_unknown[i] != String(record->parameter)) {
+			alias = p_unknown[i];
+			break;
+		}
+	}
+	if (alias.is_empty()) {
+		return String();
+	}
+	return vformat("; '%s' is not a parameter of this tool: its node path is spelled '%s' (%s), and every node "
+				   "path of the editor node tools is resolved relative to the edited scene root - an absolute "
+				   "scene-tree path such as '/root/Main/Car' is not accepted",
+			alias, String(record->parameter), String(record->shape));
+}
+
+// ---------------------------------------------------------------------------
 // TASK-032 D4 (M4d): every argument a tool accepts is declared by its contract
 // `inputSchema`. A name outside that set is not "an extra the tool ignores" but
 // a caller's mistake: `project_get_settings` documents `prefix`, and a caller
@@ -664,12 +837,6 @@ static bool _reject_unknown_arguments(const MCPToolDef &p_def, const Dictionary 
 		return true;
 	}
 
-	Vector<String> accepted;
-	const Array accepted_keys = declared.keys();
-	for (int i = 0; i < accepted_keys.size(); i++) {
-		accepted.push_back((String)accepted_keys[i]);
-	}
-
 	String message;
 	if (unknown.size() == 1) {
 		message = vformat("Unknown parameter '%s' for tool '%s'", unknown[0], String(p_def.name));
@@ -710,7 +877,11 @@ Variant MCPToolRegistry::call_tool(const StringName &p_name, const Dictionary &p
 		r_error = MCPToolError::internal(vformat("Tool has no handler: %s", String(p_name)));
 		return Variant();
 	}
-	return def->handler(p_args, r_error);
+	const Variant result = def->handler(p_args, r_error);
+	// TASK-050 O-1/N-7: the immediate half of the one place every `-32602` gets
+	// its `data.suggestion`.
+	_add_invalid_params_suggestion(*def, r_error);
+	return result;
 }
 
 bool MCPToolRegistry::is_deferred_tool(const StringName &p_name) const {
@@ -722,6 +893,7 @@ MCPDeferred::Task *MCPToolRegistry::call_deferred_tool(const StringName &p_name,
 	const MCPToolDef *def = tools.getptr(p_name);
 	if (def == nullptr) {
 		r_error = MCPToolError::invalid_params(vformat("Unknown tool: %s", String(p_name)));
+		r_error.data = _unknown_tool_suggestion_data(p_name);
 		return nullptr;
 	}
 	// TASK-032 D4: the deferred half of the same gate, before the tool is handed
@@ -733,5 +905,10 @@ MCPDeferred::Task *MCPToolRegistry::call_deferred_tool(const StringName &p_name,
 		r_error = MCPToolError::internal(vformat("Tool is not deferred: %s", String(p_name)));
 		return nullptr;
 	}
-	return def->pending_handler(p_args, r_error);
+	MCPDeferred::Task *task = def->pending_handler(p_args, r_error);
+	// TASK-050 O-1/N-7: the deferred half. A `pending_handler` validates its
+	// arguments before it builds a task, so a refused call is refused *here* -
+	// the O-1 rule must hold on this entry point too, not only on `call_tool`.
+	_add_invalid_params_suggestion(*def, r_error);
+	return task;
 }

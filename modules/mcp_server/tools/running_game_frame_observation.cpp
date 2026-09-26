@@ -126,9 +126,22 @@ static int _int_clamped(int64_t p_value) {
 	return (int)p_value;
 }
 
+namespace MCPTools {
+
+// TASK-053 section 2.3 (M-5): the whole rule of `sample_stride`, in one place
+// and with no dependency on a game being up - which is what makes it testable in
+// the `--test` process (`tools/running_game_frame_observation.h`).
+bool sample_is_returned(int p_index, int p_stride) {
+	if (p_stride <= 1) {
+		return true;
+	}
+	return p_index >= 0 && (p_index % p_stride) == 0;
+}
+
+} // namespace MCPTools
+
 // A count of frames that has to be at least one, or `-32602`.
-static bool _require_at_least_one(const Dictionary &p_args, const String &p_key, int64_t p_default, int64_t &r_out, MCPToolError &r_error) {
-	if (!optional_int(p_args, p_key, p_default, r_out, r_error)) {
+static bool _require_at_least_one(const Dictionary &p_args, const String &p_key, int64_t p_default, int64_t &r_out, MCPToolError &r_error) {	if (!optional_int(p_args, p_key, p_default, r_out, r_error)) {
 		return false;
 	}
 	if (r_out < 1) {
@@ -187,31 +200,58 @@ static String _sha256_hex(const Vector<uint8_t> &p_bytes) {
 // Observable contract (as implemented):
 //   * `node_path` (string, required; blank -> -32602), `properties` (array of
 //     strings, required), `frame_count` (integer, default 60, >= 1),
-//     `frame_interval` (integer, default 1, >= 1);
+//     `frame_interval` (integer, default 1, >= 1), `sample_stride` (integer,
+//     default 1, >= 1 - TASK-053 section 2.3, M-5);
 //   * one sample every `frame_interval` frames, `frame_count` times, each
 //     `{"frame": <sample index>, <property>: <value>, ...}` with every value
 //     through the module's single `serialize_variant`;
 //   * `{"node_path": <resolved absolute path>, "samples": [...],
-//     "frame_count": <collected>}`;
+//     "frame_count": <returned sample count>}`, and - only when the caller asked
+//     for a stride greater than 1 - `"sample_stride"` and `"observed_count"`;
+//   * TASK-053 section 2.3 (M-5) added `sample_stride`, and it is a **payload**
+//     knob, not a time knob: the game is still observed every `frame_interval`
+//     frames (`observed_count` of them), and the answer carries every
+//     `sample_stride`-th observation, the first one always. Omitting it (or
+//     passing 1) answers the shape above with no extra key, byte for byte;
 //   * a node that is not there when the call arrives -> `-32001`; a node that
 //     disappears while the series runs -> `-32001` as well (the migration source
 //     would have dereferenced a freed object); no running scene -> `-32000`;
 //     mistyped arguments -> `-32602`;
 //   * the framework ceiling (30 s by default) ends a series that is still
-
-		// Re-resolving through the id (instead of holding the `Node *`) is what
-		// makes a node deleted between two samples a clean error.
-		Node *node = ObjectDB::get_instance<Node>(node_id);
-		if (node == nullptr) {
-			return MCPDeferred::TickResult::failed(MCPToolError::not_found(
-					vformat("Node '%s'", requested_path),
-					"The node was removed while it was being sampled; sample it again from a node of the current scene"));
-		}
-
-		Dictionary sample;
-		sample["frame"] = collected;
-		for (int i = 0; i < properties.size(); i++) {
-			sample[properties[i]] = serialize_variant(node->get(properties[i]));
+//     running with `-32000`, `data.suggestion` and `data.timeout_ms`.
+//
+// `properties` is declared `required` by the contract, unlike
+// `running_game_get_node_properties` where an absent list means "everything"; it
+// is therefore required here too, and an *empty* list is still accepted (the
+// migration source's behaviour: the sample then carries only its index).
+//
+// `sample_stride` versus `frame_interval` - why both exist, and why the name is
+// `sample_stride`:
+//   * `frame_interval` decides **when the game is observed** (the sampling grid
+//     of the game clock). Raising it makes the observation cheaper and changes
+//     what the series is about;
+//   * `sample_stride` decides **how much of the observed series travels back**
+//     (the grid of the answer). The racing test plan's own continuity assertions
+//     (`RACING-TEST-PLAN.md` AC-4/AC-5) need `frame_interval: 1` - a moving body
+//     sampled every 10th frame cannot be checked for "no teleport" - and that is
+//     exactly the call whose answer is 23 020 bytes for three properties over
+//     180 frames (REPORT-AUDIT-RACING-BACKLOG section 3.5). A stride lets that
+//     call keep its one-frame observation grid and answer 18 points instead;
+//   * the name is `sample_stride` rather than `sample_interval`/`sample_step`
+//     because "interval" already means a frame gap in this schema
+//     (`frame_interval`) and "step" already means an element of
+//     `running_game_run_test_scenario`'s `steps` array. "Stride" has exactly one
+//     meaning here ("keep every Nth"), and it is the word the caller needs to
+//     read the answer: `observed_count` observations, one every `sample_stride`.
+// ---------------------------------------------------------------------------
+class NodePropertySamplesTask : public MCPDeferred::Task {
+public:
+	NodePropertySamplesTask(const ObjectID &p_node_id, const String &p_requested_path, const Vector<String> &p_properties,
+			int p_frame_count, int p_frame_interval, int p_sample_stride, int64_t p_start_frame) :
+			node_id(p_node_id),
+			requested_path(p_requested_path),
+			properties(p_properties),
+			frame_count(p_frame_count),
 			frame_interval(p_frame_interval),
 			sample_stride(p_sample_stride),
 			next_frame(p_start_frame) {}
@@ -300,6 +340,19 @@ static MCPDeferred::Task *_tool_get_node_property_samples(const Dictionary &p_ar
 	if (!_require_at_least_one(p_args, "frame_interval", 1, frame_interval, r_error)) {
 		return nullptr;
 	}
+	// TASK-053 M-5. `_require_at_least_one` is not reused: its message is about
+	// observing a frame ("an observation needs the game to advance at least one
+	// frame"), which is the wrong sentence for a stride.
+	int64_t sample_stride = 0;
+	if (!optional_int(p_args, "sample_stride", 1, sample_stride, r_error)) {
+		return nullptr;
+	}
+	if (sample_stride < 1) {
+		r_error = MCPToolError::invalid_params(vformat(
+				"Parameter 'sample_stride' must be at least 1: a stride of %d would return no sample at all",
+				(int)sample_stride));
+		return nullptr;
+	}
 
 	SceneTree *tree = SceneTree::get_singleton();
 	if (tree == nullptr) {
@@ -322,7 +375,8 @@ static MCPDeferred::Task *_tool_get_node_property_samples(const Dictionary &p_ar
 	// transport is in; the task's first observation therefore lands on the next
 	// frame (the queue never ticks a task in its own start frame).
 	return memnew(NodePropertySamplesTask(node->get_instance_id(), node_path, properties,
-			_int_clamped(frame_count), _int_clamped(frame_interval), (int64_t)tree->get_frame()));
+			_int_clamped(frame_count), _int_clamped(frame_interval), _int_clamped(sample_stride),
+			(int64_t)tree->get_frame()));
 }
 
 // ---------------------------------------------------------------------------
@@ -413,65 +467,6 @@ private:
 
 static MCPDeferred::Task *_tool_find_node_when_available(const Dictionary &p_args, MCPToolError &r_error) {
 	String node_path;
-	if (!require_string(p_args, "node_path", node_path, r_error)) {
-		return nullptr;
-	}
-	if (node_path.strip_edges().is_empty()) {
-		r_error = MCPToolError::invalid_params("Parameter 'node_path' must not be empty");
-		return nullptr;
-	}
-	int64_t poll_frames = 0;
-	if (!_require_at_least_one(p_args, "poll_frames", 5, poll_frames, r_error)) {
-		return nullptr;
-	}
-	double timeout_seconds = 0.0;
-	if (!_optional_positive_seconds(p_args, "timeout", 5.0, timeout_seconds, r_error)) {
-		return nullptr;
-	}
-
-	SceneTree *tree = SceneTree::get_singleton();
-	if (tree == nullptr) {
-		// Nothing to poll at all (the doctest binary, a process that never
-		// started a main loop). Waiting the full `timeout` here would be a lie
-		// about what this process can ever observe.
-		r_error = MCPToolError::no_scene();
-		return nullptr;
-	}
-
-	const uint64_t timeout_ms = (uint64_t)(timeout_seconds * 1000.0 + 0.5);
-	return memnew(FindNodeWhenAvailableTask(node_path, _int_clamped(poll_frames), timeout_ms, (int64_t)tree->get_frame()));
-}
-
-// ---------------------------------------------------------------------------
-// running_game_capture_frames (old `capture_frames`)
-//
-// Observable contract (as implemented):
-//   * `count` (integer, default 5, >= 1), `frame_interval` (integer, default 10,
-//     >= 1), `half_resolution` (boolean, default true);
-//   * every `frame_interval` frames one frame of the running game's root viewport
-//     is read back; each entry is
-//     `{"index": <i>, "frame": <SceneTree frame counter>, "width", "height",
-//     "image_base64": <PNG>, "sha256": <hex digest of that PNG>}`;
-//   * `{"frames": [...], "count": N}` in capture order;
-//   * a process without a framebuffer (the `--headless` display server, whose
-//     dummy renderer has no texture storage) is refused with `-32000` and a
-//     suggestion *before* the task is created, instead of returning `count`
-//     empty pictures;
-//   * the framework ceiling ends a still-running capture with `-32000`,
-//     `data.suggestion` and `data.timeout_ms`.
-//
-// `frame` and `sha256` are additions to the migration source's key set
-// (`index`/`width`/`height`/`image_base64`), and they are the point of the tool:
-// TASK-011 section 2.2 asks for frames that are provably *not* the same frame
-// copied N times, and `index` alone cannot prove it (a broken implementation
-// would happily emit 0..N-1 over one image). The SceneTree frame counter proves
-// the frames were really N frames apart and the digest proves the pixels differ.
-// ---------------------------------------------------------------------------
-class CaptureFramesTask : public MCPDeferred::Task {
-public:
-	CaptureFramesTask(int p_count, int p_frame_interval, bool p_half_resolution, int64_t p_start_frame) :
-			count(p_count),
-			frame_interval(p_frame_interval),
 	if (!require_string(p_args, "node_path", node_path, r_error)) {
 		return nullptr;
 	}
@@ -665,11 +660,16 @@ void register_running_game_frame_observation_tools(MCPToolRegistry &r_registry) 
 		v4[String::utf8("items")] = v5;
 		v4[String::utf8("type")] = String::utf8("array");
 		v0[String::utf8("properties")] = v4;
+		Dictionary v6;
+		v6[String::utf8("default")] = 1;
+		v6[String::utf8("description")] = String::utf8("回传采样步长：仍然每 frame_interval 帧观察一次，但只回传每第 N 个观察点（第一个恒回传）；缺省 1 与旧行为逐字节一致，大于 1 时响应追加 sample_stride 与 observed_count 两个字段（观察点总数），frame_count 始终是回传的样本数");
+		v6[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("sample_stride")] = v6;
 		schema[String::utf8("properties")] = v0;
-		Array v6;
-		v6.push_back(String::utf8("node_path"));
-		v6.push_back(String::utf8("properties"));
-		schema[String::utf8("required")] = v6;
+		Array v7;
+		v7.push_back(String::utf8("node_path"));
+		v7.push_back(String::utf8("properties"));
+		schema[String::utf8("required")] = v7;
 		schema[String::utf8("type")] = String::utf8("object");
 
 		builder.channel("running_game").verb("get").scope(MCPToolScope::GAME).mutating(false).schema(schema).pending_handler(_tool_get_node_property_samples);
