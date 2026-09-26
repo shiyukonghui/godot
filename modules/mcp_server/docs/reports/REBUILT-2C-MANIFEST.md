@@ -709,4 +709,50 @@ ok_file_effect_observed=5 / ok_no_effect_observed=4`), because the fixes change
 * the after-run ledger shows `assertion_failed` on game seq 10/11/12 — the three
   `passed:false` responses the before-run trace could not express.
 
+## H-7. Gate ledger (task-089, real output)
+
+Binary: `bin\godot.windows.editor.x86_64.mono.console.exe`, built at HEAD
+`80035ed11` and self-reporting `4.8.dev.mono.custom_build.80035ed11`. Gate runner
+`work/task089/run_gates.ps1` (each gate is its own `cmd.exe` child; the exit code
+is echoed **inside** the child and parsed, because `$p.ExitCode` came back empty
+for every redirected child on this machine). Logs:
+`logs/task089_final_g0*.stdout.txt`, summary `logs/task089_final.summary.txt`.
+
+| # | gate | command | result |
+|---|---|---|---|
+| 1 | module doctest | `--headless --test --test-case=[MCPServer]*` | **exit 0** — `148/148 passed`, `6464/6464` assertions, `SUCCESS!` (was 143/6396 at 2c-7; +5 cases from this batch) |
+| 2 | full doctest | `--headless --test` | **exit 0** — `1574/1574 passed / 3 skipped`, `430777/430777` assertions, `SUCCESS!` |
+| 3 | group manifests | `python docs\scripts\check_tool_groups.py` | **exit 0** — `TOOL-GROUPS CHECK PASS`, 5681 B, sha `b83d79d3…` |
+| 4 | contract subset (live) | `scripts\check_contract_subset.ps1` | **exit 0** — `3/3 checks passed`; editor 9888 `tools=154`, game 9889 `tools=73`, `guard_user_port_9877` PASS |
+| 5 | rename map | `python docs\scripts\check_rename_map.py` | **exit 0** — `RESULT: PASS`; `177 == 174 - 2 - 1 + 6` |
+| 6 | tautologies | `python scripts\check_tautologies.py` | **exit 0** — `TAUTOLOGY CHECK PASS` |
+| 7 | exit-code propagation | `python scripts\check_exit_propagation.py --probes` | **exit 0** — `PROBES: 10/10` |
+| 8 | hardcoded counts | `python scripts\check_hardcoded_counts.py` | **exit 0** — `UNCLASSIFIED = 0` |
+| 9 | engine anchor | `check_engine_anchor.ps1 -VersionText '4.8.dev.mono.custom_build.80035ed11'` | **exit 0** — `VERDICT=ANCHOR_EQUAL`, `diff_count=0`, `RESULT PASS` |
+| + | M1 acceptance | `powershell -NoProfile -ExecutionPolicy Bypass -File modules\mcp_server\scripts\accept_m1.ps1` | **exit 0** — `22/22 cases passed` (log `logs/task089_accept_m1.stdout.txt`) |
+| + | traceability demo | `mcp089_live_evidence.ps1` + `mcp_trace_ledger.py` | editor `calls=30` `facts_complete 30/30`; game `calls=15` `facts_complete 15/15`; counts in §4.2 of `MCP-TRACEABILITY.md` |
+
+**Honest note:** the non-mono binary is **not** rebuilt at this HEAD (it is older
+than 2c-7's own, which was already declared); every number above is the mono
+binary's, which is the same source. The 2c-7 declaration on this point stands.
+
+## H-8. Iron rules
+
+* Only `H:\rebuild\godot`, `H:\rebuild\projects\` and
+  `C:\Users\wyl\AppData\Local\Temp\mcp-recovery\` were written.
+* `F:` was **never** written. Pre-flight and post-flight measured **byte-identical**:
+  `F:\moonbit-hof-rs\DECISIONS.md` 537 251 B sha
+  `114B2A8218E35DF8E998FA4329D99F97D6037987E19FBA4A324B567C009CF323`;
+  `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` 48 749 B sha
+  `8F8051C4C0F8941089F0B21A193CEF7C51FA7C41D7E312B1463EA8593F313C54`.
+* No shell redirection anywhere: every log is written by
+  `Start-Process -RedirectStandardOutput/-RedirectStandardError`, every text file
+  by `Set-Content`/`-NoNewline`, a Python writer, or the `write` tool.
+* Destructive commands: exactly one guarded deletion ran, four times, before each
+  build — `work/task088/del_stale_objs.py --apply`: absolute paths only, under the
+  single whitelisted prefix `H:\rebuild\godot\bin\obj\`, the exact four paths the
+  tracked `mcp057_build_mono.cmd` names, the manifest printed before removal, a
+  dry run first, no wildcard and no `..` (3 present, 1 absent each time).
+* Builds and engine runs start from `cmd.exe` (iron rule 4), with `WaitForExit()`.
+
 
