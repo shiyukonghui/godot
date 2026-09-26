@@ -538,22 +538,36 @@ function ConvertFrom-JsonSafe {
 
 # The editor spends a while on its first filesystem scan and layout load. If a
 # frame takes long, connections pending beyond the listen backlog are reset by
-# the OS, so every case waits until the pump runs steadily first.
+# the OS, so every case waits until the pump is running before starting.
+#
+# TASK-094 (defect D-2): the criterion used to be "at least 20 frames between
+# two samples one second apart, three times in a row" - a *throughput*
+# requirement, not a readiness one. On a loaded machine (a game session and a
+# build running next to it) the editor pump is alive but slower than 20 fps, so
+# the loop never qualified, the function gave up after its whole deadline, and
+# the cases then ran against a pump that was still settling: 5/22 with
+# `status=0` and `Wait` exceptions. Readiness is "the loop advances", not "the
+# loop is fast": the predicate below only asks for six consecutive strictly
+# increasing frame counts, sampled every 250 ms (about 1.5 s of uninterrupted
+# progress at *any* frame rate). It is bounded by the same deadline and still
+# says so loudly when it cannot be met.
 function Wait-ForStablePump {
     param([int]$Port, [int]$TimeoutMs = 180000)
     $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
-    $consecutive = 0
+    $increases = 0
     $previous = $null
     while ([DateTime]::UtcNow -lt $deadline) {
         $probe = Invoke-StatusProbe -Port $Port
         $json = ConvertFrom-JsonSafe -Text $probe.Body
         if ($null -ne $json) {
             $frames = [int]$json.frame_count
-            if ($null -ne $previous -and ($frames - $previous) -ge 20) { $consecutive++ } else { $consecutive = 0 }
-            if ($consecutive -ge 3) { return $true }
+            if ($null -ne $previous) {
+                if ($frames -gt $previous) { $increases++ } else { $increases = 0 }
+                if ($increases -ge 6) { return $true }
+            }
             $previous = $frames
         }
-        Start-Sleep -Milliseconds 1000
+        Start-Sleep -Milliseconds 250
     }
     return $false
 }
@@ -667,9 +681,9 @@ try {
         Write-Host (Get-LogText -Path $script:editorHandle.Err)
         throw 'editor endpoint not reachable'
     }
-    Write-Host 'waiting for a steadily pumping main loop ...'
+    Write-Host 'waiting for the main loop to advance (frame_count strictly increasing) ...'
     if (-not (Wait-ForStablePump -Port $EditorPort -TimeoutMs 180000)) {
-        Write-Host 'WARNING: the pump never looked steady, running the cases anyway'
+        Write-Host 'WARNING: the main loop never advanced; running the cases anyway'
     }
 
     # ------------------------------------------------------------------
