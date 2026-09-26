@@ -258,15 +258,165 @@ static Response _handle_tools_call(const String &p_id_json, const Variant &p_par
 	return _result_response(200, _envelope_result(p_id_json, MCPTools::content_result(tool_result)));
 }
 
+// ---------------------------------------------------------------------------
+// `_immediate` / `_tag` / `_effective_timeout` / `_dispatch_tools_call`:
+// Wraps one immediate response in a `Dispatch`.
+static Dispatch _immediate(const Response &p_response) {
+	Dispatch dispatch;
+	dispatch.response = p_response;
+	return dispatch;
+}
+
+// is a pass-through that copies nothing.
+static Dispatch _tag(Dispatch p_dispatch, const MCPTrace::Record &p_trace) {
+	if (p_trace.traceable) {
+		p_dispatch.trace = p_trace;
+	}
+	return p_dispatch;
+}
+
+// The effective deadline of a deferred request: the framework ceiling
+// (`p_default_timeout_ms`, 0 = none) can only be *lowered* by the tool's own
+// deadline (`Task::get_timeout_ms()`, 0 = none). A tool may therefore shorten a
+// wait - `running_game_find_node_when_available` does, from its own `timeout`
+// parameter - but never extend it past the configured ceiling.
+static uint64_t _effective_timeout(uint64_t p_default_timeout_ms, uint64_t p_task_timeout_ms) {
+	if (p_task_timeout_ms == 0) {
+		return p_default_timeout_ms;
+	}
+	if (p_default_timeout_ms == 0) {
+		return p_task_timeout_ms;
+	}
+	return MIN(p_task_timeout_ms, p_default_timeout_ms);
+}
+
+static Dispatch _dispatch_tools_call(const String &p_id_json, const Variant &p_params, const MCPToolRegistry &p_registry, bool p_is_editor, uint64_t p_default_timeout_ms, MCPTrace::Record &r_trace) {
+	if (p_params.get_type() != Variant::NIL && p_params.get_type() != Variant::DICTIONARY) {
+		r_trace.ok = false;
+		r_trace.error_code = INVALID_PARAMS;
+		r_trace.error_message = "Invalid params: expected an object";
+		return _tag(_immediate(_error_response(p_id_json, INVALID_PARAMS, "Invalid params: expected an object")), r_trace);
+	}
+
+	Dictionary params;
+	if (p_params.get_type() == Variant::DICTIONARY) {
+		params = (Dictionary)p_params;
+	}
+
+	const Variant name_value = params.get("name", Variant());
+	if (name_value.get_type() != Variant::STRING || ((String)name_value).is_empty()) {
+		r_trace.ok = false;
+		r_trace.error_code = INVALID_PARAMS;
+		r_trace.error_message = "Missing tool name";
+		return _tag(_immediate(_error_response(p_id_json, INVALID_PARAMS, "Missing tool name")), r_trace);
+	}
+	const String tool_name = (String)name_value;
+
+	const Variant arguments_value = params.get("arguments", Variant());
+	if (arguments_value.get_type() != Variant::NIL && arguments_value.get_type() != Variant::DICTIONARY) {
+		r_trace.ok = false;
+		r_trace.error_code = INVALID_PARAMS;
+		r_trace.error_message = "Invalid arguments: expected an object";
+
+
+
+		return _tag(_immediate(_error_response(p_id_json, INVALID_PARAMS, "Invalid arguments: expected an object")), r_trace);
+	}
+	Dictionary arguments;
+	if (arguments_value.get_type() == Variant::DICTIONARY) {
+		arguments = (Dictionary)arguments_value;
+	}
+
+	if (r_trace.traceable) {
+		// The canonical form of the arguments (sorted keys) - the same
+		// `JSON::stringify` the wire uses, so "the same arguments twice" is
+		// recognisable as such in the trace.
+		r_trace.args_json = JSON::stringify(arguments);
+		r_trace.args_bytes = r_trace.args_json.utf8().length();
+	}
+
+	if (!p_registry.is_tool_visible(tool_name, p_is_editor)) {
+		// Unknown tool, or a tool that belongs to the other process.
+		const String message = vformat("Method not found: %s", tool_name);
+		r_trace.ok = false;
+		r_trace.error_code = METHOD_NOT_FOUND;
+		r_trace.error_message = message;
+		return _tag(_immediate(_error_response(p_id_json, METHOD_NOT_FOUND, message)), r_trace);
+	}
+
+	MCPToolError tool_error;
+
+	if (p_registry.is_deferred_tool(tool_name)) {
+		// GDR-20: the tool answers across frames, so the request is handed over
+		// to the transport's pending table instead of being answered here.
+		MCPDeferred::Task *task = p_registry.call_deferred_tool(tool_name, arguments, tool_error);
+		if (tool_error.is_error() || task == nullptr) {
+			if (!tool_error.is_error()) {
+				tool_error = MCPToolError::internal(vformat("Deferred tool returned no task: %s", tool_name));
+			}
+			r_trace.ok = false;
+			r_trace.error_code = tool_error.code;
+			r_trace.error_message = tool_error.message;
+			return _tag(_immediate(_error_response(p_id_json, tool_error.code, tool_error.message, 200, tool_error.data)), r_trace);
+		}
+		Dispatch deferred;
+		deferred.deferred = true;
+		deferred.task = task;
+		deferred.id_json = p_id_json;
+		deferred.tool_name = tool_name;
+		deferred.timeout_ms = _effective_timeout(p_default_timeout_ms, task->get_timeout_ms());
+		// Whether the call succeeded is only known when the completion arrives,
+		// so the trace is marked deferred and the transport finishes it.
+		r_trace.deferred = true;
+		r_trace.timeout_ms = deferred.timeout_ms;
+		return _tag(deferred, r_trace);
+	}
+
+	const Variant tool_result = p_registry.call_tool(tool_name, arguments, tool_error);
+	if (tool_error.is_error()) {
+		// The code and the optional `data` (a `suggestion`) come from the tool
+		// layer (GDR-6 / GDR-14): -32602 for an argument problem, -32001 for a
+		// missing resource, -32000 for a missing state. No `console_output`
+		// delta exists in v1, so a failing tool always maps to a JSON-RPC error
+		// object (GDR-6, GDR-8).
+		r_trace.ok = false;
+		r_trace.error_code = tool_error.code;
+		r_trace.error_message = tool_error.message;
+		return _tag(_immediate(_error_response(p_id_json, tool_error.code, tool_error.message, 200, tool_error.data)), r_trace);
+	}
+
+	// `MCPTools::content_result` is the single place that builds the success
+	// envelope, so every tool answers with the very same wire shape (GDR-6).
+	r_trace.ok = true;
+	return _tag(_immediate(_result_response(200, _envelope_result(p_id_json, MCPTools::content_result(tool_result)))), r_trace);
+}
+
+
 Response handle(const String &p_payload, const MCPToolRegistry &p_registry, bool p_is_editor) {
+	Dispatch dispatched = dispatch(p_payload, p_registry, p_is_editor);
+	if (!dispatched.deferred) {
+		return dispatched.response;
+	}
+	// No frame loop exists on this path, so the task the tool just produced has
+	// to be released here and the call has to be refused. Answering it would
+	// mean ticking once and returning the first frame's observation as if it
+	// were the whole series (GDR-20).
+	const String tool_name = dispatched.tool_name;
+	memdelete(dispatched.task);
+	return _error_response(dispatched.id_json, INTERNAL_ERROR,
+			vformat("Tool '%s' answers across frames and needs the transport's deferred channel (GDR-20)", tool_name));
+}
+Dispatch dispatch(const String &p_payload, const MCPToolRegistry &p_registry, bool p_is_editor, uint64_t p_default_timeout_ms, bool p_trace) {
+	MCPTrace::Record trace;
+	trace.traceable = p_trace;
 	JSON json;
 	if (json.parse(p_payload) != OK) {
-		return _error_response("null", PARSE_ERROR, "Parse error", 400);
+		return _tag(_immediate(_error_response("null", PARSE_ERROR, "Parse error", 400)), trace);
 	}
 
 	const Variant data = json.get_data();
 	if (data.get_type() != Variant::DICTIONARY) {
-		return _error_response("null", INVALID_REQUEST, "Invalid request: request must be a JSON object");
+		return _tag(_immediate(_error_response("null", INVALID_REQUEST, "Invalid request: request must be a JSON object")), trace);
 	}
 
 	const String id_json = _extract_raw_id(p_payload);
@@ -274,7 +424,7 @@ Response handle(const String &p_payload, const MCPToolRegistry &p_registry, bool
 
 	const Variant method_value = request.get("method", Variant());
 	if (method_value.get_type() != Variant::STRING) {
-		return _error_response(id_json, INVALID_REQUEST, "Invalid request: missing method");
+		return _tag(_immediate(_error_response(id_json, INVALID_REQUEST, "Invalid request: missing method")), trace);
 	}
 	const String method = (String)method_value;
 
@@ -295,29 +445,29 @@ Response handle(const String &p_payload, const MCPToolRegistry &p_registry, bool
 		result["capabilities"] = capabilities;
 		result["serverInfo"] = server_info;
 
-		return _result_response(200, _envelope_result(id_json, result));
+		return _tag(_immediate(_result_response(200, _envelope_result(id_json, result))), trace);
 	}
 
 	if (method == "notifications/initialized") {
 		// A notification carries no body at all.
-		return _result_response(202, String());
+		return _tag(_immediate(_result_response(202, String())), trace);
 	}
 
 	if (method == "tools/list") {
 		Dictionary result;
 		result["tools"] = p_registry.build_tools_list(p_is_editor);
-		return _result_response(200, _envelope_result(id_json, result));
+		return _tag(_immediate(_result_response(200, _envelope_result(id_json, result))), trace);
 	}
 
 	if (method == "tools/call") {
-		return _handle_tools_call(id_json, request.get("params", Variant()), p_registry, p_is_editor);
+		return _dispatch_tools_call(id_json, request.get("params", Variant()), p_registry, p_is_editor, p_default_timeout_ms, trace);
 	}
 
 	if (method == "ping") {
-		return _result_response(200, _envelope_result(id_json, Dictionary()));
+		return _tag(_immediate(_result_response(200, _envelope_result(id_json, Dictionary()))), trace);
 	}
 
-	return _error_response(id_json, METHOD_NOT_FOUND, vformat("Method not found: %s", method));
+	return _tag(_immediate(_error_response(id_json, METHOD_NOT_FOUND, vformat("Method not found: %s", method))), trace);
 }
 
 
