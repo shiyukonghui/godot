@@ -293,9 +293,36 @@ public:
 	int get_event_lines_written() const { return event_lines_written; }
 
 private:
-	String _build_line(uint64_t p_connection_id, const Record &p_record, uint64_t p_duration_ms, uint64_t p_pending_ms) const;
+	String _build_line(uint64_t p_connection_id, const Record &p_record, uint64_t p_duration_ms, uint64_t p_pending_ms,
+			const Dictionary &p_sidecars) const;
 	bool _append(const String &p_line, bool p_counts_as_request = true);
 	void _disable_after_failure(const String &p_reason);
+
+	// -----------------------------------------------------------------------
+	// TASK-092 (item B1): the sidecar channel for the three bounded payloads.
+	//
+	// `args`, `result_json` and `error_data_json` are cropped at
+	// `max_args_bytes`, which is what made a row's own facts unreconstructible:
+	// the Pong session recorded `args_truncated: true` with `args_bytes: 9464`,
+	// so the ledger could see *that* something was cropped and never *what* was
+	// cropped. The rule this replaces a silent crop with is:
+	//
+	//   * a payload inside the limit is inline, complete, and gets no sidecar;
+	//   * a payload over the limit is written **whole** to
+	//     `<trace dir>/<trace stem>.sidecar/<seq>-<kind>.json`, and the line
+	//     carries `{path, relative_path, bytes, sha256}` so an observer can
+	//     re-read and re-hash exactly the bytes the trace had to crop;
+	//   * a sidecar that cannot be written puts `<kind>_sidecar_error` on the
+	//     line (`<kind>_truncated` stays true) - the crop is then declared, not
+	//     hidden, and the recorder never disturbs the call it is describing.
+	//
+	// `sha256` is `FileAccess::get_sha256()`'s answer - the same function the
+	// file-effect rows use - so the reader's recomputation and the line agree by
+	// construction. `relative_path` is what makes the evidence survive the trace
+	// being copied to another machine; `path` is the absolute original.
+	// -----------------------------------------------------------------------
+	String _sidecar_dir() const;
+	Dictionary _write_sidecar(int p_seq, const String &p_kind, const String &p_payload);
 
 	Ref<FileAccess> file;
 	String path;

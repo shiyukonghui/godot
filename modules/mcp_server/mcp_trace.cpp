@@ -30,6 +30,7 @@
 
 #include "mcp_trace.h"
 
+#include "core/io/dir_access.h"
 #include "core/io/json.h"
 #include "core/os/os.h"
 #include "core/version.h"
@@ -317,7 +318,104 @@ bool Recorder::_append(const String &p_line, bool p_counts_as_request) {
 	return true;
 }
 
-String Recorder::_build_line(uint64_t p_connection_id, const Record &p_record, uint64_t p_duration_ms, uint64_t p_pending_ms) const {
+// TASK-092 (item B1): the sidecar directory of a trace file. `<dir>/<stem>.sidecar`,
+// or `mcp-trace.sidecar` for a path with no usable file name. One directory per
+// trace, so two processes writing `.jsonl` files side by side never collide.
+static const char *const SIDECAR_SUFFIX = ".sidecar";
+
+String Recorder::_sidecar_dir() const {
+	const String base = path.get_base_dir();
+	String stem = path.get_file().get_basename();
+	if (stem.is_empty()) {
+		stem = "mcp-trace";
+	}
+	const String relative = stem + SIDECAR_SUFFIX;
+	return base.is_empty() ? relative : base.path_join(relative);
+}
+
+Dictionary Recorder::_write_sidecar(int p_seq, const String &p_kind, const String &p_payload) {
+	Dictionary result;
+	const String dir = _sidecar_dir();
+	const Error made = DirAccess::make_dir_recursive_absolute(dir);
+	if (made != OK && !DirAccess::dir_exists_absolute(dir)) {
+		result["error"] = vformat("cannot create '%s' (error %d)", dir, (int)made);
+		return result;
+	}
+
+	String stem = path.get_file().get_basename();
+	if (stem.is_empty()) {
+		stem = "mcp-trace";
+	}
+	const String file_name = vformat("%04d-%s.json", p_seq, p_kind);
+	const String abs_path = dir.path_join(file_name);
+
+	// The same backup-save carrier the trace file itself disables: in an editor
+	// process `FileAccess::open(WRITE)` otherwise writes `<path><ticks>.tmp` and
+	// the sidecar would not exist while the observed process is still running -
+	// which is exactly when an observer wants to read it. The option is restored
+	// immediately; this runs on the main thread and nothing below re-enters a
+	// file writer.
+	const bool previous_backup_save = FileAccess::is_backup_save_enabled();
+	FileAccess::set_backup_save(false);
+	Ref<FileAccess> handle = FileAccess::open(abs_path, FileAccess::WRITE);
+	bool written = handle.is_valid();
+	if (written) {
+		handle->store_string(p_payload);
+		written = handle->get_error() == OK;
+		handle->close();
+		handle.unref();
+	}
+	FileAccess::set_backup_save(previous_backup_save);
+
+	if (!written) {
+		result["error"] = vformat("cannot write '%s'", abs_path);
+		return result;
+	}
+
+	// The byte count is taken by reading the file back, not by measuring the
+	// string that was handed to `store_string`: the field must describe the
+	// bytes on disk (that is what the reader will re-measure), and a CRLF or
+	// encoding difference would otherwise make the two disagree.
+	int64_t stored_bytes = 0;
+	Ref<FileAccess> written_back = FileAccess::open(abs_path, FileAccess::READ);
+	if (written_back.is_valid()) {
+		stored_bytes = (int64_t)written_back->get_length();
+		written_back->close();
+		written_back.unref();
+	}
+
+	result["path"] = abs_path;
+	// Relative to the trace file's own directory, so the evidence survives the
+	// trace being copied somewhere else (the ledger tries the absolute path
+	// first and this one second).
+	result["relative_path"] = (stem + SIDECAR_SUFFIX).path_join(file_name);
+	result["bytes"] = stored_bytes;
+	result["sha256"] = FileAccess::get_sha256(abs_path);
+	return result;
+}
+
+// One call line's half of a sidecar record: the object above on success, or the
+// reason on the line when the file could not be produced. Either way the crop is
+// declared - the trace never silently loses a payload.
+static void _emit_sidecar(Dictionary &r_fields, const Dictionary &p_sidecars, const String &p_kind) {
+	if (!p_sidecars.has(p_kind)) {
+		return;
+	}
+	const Dictionary entry = p_sidecars[p_kind];
+	if (entry.has("error")) {
+		r_fields[p_kind + "_sidecar_error"] = (String)entry["error"];
+		return;
+	}
+	Dictionary payload;
+	payload["path"] = entry.get("path", String());
+	payload["relative_path"] = entry.get("relative_path", String());
+	payload["bytes"] = entry.get("bytes", (int64_t)0);
+	payload["sha256"] = entry.get("sha256", String());
+	r_fields[p_kind + "_sidecar"] = payload;
+}
+
+String Recorder::_build_line(uint64_t p_connection_id, const Record &p_record, uint64_t p_duration_ms, uint64_t p_pending_ms,
+		const Dictionary &p_sidecars) const {
 	Dictionary fields;
 	fields["seq"] = seq + 1;
 	fields["ts_ms"] = _wall_clock_ms();
@@ -339,6 +437,8 @@ String Recorder::_build_line(uint64_t p_connection_id, const Record &p_record, u
 		fields["args"] = _truncate_utf8(p_record.args_json, max_args_bytes, args_truncated);
 		fields["args_bytes"] = p_record.args_bytes;
 		fields["args_truncated"] = args_truncated;
+		// TASK-092 (item B1): a cropped payload is reproducible from its sidecar.
+		_emit_sidecar(fields, p_sidecars, "args");
 
 		// TASK-089 (item A): the file-side side effects of exactly this call.
 		// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
@@ -360,6 +460,7 @@ String Recorder::_build_line(uint64_t p_connection_id, const Record &p_record, u
 			fields["result_json"] = _truncate_utf8(p_record.result_json, max_args_bytes, result_truncated);
 			fields["result_json_bytes"] = p_record.result_json_bytes;
 			fields["result_json_truncated"] = result_truncated;
+			_emit_sidecar(fields, p_sidecars, "result_json");
 		}
 
 		// TASK-090 (item A): the failure payload. Written for every failed
@@ -374,6 +475,7 @@ String Recorder::_build_line(uint64_t p_connection_id, const Record &p_record, u
 			fields["error_data_json"] = _truncate_utf8(p_record.error_data_json, max_args_bytes, error_data_truncated);
 			fields["error_data_json_bytes"] = p_record.error_data_bytes;
 			fields["error_data_json_truncated"] = error_data_truncated;
+			_emit_sidecar(fields, p_sidecars, "error_data_json");
 		}
 		// [/REBUILT-2C]
 	}
@@ -431,7 +533,25 @@ void Recorder::record(uint64_t p_connection_id, const Record &p_record, uint64_t
 	if (!active || !p_record.traceable) {
 		return;
 	}
-	_append(_build_line(p_connection_id, p_record, p_duration_ms, p_pending_ms));
+	// TASK-092 (item B1): everything over the inline bound is written whole to
+	// the sidecar **before** the line that names it, so an observer that reads
+	// the line can always open the file it points at. The three payloads the
+	// trace bounds (`args`, `result_json`, `error_data_json`) get the same
+	// treatment; a payload inside the bound is inline and produces no file.
+	Dictionary sidecars;
+	if (p_record.method == "tools/call") {
+		const int line_seq = seq + 1;
+		if (p_record.args_bytes > max_args_bytes) {
+			sidecars["args"] = _write_sidecar(line_seq, "args", p_record.args_json);
+		}
+		if (!p_record.result_json.is_empty() && p_record.result_json.utf8().length() > max_args_bytes) {
+			sidecars["result_json"] = _write_sidecar(line_seq, "result", p_record.result_json);
+		}
+		if (!p_record.error_data_json.is_empty() && p_record.error_data_json.utf8().length() > max_args_bytes) {
+			sidecars["error_data_json"] = _write_sidecar(line_seq, "error_data", p_record.error_data_json);
+		}
+	}
+	_append(_build_line(p_connection_id, p_record, p_duration_ms, p_pending_ms, sidecars));
 }
 
 bool Recorder::record_event_line(const Dictionary &p_fields) {

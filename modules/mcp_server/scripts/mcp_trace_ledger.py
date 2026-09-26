@@ -23,8 +23,10 @@ Usage:
 Exit 0 when the file was read (whatever the verdicts), 2 on a usage/IO error.
 """
 import argparse
+import hashlib
 import io
 import json
+import os
 import sys
 
 # The verdict vocabulary. Every call gets exactly one.
@@ -82,6 +84,84 @@ def load(path):
             else:
                 broken += 1
     return records, broken
+
+
+# ---------------------------------------------------------------------------
+# TASK-092 (item B1): the sidecar of an over-bound payload.
+#
+# `args` (and the two bodies) are cropped at the trace's own byte bound, so a
+# cropped payload used to be a fact nothing could reconstruct: the Pong session
+# recorded `args_truncated: true` with `args_bytes: 9464`. The trace now names a
+# file that holds the whole payload, with its byte count and its sha256, and this
+# is the reader that **recomputes both** instead of trusting the line:
+#
+#   * `path` is tried first (the absolute original), then
+#     `<trace dir>/<relative_path>` - the second one is what makes the evidence
+#     survive the trace being copied to another machine;
+#   * `verified` means the file exists, its sha256 matches the recorded one and
+#     its size matches the recorded byte count. Anything else is reported as the
+#     specific failure it is, never as "probably fine".
+#
+# The vocabulary mirrors `file_effect_evidence`: an absence is read as "this
+# trace does not carry that evidence", never as "the payload was complete".
+# ---------------------------------------------------------------------------
+SIDECAR_INLINE = "inline_complete"
+SIDECAR_VERIFIED = "sidecar_verified"
+SIDECAR_MISSING = "sidecar_missing"
+SIDECAR_MISMATCH = "sidecar_mismatch"
+SIDECAR_TRUNCATED_NO_SIDECAR = "truncated_no_sidecar"
+SIDECAR_ABSENT_FIELD = "sidecar_not_recorded_in_trace"
+
+
+def _sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest().upper()
+
+
+def sidecar_of(record, kind, truncated, trace_path):
+    """(evidence, detail) for one bounded payload of one call.
+
+    `kind` is the field prefix the trace uses: `args`, `result_json` or
+    `error_data_json` (the sidecar object is `<kind>_sidecar`).
+    """
+    if not truncated:
+        return SIDECAR_INLINE, {}
+    entry = record.get(kind + "_sidecar")
+    error = record.get(kind + "_sidecar_error")
+    if isinstance(error, str) and error != "":
+        return SIDECAR_TRUNCATED_NO_SIDECAR, {"sidecar_error": error}
+    if not isinstance(entry, dict):
+        return SIDECAR_ABSENT_FIELD, {}
+    recorded_sha = entry.get("sha256")
+    recorded_bytes = entry.get("bytes")
+    candidates = []
+    if isinstance(entry.get("path"), str) and entry["path"]:
+        candidates.append(entry["path"])
+    if isinstance(entry.get("relative_path"), str) and entry["relative_path"]:
+        candidates.append(os.path.join(os.path.dirname(os.path.abspath(trace_path)), entry["relative_path"]))
+    detail = {
+        "path": entry.get("path"),
+        "relative_path": entry.get("relative_path"),
+        "recorded_bytes": recorded_bytes,
+        "recorded_sha256": recorded_sha,
+    }
+    for candidate in candidates:
+        if not os.path.isfile(candidate):
+            continue
+        detail["resolved_path"] = candidate
+        actual_bytes = os.path.getsize(candidate)
+        actual_sha = _sha256_file(candidate)
+        detail["actual_bytes"] = actual_bytes
+        detail["actual_sha256"] = actual_sha
+        if actual_sha == (recorded_sha or "").upper() and actual_bytes == recorded_bytes:
+            return SIDECAR_VERIFIED, detail
+        detail["reason"] = "sha256 or byte count differs from the line"
+        return SIDECAR_MISMATCH, detail
+    detail["reason"] = "neither the absolute nor the relative path exists"
+    return SIDECAR_MISSING, detail
 
 
 def generations(records):
@@ -272,7 +352,7 @@ def error_data_of(record):
 # [/REBUILT-2C]
 
 
-def row_for(record, capture_line, generation_index):
+def row_for(record, capture_line, generation_index, trace_path):
     duration = record.get("duration_ms")
     ended = record.get("ts_ms")
     started = None
@@ -289,10 +369,19 @@ def row_for(record, capture_line, generation_index):
 
     args = record.get("args")
     args_truncated = bool(record.get("args_truncated"))
+    # TASK-092 (item B1): a cropped payload is reconstructible from the sidecar
+    # the line names. `args_complete` is the fact the ledger now judges `args` by;
+    # a crop with no verifiable sidecar stays incomplete, exactly as before.
+    args_sidecar, args_sidecar_detail = sidecar_of(record, "args", args_truncated, trace_path)
+    args_complete = args_sidecar in (SIDECAR_INLINE, SIDECAR_VERIFIED)
+    result_sidecar, result_sidecar_detail = sidecar_of(
+        record, "result_json", bool(record.get("result_json_truncated")), trace_path)
+    error_sidecar, error_sidecar_detail = sidecar_of(
+        record, "error_data_json", bool(record.get("error_data_json_truncated")), trace_path)
     facts = {
         "request_id": "id" in record,
         "tool": bool(record.get("tool")),
-        "args": args is not None and not args_truncated,
+        "args": args is not None and args_complete,
         "times": started is not None,
         "result": "ok" in record and "error_code" in record,
         "capture": bool(capture),
@@ -309,6 +398,14 @@ def row_for(record, capture_line, generation_index):
         "args": args,
         "args_bytes": record.get("args_bytes"),
         "args_truncated": args_truncated,
+        # TASK-092 (item B1): the read side of the sidecar rule. `args_complete`
+        # is true when the payload is inline or when the file the line names was
+        # found, re-hashed and re-measured here.
+        "args_complete": args_complete,
+        "args_evidence": args_sidecar,
+        "args_sidecar": record.get("args_sidecar"),
+        "args_sidecar_detail": args_sidecar_detail,
+        "args_sidecar_error": record.get("args_sidecar_error"),
         "started_ts_ms": started,
         "ended_ts_ms": ended,
         "duration_ms": duration,
@@ -334,6 +431,13 @@ def row_for(record, capture_line, generation_index):
         "result_json": record.get("result_json"),
         "result_json_bytes": record.get("result_json_bytes"),
         "result_json_truncated": bool(record.get("result_json_truncated")),
+        # TASK-092 (item B1): the same read side for the two bodies. They do not
+        # gate a fact today (`facts.result` is "the outcome is on the line"), but
+        # a reader can now tell a cropped body from a complete one and can open
+        # the whole body when it was cropped.
+        "result_json_complete": result_sidecar in (SIDECAR_INLINE, SIDECAR_VERIFIED),
+        "result_json_evidence": result_sidecar,
+        "result_json_sidecar_detail": result_sidecar_detail,
         "result_flags": result_flags(record),
         # TASK-090 (item A): the failure payload, on the same row as the verdict
         # that says the call failed. `error_data_evidence` keeps "this build
@@ -343,6 +447,9 @@ def row_for(record, capture_line, generation_index):
         "error_data_json_bytes": record.get("error_data_json_bytes"),
         "error_data_json_truncated": bool(record.get("error_data_json_truncated")),
         "error_data_evidence": error_evidence,
+        "error_data_complete": error_sidecar in (SIDECAR_INLINE, SIDECAR_VERIFIED),
+        "error_data_sidecar_evidence": error_sidecar,
+        "error_data_sidecar_detail": error_sidecar_detail,
         "error_flags": error_flags(record),
         "facts": facts,
         "facts_complete": all(facts.values()),
@@ -350,7 +457,7 @@ def row_for(record, capture_line, generation_index):
     }
 
 
-def build(records):
+def build(records, trace_path=""):
     rows = []
     for index, generation in enumerate(generations(records)):
         captures = {}
@@ -360,7 +467,7 @@ def build(records):
         for record in generation:
             if record.get("method") != "tools/call":
                 continue
-            rows.append(row_for(record, captures.get(record.get("seq")), index))
+            rows.append(row_for(record, captures.get(record.get("seq")), index, trace_path))
     return rows
 
 
@@ -417,6 +524,26 @@ def render_text(rows, path, broken, args):
         evidence[row["error_data_evidence"]] = evidence.get(row["error_data_evidence"], 0) + 1
     lines.append("error_data_evidence: " + (", ".join("%s=%d" % (k, evidence[k]) for k in sorted(evidence)) or "<none>"))
     # [/REBUILT-2C]
+
+    # TASK-092 (item B1): the sidecar half of the same question - was a cropped
+    # payload reconstructible? The count is by evidence, and every row that named
+    # a sidecar is listed with the answer this reader got by re-hashing the file.
+    sidecar_counts = {}
+    for row in rows:
+        sidecar_counts[row["args_evidence"]] = sidecar_counts.get(row["args_evidence"], 0) + 1
+    lines.append("args_evidence: " + (", ".join("%s=%d" % (k, sidecar_counts[k])
+                                                for k in sorted(sidecar_counts)) or "<none>"))
+    for row in rows:
+        if row["args_evidence"] in (SIDECAR_INLINE, SIDECAR_ABSENT_FIELD) and not row.get("args_sidecar"):
+            continue
+        if args.tool and row["tool"] != args.tool:
+            continue
+        detail = row.get("args_sidecar_detail") or {}
+        lines.append("  seq=%s req_id=%s %s args_evidence=%s recorded=%s/%s actual=%s/%s path=%s" % (
+            row["call_id"], row["request_id"], row["tool"], row["args_evidence"],
+            detail.get("recorded_bytes"), (detail.get("recorded_sha256") or "")[:12],
+            detail.get("actual_bytes"), (detail.get("actual_sha256") or "")[:12],
+            detail.get("resolved_path") or detail.get("path") or row.get("args_sidecar_error")))
     return "\n".join(lines) + "\n"
 
 
@@ -435,7 +562,7 @@ def main(argv=None):
         sys.stderr.write("mcp_trace_ledger: cannot read %s: %s\n" % (args.trace, exc))
         return 2
 
-    rows = build(records)
+    rows = build(records, args.trace)
     text = render_text(rows, args.trace, broken, args)
     sys.stdout.write(text)
     if args.text:
