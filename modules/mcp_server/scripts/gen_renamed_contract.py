@@ -514,6 +514,40 @@ GENERATED_BY = "modules/mcp_server/scripts/gen_renamed_contract.py"
 # v1.2: R-1/R-2/R-3 disambiguation (TASK-002 section 2.1.1). Each discriminator
 # below is a *fact read out of the migration source*, never an invention; the
 # line references are the ones already audited for tool-rename-map.json v1.1.
+
+# v1.22 (TASK-076 section A.1): the two append-only boundary sentences, as
+# module-level literals so the two tilemap entries cannot drift apart - the same
+# device as `NODE_PATH_RULE_SENTENCE` (v1.19) and `_T059_SECTION_WRITE` (v1.18).
+#
+# Reconstructed byte-exactly (TASK-082): the scene-tree sentence is the one
+# REPORT-076 section 1.2 records together with the "42 -> 898" byte count, and
+# the tilemap sentence is the one carried verbatim by the C++ literals in
+# `tools/editor_tilemap_write.cpp:532/:538`, which the same table records as
+# "27 -> 717" and "30 -> 720".  Both byte counts reproduce exactly, so the text
+# below is the artefact's text and not a paraphrase.
+SCENE_TREE_ADDRESSABILITY_SENTENCE = (
+    '本工具是“此刻编辑器侧可寻址什么”的权威：实例子场景内部的节点可能不出现在这棵树里，因为编辑器把 PackedScene 缓存成实例快照 —— 子场景改了以后，同一会话里既有的实例与新建的实例都仍带旧缓存（游戏进程从磁盘加载，因此能看到新节点）；要操作子场景新增的内部节点，就把 editor_add_node 的 parent_path 指向该实例、把它作为外层场景里实例下的子节点写（实测可寻址并可连信号），或者开一个新的编辑器会话让缓存重建；子场景本身的编辑永远应当先做，再做外层场景的实例化。这不是“各工具看不看得见不一致”：属性写工具与信号工具经同一个 MCPTools::find_node 解析路径，对同一路径给出同一结论，差别只在编辑器缓存。'
+)
+
+TILEMAP_ATLAS_GAP_SENTENCE = (
+    '写格子要求目标 TileMapLayer 的 TileSet 里已经存在一个 TileSetAtlasSource：project_create_resource 用 type=TileSet 只会造出一个空 TileSet（source_count=0，既没有 source 也没有 texture），而当前工具集没有任何“给 TileSet 添加 atlas source / texture / tile”的入口，所以在可预见的调用序列里本工具无法成功 —— 这是一处如实声明的能力缺口，不是本工具的缺陷；调用方要么在编辑器里手工建好带 atlas source 的 TileSet，要么在项目里自带一个含 source 的 .tres。TileSet 里没有该 source 时本工具以 -32602 拒绝，并在 data.suggestion 里点名它接受的参数。'
+)
+
+# The measured facts both tilemap `reason` fields cite (REPORT-076 section 1.3
+# (ii), measured in REPORT-075 section 6 D5).
+_T076_TILEMAP_GAP_REASON = (
+    "依据 REPORT-075 §6 D5 / REPORT-076 §1.3(ii)：project_create_resource"
+    "{path:res://tiles/empty_tileset.tres,type:TileSet} 返回 "
+    "{\"properties_set\":[],…,\"type\":\"TileSet\"}；赋值前 has_tile_set:false, source_count:0, sources:[]；"
+    "editor_add_resource_to_node_property{tile_set} 与 editor_set_node_property{tile_set} 都成功；"
+    "赋值后 has_tile_set:true, source_count:0（E8 的“赋值没落地”被证伪）；"
+    "editor_set_tilemap_cell{source_id:0,…} 返回 -32602 "
+    "\"The TileSet of this TileMapLayer has no source 0; it has: no source at all (add a TileSetAtlasSource first)\" "
+    "并带 data.suggestion。缺口 = 无任何工具能创建/填充 TileSetAtlasSource，故按能力缺口记账、不改行为。"
+    "范围裁决：缺口句只挂在两个写工具上——editor_get_tilemap_info/_used_cells/_cell 与 "
+    "editor_remove_all_tilemap_cells 不要求 source 存在、也不会因此失败，挂上去只会噪音化真正的调用方。"
+)
+
 DESCRIPTION_OVERRIDES = {
     # R-1: editor_analyze_signal_flow vs editor_list_signal_connections.
     # analysis.rs:387-410 / analysis.rs:96-160 (nested nodes[], flags & 1, exact
@@ -606,6 +640,36 @@ DESCRIPTION_OVERRIDES = {
         ),
         "value": "运行场景 起游戏时经 EditorRunBar 注入 --mcp-port：缺省自动挑一个空闲端口（与编辑器自身端口不同），也可用 mcp_port 指定；响应在游戏真的起来后给出 mcp_port、mcp_port_source、endpoint 与 pid，使游戏子进程立刻可被 MCP 观察，无需改被测工程设置。",
     },
+    # v1.22 (TASK-076 section A.1): the two boundaries TASK-075's D4/D5 measured
+    # and REPORT-076 section 1 implemented.  All three records are append-only
+    # (`mode` stays the default), so the original wording stays first and
+    # verbatim; the `startswith(<original> + " ")` guard above enforces that.
+    "get_scene_tree": {
+        "reason": (
+            "TASK-076 §A.1 / REPORT-076 §1.3(i)，依据 REPORT-075 §5 D4 的最小复现"
+            "（scripts/mcp075_d4_staleness.ps1，9/9 PASS）：player.tscn 无子节点、main.tscn 实例化它后 "
+            "Player 子节点数 = 0、Player/Anim 报 -32001；打开 player.tscn 加入 AnimationPlayer \"Anim\" 保存后"
+            "磁盘确实含 Anim，回到 main.tscn 仍为 0/-32001，新建同文件实例同样为 0，"
+            "而游戏进程（从磁盘加载）/World/Player/{Body,Art,Anim} 齐全；机制是编辑器把 PackedScene 缓存成实例快照。"
+            "会话内的绕法 editor_add_node{parent_path:'Player'} 之后 Player/Anim 可寻址且 editor_connect_signal 成功"
+            "（connected:true, persisted:true）。「不是各工具口径不一」的出处：属性写与信号工具都经同一个 "
+            "MCPTools::find_node（tools/tool_helpers.cpp:1417），同一路径结论一致；round-5 的"
+            "「属性写工具到得了 Anim」来自另一上下文（先 editor_open_scene res://scenes/player.tscn，"
+            "再写 path:'Anim'，那是被编辑场景根的直接子节点，不是外层场景里实例下的路径）。"
+            "裁决是不改 find_node（穿越缓存会改变所有编辑器工具语义、并让读取产生写副作用），只声明边界。"
+        ),
+        "value": "获取当前编辑场景的完整场景树 " + SCENE_TREE_ADDRESSABILITY_SENTENCE,
+    },
+    # TASK-076 section 1.2(ii): one shared sentence, two entries - they cannot
+    # drift apart because both read the literal below.
+    "tilemap_set_cell": {
+        "reason": _T076_TILEMAP_GAP_REASON,
+        "value": "设置瓦片地图单元格 " + TILEMAP_ATLAS_GAP_SENTENCE,
+    },
+    "tilemap_fill_rect": {
+        "reason": _T076_TILEMAP_GAP_REASON,
+        "value": "填充瓦片地图矩形区域 " + TILEMAP_ATLAS_GAP_SENTENCE,
+    },
 }
 # v1.5: a schema override replaces the whole `inputSchema` object (there is
 # nothing to append to), so it must carry `"mode": "replace"` and a `reason` that
@@ -689,32 +753,6 @@ SCHEMA_OVERRIDES = {
                     "default": 1.0,
                     "description": "回放速度倍率",
                     "type": "number",
-                },
-            },
-            "required": [],
-            "type": "object",
-        },
-    },
-    # TASK-024 E-10: the new optional `mcp_port` argument. A schema override
-    # replaces the whole object, so `mode` is repeated verbatim and nothing else
-    # moves; the `required` member stays `[]` and the record names it verbatim.
-    "play_scene": {
-        "reason": (
-            "TASK-024 E-10 顺手性（GDR-23）：新增可选整数参数 mcp_port，让调用方指定游戏子进程监听的端口"
-            "（缺省由模块自动挑一个空闲端口并经 --mcp-port 注入）。被移除的 required 成员逐字为 []"
-            "（该 schema 本来就没有必填参数）；原有的 mode 属性一字未动，只是新增一个属性。"
-        ),
-        "mode": "replace",
-        "value": {
-            "properties": {
-                "mode": {
-                    "default": "main",
-                    "description": "main/current/路径",
-                    "type": "string",
-                },
-                "mcp_port": {
-                    "description": "游戏子进程监听的 TCP 端口 (可选，1-65535；缺省时自动挑一个空闲端口且不与编辑器自身端口相同)",
-                    "type": "integer",
                 },
             },
             "required": [],
