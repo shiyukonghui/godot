@@ -361,6 +361,20 @@ String Recorder::_build_line(uint64_t p_connection_id, const Record &p_record, u
 			fields["result_json_bytes"] = p_record.result_json_bytes;
 			fields["result_json_truncated"] = result_truncated;
 		}
+
+		// TASK-090 (item A): the failure payload. Written for every failed
+		// `tools/call` - an empty string when the tool attached no `data` - so the
+		// presence of the field itself separates "this build records it" from "this
+		// trace predates it" (see the declaration in `mcp_trace.h`).
+		// [REBUILT-2C low-confidence: verify] TASK-090 item A: written, not
+		// replayed (no recording carries a failure payload);
+		// REBUILT-2C-MANIFEST.md section 2c-9 (J-1).
+		if (!p_record.ok) {
+			bool error_data_truncated = false;
+			fields["error_data_json"] = _truncate_utf8(p_record.error_data_json, max_args_bytes, error_data_truncated);
+			fields["error_data_json_bytes"] = p_record.error_data_bytes;
+			fields["error_data_json_truncated"] = error_data_truncated;
+		}
 		// [/REBUILT-2C]
 	}
 

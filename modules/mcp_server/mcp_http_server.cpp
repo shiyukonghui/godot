@@ -487,10 +487,26 @@ void MCPHttpServer::_tick_pending(int64_t p_frame, uint64_t p_now) {
 				record.ok = true;
 				record.error_code = 0;
 				record.error_message = String();
+				record.error_data_json = String();
+				record.error_data_bytes = 0;
 			} else {
 				record.ok = false;
 				record.error_code = completion.error.code;
 				record.error_message = completion.error.message;
+				// TASK-090 (item A): a deferred failure carries the same
+				// machine-readable payload an immediate one does (`suggestion`,
+				// `timeout_ms`), and it has to reach the line by the same rule -
+				// an empty string when there is nothing attached.
+				// [REBUILT-2C low-confidence: verify] TASK-090 item A: written,
+				// not replayed; REBUILT-2C-MANIFEST.md 2c-9 (J-1).
+				if (completion.error.data.get_type() == Variant::NIL) {
+					record.error_data_json = String();
+					record.error_data_bytes = 0;
+				} else {
+					record.error_data_json = JSON::stringify(completion.error.data);
+					record.error_data_bytes = record.error_data_json.utf8().length();
+				}
+				// [/REBUILT-2C]
 			}
 			const uint64_t finished = OS::get_singleton()->get_ticks_msec();
 			const uint64_t waited = (finished > completion.start_ms) ? finished - completion.start_ms : 0;

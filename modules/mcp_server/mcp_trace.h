@@ -216,6 +216,29 @@ struct Record {
 	// `result_json_truncated` never hides how much was dropped.
 	String result_json;
 	int result_json_bytes = 0;
+
+	// TASK-090 (item A): the **failure payload** of a `tools/call` that answered a
+	// JSON-RPC error, as the tool produced it - `data.suggestion`,
+	// `data.parse_error` and anything else the tool layer attached to the error.
+	//
+	// Why it is needed: until this field existed the trace carried only
+	// `error_code` and a 512 byte `error_message`, so the one thing a caller
+	// actually needs to *act* on a failure - the machine-readable reason and the
+	// named line - was visible to the client and invisible to the observer. The
+	// round-7 session measured the cost: a body that did not compile answered
+	// `-32602 "Parameter 'code' does not compile: Parse error"` with the line and
+	// the cause sitting in `data.parse_error`, unreadable from the trace.
+	//
+	// It shares the success half's shape and bounds on purpose: the same
+	// `max_args_bytes` ceiling, the same canonical `JSON::stringify`, and
+	// `error_data_json_bytes` always carries the true size, so
+	// `error_data_json_truncated` never hides how much was dropped.
+	//
+	// Emitted on **every** failed `tools/call` line, `""` when the tool attached
+	// no data, so that "this trace has the field" and "this failure had no payload"
+	// stay distinguishable from "this trace was written before the field existed".
+	String error_data_json;
+	int error_data_bytes = 0;
 	// [/REBUILT-2C]
 };
 

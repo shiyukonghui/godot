@@ -291,6 +291,30 @@ static uint64_t _effective_timeout(uint64_t p_default_timeout_ms, uint64_t p_tas
 	return MIN(p_task_timeout_ms, p_default_timeout_ms);
 }
 
+// TASK-090 (item A): the failure half of "what did this call really answer".
+//
+// `MCPToolError::data` is where the tool layer puts the machine-readable reason
+// (`suggestion`, `parse_error`); the trace carried only the code and the
+// 512 byte message, so the observer could see *that* a call failed and not *why*.
+// This puts the payload on the record, and an empty string when the failure
+// carries none - the field is then still written, which is what makes a missing
+// field readable as "old trace" rather than as "no payload".
+// [REBUILT-2C low-confidence: verify] TASK-090 item A: written, not replayed
+// (no recording carries a failure payload); REBUILT-2C-MANIFEST.md 2c-9 (J-1).
+static void _record_error_data(MCPTrace::Record &r_trace, const Variant &p_data) {
+	if (!r_trace.traceable) {
+		return;
+	}
+	if (p_data.get_type() == Variant::NIL) {
+		r_trace.error_data_json = String();
+		r_trace.error_data_bytes = 0;
+		return;
+	}
+	r_trace.error_data_json = JSON::stringify(p_data);
+	r_trace.error_data_bytes = r_trace.error_data_json.utf8().length();
+}
+// [/REBUILT-2C]
+
 static Dispatch _dispatch_tools_call(const String &p_id_json, const Variant &p_params, const MCPToolRegistry &p_registry, bool p_is_editor, uint64_t p_default_timeout_ms, MCPTrace::Record &r_trace) {
 	if (p_params.get_type() != Variant::NIL && p_params.get_type() != Variant::DICTIONARY) {
 		r_trace.ok = false;
@@ -363,6 +387,9 @@ static Dispatch _dispatch_tools_call(const String &p_id_json, const Variant &p_p
 			r_trace.ok = false;
 			r_trace.error_code = tool_error.code;
 			r_trace.error_message = tool_error.message;
+			// TASK-090 (item A): the failure payload of a deferred tool that
+			// refused before it could be deferred.
+			_record_error_data(r_trace, tool_error.data);
 			return _tag(_immediate(_error_response(p_id_json, tool_error.code, tool_error.message, 200, tool_error.data)), r_trace);
 		}
 		Dispatch deferred;
@@ -414,6 +441,11 @@ static Dispatch _dispatch_tools_call(const String &p_id_json, const Variant &p_p
 		r_trace.ok = false;
 		r_trace.error_code = tool_error.code;
 		r_trace.error_message = tool_error.message;
+		// TASK-090 (item A): `data.suggestion` / `data.parse_error` on the line.
+		// [REBUILT-2C low-confidence: verify] TASK-090 item A: written, not
+		// replayed; REBUILT-2C-MANIFEST.md 2c-9 (J-1).
+		_record_error_data(r_trace, tool_error.data);
+		// [/REBUILT-2C]
 		return _tag(_immediate(_error_response(p_id_json, tool_error.code, tool_error.message, 200, tool_error.data)), r_trace);
 	}
 

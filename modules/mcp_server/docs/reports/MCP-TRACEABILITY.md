@@ -1,6 +1,7 @@
 # MCP-TRACEABILITY — 一次操作是否有效，以及凭什么判定
 
-* Task: TASK-088 item ⑤；TASK-089 item A 关闭了当时的唯一缺口（文件侧副作用）。
+* Task: TASK-088 item ⑤；TASK-089 item A 关闭了当时的唯一缺口（文件侧副作用）；
+  TASK-090 item A 关闭了剩下的一个（失败应答的 `data` 载荷）。
 * 口径：本文定义**溯源模型**（字段 / 判定规则 / 失败分类）与**如何用日志判定一次操作是否有效**，
   并给出一次真实会话的产物路径。所有字段名都以实际写出的 JSON 行为准，逐条给出源码位置。
 
@@ -11,11 +12,11 @@
 运行期已经**把判定一次操作是否有效所需的全部事实写进日志**：每条请求一行，每次 `tools/call`
 另配一行 `{"event":"capture"}`（截图像素差），并且（TASK-089 起）调用行本身还带着**这次调用改了
 哪些文件**（绝对路径 + 前后 sha256/大小 + 是否真的变了 + 文本文件的首尾差异摘要）与**这次调用
-答了什么**（`result_json`，有界）。读取侧由 `scripts/mcp_trace_ledger.py` 把这些行合成**每次调用
-一行**的有效性台账。
+答了什么**（`result_json`，有界；TASK-090 起失败时还有 `error_data_json`，同样是工具自身写的、
+有界的）。读取侧由 `scripts/mcp_trace_ledger.py` 把这些行合成**每次调用一行**的有效性台账。
 
-**TASK-088 声明的唯一缺口（文件侧副作用 `not_recorded_in_trace`）已在 TASK-089 补上**，见 §2.4
-与 §3.2。
+**TASK-088 声明的缺口（文件侧副作用 `not_recorded_in_trace`）已在 TASK-089 补上**，
+**TASK-090 item A 又补上了失败应答的 `data`**，见 §2.4、§3.2 与 §5。
 
 ---
 
@@ -58,6 +59,7 @@
 | `capture{mode,viewport,status[,reason]}` | 捕获档位与状态（`pending` / `unavailable`） | `:356-365` |
 | `file_effect_status` / `file_effects` | **TASK-089 新增**：这次调用对磁盘做了什么，见 §2.4 | `mcp_file_effects.*`；`mcp_trace.cpp` 的 `_build_line` |
 | `result_json` / `result_json_bytes` / `result_json_truncated` | **TASK-089 新增**：成功应答的**工具自身返回体**（规范化 JSON，按 `args` 同一上限截断；真实字节数另给）。看的不是「调用成功」，而是「它自己说什么」：`passed:false`、`created:true`、`ignored`、`changed` | `mcp_jsonrpc.cpp`（`_dispatch_tools_call` 成功分支）；`mcp_trace.cpp` 的 `_build_line` |
+| `error_data_json` / `error_data_json_bytes` / `error_data_json_truncated` | **TASK-090 新增**：失败应答的**工具自身 `data` 载荷**（`suggestion`、`parse_error` 等），与 `result_json` 同一收口、同一上限策略。**每一次失败的 `tools/call` 都写**，工具没带载荷时写 `""`——「有这个字段」因此可以与「这条 trace 出自旧版本」区分开 | `mcp_jsonrpc.cpp`（`_record_error_data`；延迟分支与立即分支）；`mcp_http_server.cpp`（延迟完成）；`mcp_trace.cpp` 的 `_build_line` |
 
 ### 2.4 TASK-089 新增：文件侧副作用（`file_effect_status` + `file_effects`）
 
@@ -178,23 +180,35 @@ verdict       = failed                   ok=false（带 error_code/error_message
 
 每一行同时给出该调用**可从日志重建的事实**是否齐备：
 `request_id` / `tool` / `args`（未截断）/ `times` / `result` / `capture` / `scene_evidence` /
-`file_effect`，以及 `facts_complete`。用它区分「证据支持」与「推断」：`facts_complete=false`
-的行不得用来下结论。
+`file_effect` / `error_data`，以及 `facts_complete`。用它区分「证据支持」与「推断」：
+`facts_complete=false` 的行不得用来下结论。
 
-### 3.2 缺口状态（TASK-089）
+`error_data`（TASK-090 新增）只在**失败**的调用上不可省略：新版本对每一次失败的
+`tools/call` 都写这个字段（没载荷就是 `""`），所以「字段在」＝可重建；「失败却没有这个
+字段」只可能是**旧版本写出的 trace**，如实记为不可重建，而不是当作「这次失败没有载荷」。
+
+### 3.2 缺口状态（TASK-090）
 
 * **文件侧副作用：已补**（TASK-089 item A）。调用行带 `file_effect_status` + `file_effects`，
   §2.4 是字段表与界。台账不再写 `file_effect_evidence: "not_recorded_in_trace"`——除非它读的是
   一条**由更早版本写出的** trace，那种情况仍如实写 `not_recorded_in_trace`。旧 trace 与新 trace
   因此可以并存，缺字段一律读作「这份证据不存在」，绝不读作「没有改动」。
+* **失败应答的 `data`：已补**（TASK-090 item A）。调用行带 `error_data_json`
+  （+ `error_data_json_bytes` / `error_data_json_truncated`），字段名与上限都跟成功的
+  `result_json` 同构。写入点是工具错误真正成形的那两处（`_dispatch_tools_call` 的立即分支与
+  延迟拒绝分支）以及延迟通道的完成处（`mcp_http_server.cpp::_tick_pending`），所以
+  `suggestion`、`parse_error`、延迟超时的 `data.timeout_ms` 都在线上。台账据此给出
+  `error_data` / `error_data_evidence` / `error_flags`（`error_suggestion` / `error_parse_error`），
+  并在文本里单列「failure payloads」一段。
+  **旧 trace 读法**：`error_data_evidence = not_recorded_in_trace`（失败行没有该字段）。
 * **延迟应答通道（deferred）不算已补**：`file_effect_status` 写 `not_tracked_deferred`。工具的
   实际磁盘工作发生在应答之后（运输层逐帧 tick），同步的每调用缓冲看不到它。声明的边界。
+  它的**失败载荷**则是在完成处写的（上面那条），两者不矛盾：载荷由运输层知道，磁盘副作用由
+  同步缓冲知道，而后者看不到。
 * `args` 超过 4096 B 会被截断（`args_bytes` 仍给真实值，`args_truncated=true`）；`result_json`
-  用同一上限（`result_json_bytes` 给真实值）；`error_message` 上限 512 B。这三条是刻意的。
+  与 `error_data_json` 用同一上限（各自的 `_bytes` 给真实值）；`error_message` 上限 512 B。
+  这四条是刻意的。
 * 捕获只在 `tools/call` 上开（`initialize` / `tools/list` 无副作用可观测）。
-* **失败应答的 `data`（例如 `data.suggestion`、`data.parse_error`）不在 trace 上**，只有
-  `error_code` 与 512 B 的 `error_message`。TASK-089 修掉了其中一个最要命的形状（`-32602` 只说
-  "Parse error"、不说哪一行），但**结构化失败细节仍未入日志**——这是一个仍然开着的缺口。
 
 
 ---
@@ -278,10 +292,11 @@ python modules\mcp_server\scripts\mcp_trace_ledger.py <trace.jsonl> --only-ineff
 | 类别 | 入口 | 判据 |
 |---|---|---|
 | 协议失败 | 调用行 `ok=false` + `error_code` | `-32700`/`-32600`/`-32601`/`-32602`/`-32000`/`-32001` |
-| 工具失败 | 同上，`error_code` 为工具自报 | 消息在 `error_message`（≤512 B）；`data`（`suggestion` / `parse_error`）**不在** trace |
+| 工具失败 | 同上，`error_code` 为工具自报 | 消息在 `error_message`（≤512 B）；**载荷**在 `error_data_json`（TASK-090 起；`suggestion` / `parse_error` / `timeout_ms`）。旧 trace 上仍是 `not_recorded_in_trace` |
 | 无效成功（本模型的核心） | `ok=true` + `scene_effect=unchanged` + `file_effect∈{unchanged,none}` | 画面没动、盘上也没动 |
 | 成功但结论为否 | `ok=true` + `result_flags` 含 `assertion_failed` | 工具答 `passed:false`；TASK-089 起可见 |
 | 自相矛盾的声称 | `ok=true` + `result_flags` 含 `created_conflict` | `created:true` 与 `existed_before:true` 并存 |
 | 无法判定的成功（诚实边界） | `ok=true` + `unavailable` / `not_observed` / `not_tracked_deferred` | 无 framebuffer / 没开捕获 / 延迟应答通道 |
-| 证据不完整 | `args_truncated=true` 或 `result_json_truncated=true` 或 `facts_complete=false` | 不得据此下结论 |
+| 证据不完整 | `args_truncated=true` 或 `result_json_truncated=true` 或 `error_data_json_truncated=true` 或 `facts_complete=false` | 不得据此下结论 |
 | 文件侧证据缺失 | `file_effect_evidence=not_recorded_in_trace` | 只对**旧版本写出的** trace 成立，见 §3.2 |
+| 失败载荷缺失 | `error_data_evidence=not_recorded_in_trace` | 只对**旧版本写出的** trace 成立，见 §3.2 |

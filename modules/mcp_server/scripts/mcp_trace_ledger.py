@@ -55,8 +55,12 @@ FILE_EFFECT_NOT_TRACKED = "not_tracked"
 # The facts a row is reconstructible from. `capture` and `scene_evidence` are
 # conditional: they are only knowable when capture was switched on. The same is
 # true of `file_effect`: it is only knowable from a trace written by a build that
-# carries the TASK-089 recorder.
-FACTS = ("request_id", "tool", "args", "times", "result", "capture", "scene_evidence", "file_effect")
+# carries the TASK-089 recorder. `error_data` (TASK-090 item A) is knowable from
+# every new build - a failed call always carries the field, empty when the tool
+# attached nothing - and is *not* knowable from a trace that predates it, which is
+# exactly the distinction the fact is there to make.
+FACTS = ("request_id", "tool", "args", "times", "result", "capture", "scene_evidence", "file_effect",
+         "error_data")
 # [/REBUILT-2C]
 
 
@@ -196,7 +200,75 @@ def result_flags(record):
             flags.append("assertion_failed")
         if body.get("created") is True and body.get("existed_before") is True:
             flags.append("created_conflict")
+        # TASK-090 (item C, round-8 defect): a scenario driver answers with its
+        # own summary (`all_passed` / `passed` / `failed` / `errors`) and nests a
+        # verdict per assertion step in `results[]`. Without this the ledger
+        # could not answer the question the scenario tools exist for - "did the
+        # assertions hold" - because none of those keys is `passed: false` at the
+        # top level.
+        # [REBUILT-2C low-confidence: verify] TASK-090 item C: written, not
+        # replayed; REBUILT-2C-MANIFEST.md section 2c-9 (J-3).
+        if "all_passed" in body:
+            if body.get("all_passed") is True:
+                flags.append("scenario_passed")
+            else:
+                if int(body.get("errors") or 0) > 0:
+                    flags.append("scenario_errors")
+                if int(body.get("failed") or 0) > 0:
+                    flags.append("scenario_assertion_failed")
+                elif int(body.get("passed") or 0) == 0:
+                    flags.append("scenario_asserted_nothing")
+        # [/REBUILT-2C]
     return flags
+# [/REBUILT-2C]
+
+# TASK-090 (item A): the mirror image for a failure. `error_data_json` is the
+# tool's own `data` payload (`suggestion`, `parse_error`), and the two flags below
+# are what a reader looks for first: a next step to take, and a line to fix.
+# [REBUILT-2C low-confidence: verify] TASK-090 item A: written, not replayed;
+# REBUILT-2C-MANIFEST.md section 2c-9 (J-1).
+def error_flags(record):
+    if bool(record.get("ok")):
+        return []
+    if record.get("error_data_json_truncated"):
+        return ["error_data_truncated"]
+    raw = record.get("error_data_json")
+    if not isinstance(raw, str) or raw == "":
+        return []
+    try:
+        payload = json.loads(raw)
+    except ValueError:
+        return ["error_data_unparseable"]
+    flags = []
+    if isinstance(payload, dict):
+        suggestion = payload.get("suggestion")
+        if isinstance(suggestion, str) and suggestion != "":
+            flags.append("error_suggestion")
+        if isinstance(payload.get("parse_error"), dict):
+            flags.append("error_parse_error")
+    return flags
+
+
+def error_data_of(record):
+    """(payload, evidence) for the failure half of one call.
+
+    Evidence is decidable because a build that carries the field writes it on
+    *every* failed `tools/call` line, empty when nothing was attached: present =
+    recorded, absent on a failure = a trace written before the field existed.
+    """
+    if bool(record.get("ok")):
+        return None, "not_applicable"
+    if "error_data_json" not in record:
+        return None, "not_recorded_in_trace"
+    raw = record.get("error_data_json")
+    if not isinstance(raw, str) or raw == "":
+        return None, "recorded_in_trace_no_payload"
+    if record.get("error_data_json_truncated"):
+        return None, "recorded_in_trace_truncated"
+    try:
+        return json.loads(raw), "recorded_in_trace"
+    except ValueError:
+        return None, "recorded_in_trace_unparseable"
 # [/REBUILT-2C]
 
 
@@ -210,6 +282,10 @@ def row_for(record, capture_line, generation_index):
     scene, scene_detail = _scene_of(record, capture_line)
     file_effect, file_detail = _file_effect_of(record)
     ok = bool(record.get("ok"))
+    # [REBUILT-2C low-confidence: verify] TASK-090 item A: written, not replayed;
+    # REBUILT-2C-MANIFEST.md section 2c-9 (J-1).
+    error_payload, error_evidence = error_data_of(record)
+    # [/REBUILT-2C]
 
     args = record.get("args")
     args_truncated = bool(record.get("args_truncated"))
@@ -222,6 +298,7 @@ def row_for(record, capture_line, generation_index):
         "capture": bool(capture),
         "scene_evidence": scene != "not_observed",
         "file_effect": file_effect not in (FILE_EFFECT_NOT_RECORDED, FILE_EFFECT_NOT_TRACKED),
+        "error_data": error_evidence not in ("not_recorded_in_trace",),
     }
     return {
         "generation": generation_index,
@@ -258,6 +335,15 @@ def row_for(record, capture_line, generation_index):
         "result_json_bytes": record.get("result_json_bytes"),
         "result_json_truncated": bool(record.get("result_json_truncated")),
         "result_flags": result_flags(record),
+        # TASK-090 (item A): the failure payload, on the same row as the verdict
+        # that says the call failed. `error_data_evidence` keeps "this build
+        # records the payload" apart from "this trace predates the field".
+        "error_data": error_payload,
+        "error_data_json": record.get("error_data_json"),
+        "error_data_json_bytes": record.get("error_data_json_bytes"),
+        "error_data_json_truncated": bool(record.get("error_data_json_truncated")),
+        "error_data_evidence": error_evidence,
+        "error_flags": error_flags(record),
         "facts": facts,
         "facts_complete": all(facts.values()),
         "verdict": verdict_of(ok, scene, file_effect),
@@ -300,7 +386,7 @@ def render_text(rows, path, broken, args):
             continue
         if args.only_ineffective and row["verdict"] in (VERDICT_OK_EFFECT, VERDICT_OK_FILE_EFFECT, VERDICT_FAILED):
             continue
-        flags = ",".join(row.get("result_flags") or []) or "-"
+        flags = ",".join((row.get("result_flags") or []) + (row.get("error_flags") or [])) or "-"
         lines.append("%-6s %-8s %-38s %-9s %-8s %-8s %-14s %-15s %-26s %s" % (
             row["call_id"], row["request_id"],
             (row["tool"] or "")[:38], row["duration_ms"], row["ok"],
@@ -308,6 +394,29 @@ def render_text(rows, path, broken, args):
     complete = sum(1 for row in rows if row["facts_complete"])
     lines.append("")
     lines.append("rows whose reconstructible facts are all present: %d/%d" % (complete, len(rows)))
+
+    # TASK-090 (item A): the failure payloads, in full (bounded per entry), so a
+    # reader does not have to open the JSON to see the `suggestion` a refused call
+    # carried - the whole point of putting `data` on the line.
+    # [REBUILT-2C low-confidence: verify] TASK-090 item A: written, not replayed;
+    # REBUILT-2C-MANIFEST.md section 2c-9 (J-1).
+    payload_rows = [r for r in rows if (r.get("error_data_json") or "") != ""]
+    lines.append("")
+    lines.append("failure payloads (`error_data_json`) present on %d/%d call(s)"
+                 % (len([r for r in rows if not r["ok"]]), len(rows)))
+    for row in payload_rows:
+        if args.tool and row["tool"] != args.tool:
+            continue
+        text = row.get("error_data_json") or ""
+        if row.get("error_data_json_truncated"):
+            text += " …[truncated, %s bytes]" % row.get("error_data_json_bytes")
+        lines.append("  seq=%s req_id=%s %s err=%s | %s"
+                     % (row["call_id"], row["request_id"], row["tool"], row["error_code"], text[:400]))
+    evidence = {}
+    for row in rows:
+        evidence[row["error_data_evidence"]] = evidence.get(row["error_data_evidence"], 0) + 1
+    lines.append("error_data_evidence: " + (", ".join("%s=%d" % (k, evidence[k]) for k in sorted(evidence)) or "<none>"))
+    # [/REBUILT-2C]
     return "\n".join(lines) + "\n"
 
 
