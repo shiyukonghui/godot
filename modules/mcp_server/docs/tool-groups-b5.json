@@ -1,0 +1,370 @@
+{
+  "_comment": "B5 group manifest for TASK-015. The unimplemented contract entries of docs/tools_list.renamed.json are partitioned into B3/B4/B5 so that each group is one tools/<group>.{h,cpp} file: one channel, one scope, one mutating value, at most 10 tools, every tool exactly once across the three files. The union of the three manifests is exactly the contract minus the 66 B1/B2 tools; docs/scripts/check_tool_groups.py --batch B5 and --check-completeness make that assertion executable.",
+  "batch": "B5",
+  "total": 58,
+  "source": {
+    "batch_list": "docs/DESIGN-DETAIL.md section 10 (B5)",
+    "names": "docs/tools_list.renamed.json (171 entries) minus the 66 tools of docs/tool-groups.json and docs/tool-groups-b2.json",
+    "map": "docs/tool-rename-map.json (v1.1, 174 entries; channel/scope/mutating are read from it, never invented)",
+    "excluded": "none: the two unregister_until_implemented entries are absent from the 171 entry contract already"
+  },
+  "counts": {
+    "unimplemented_contract_tools": 105,
+    "unimplemented_in_this_batch": 58,
+    "groups": 26
+  },
+  "notes": {
+    "partition_axis": "B5 is every remaining subsystem batch named by DESIGN-DETAIL.md section 10: animation, animation_tree, audio, theme, tilemap, particle, navigation, physics, scene_3d, shader, export, android, profiling and the one game-scope movement write. A tool is put in B5 when the subsystem it drives (not the shape of its argument) is one of those; a tool whose subsystem also needs a B3 write (a script, a resource identity) stays in B3.",
+    "fix_implementation_first": [
+      "editor_bake_navigation_mesh",
+      "editor_set_tilemap_cell",
+      "editor_set_tilemap_cells_in_rect"
+    ]
+  },
+  "groups": [
+    {
+      "name": "editor_animation_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_add_animation_track",
+        "editor_create_animation",
+        "editor_remove_animation",
+        "editor_set_animation_keyframe"
+      ],
+      "notes": "Animation resource writes: create/remove an Animation, add a track, set a keyframe."
+    },
+    {
+      "name": "editor_animation_tree_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_create_animation_tree",
+        "editor_add_state_machine_state",
+        "editor_add_state_machine_transition",
+        "editor_remove_state_machine_state",
+        "editor_remove_state_machine_transition",
+        "editor_set_blend_tree_node",
+        "editor_set_animation_tree_parameter"
+      ],
+      "notes": "AnimationTree writes: create the tree, add/remove state machine states and transitions, set a blend-tree node and a tree parameter."
+    },
+    {
+      "name": "editor_audio_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_add_audio_bus",
+        "editor_add_audio_bus_effect",
+        "editor_add_audio_player",
+        "editor_set_audio_bus_property"
+      ],
+      "notes": "Audio bus layout and AudioStreamPlayer writes."
+    },
+    {
+      "name": "editor_particle_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_create_particles",
+        "editor_set_particle_preset",
+        "editor_set_particle_color_gradient",
+        "editor_set_particle_material"
+      ],
+      "notes": "GPUParticles writes: creation, a preset, a colour gradient and a process material."
+    },
+    {
+      "name": "editor_theme_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_set_control_theme"
+      ],
+      "notes": "editor_set_control_theme is alone: it is the one Control theme write and the only editor tool that needs a Theme resource on a Control."
+    },
+    {
+      "name": "editor_tilemap_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_remove_all_tilemap_cells",
+        "editor_set_tilemap_cell",
+        "editor_set_tilemap_cells_in_rect"
+      ],
+      "notes": "TileMap writes. Contains the two data-destructive fix_implementation_first tools (set_tilemap_cell, set_tilemap_cells_in_rect) - they are B5 by subsystem and are NOT part of TASK-015."
+    },
+    {
+      "name": "editor_shader_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_set_shader_material",
+        "editor_set_shader_param"
+      ],
+      "notes": "ShaderMaterial assignment and ShaderMaterial parameter writes."
+    },
+    {
+      "name": "editor_physics_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_set_physics_layers"
+      ],
+      "notes": "editor_set_physics_layers is alone: it writes the project's collision layer names through ProjectSettings, not through the scene."
+    },
+    {
+      "name": "editor_navigation_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_bake_navigation_mesh",
+        "editor_set_navigation_layers"
+      ],
+      "notes": "Navigation writes: baking a NavigationMesh (fix_implementation_first) and setting the navigation layer names."
+    },
+    {
+      "name": "editor_scene_3d_write",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_set_material_3d"
+      ],
+      "notes": "editor_set_material_3d is alone: it assigns a material to a MeshInstance3D surface, which is a different path from editor_set_shader_material."
+    },
+    {
+      "name": "editor_animation_read",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_animation_info",
+        "editor_get_animation_tree_structure",
+        "editor_list_animations"
+      ],
+      "notes": "Animation reads: one animation, an AnimationTree's structure, the list of animations."
+    },
+    {
+      "name": "editor_audio_read",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_audio_info",
+        "editor_get_audio_bus_layout"
+      ],
+      "notes": "Audio reads: one bus's info and the whole bus layout."
+    },
+    {
+      "name": "editor_particle_read",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_particle_info"
+      ],
+      "notes": "editor_get_particle_info is alone: the one particle read."
+    },
+    {
+      "name": "editor_tilemap_read",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_tilemap_cell",
+        "editor_get_tilemap_info",
+        "editor_get_tilemap_used_cells"
+      ],
+      "notes": "TileMap reads: one cell, the layer info, the used cells. The read half of editor_tilemap_write."
+    },
+    {
+      "name": "editor_physics_read",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_collision_info",
+        "editor_get_physics_layers"
+      ],
+      "notes": "Physics reads: collision info and the collision layer names."
+    },
+    {
+      "name": "editor_navigation_read",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_navigation_info"
+      ],
+      "notes": "editor_get_navigation_info is alone: the one navigation read."
+    },
+    {
+      "name": "editor_profiling_read",
+      "batch": "B5",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_performance_monitors"
+      ],
+      "notes": "editor_get_performance_monitors is alone: the profiling read, and the tool get_editor_performance was merged into (GDR-17)."
+    },
+    {
+      "name": "project_shader_write",
+      "batch": "B5",
+      "channel": "project",
+      "scope": "both",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "project_create_shader",
+        "project_edit_shader"
+      ],
+      "notes": "Project shader file writes (create / edit)."
+    },
+    {
+      "name": "project_theme_write",
+      "batch": "B5",
+      "channel": "project",
+      "scope": "both",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "project_create_theme",
+        "project_set_theme_color",
+        "project_set_theme_constant",
+        "project_set_theme_font_size",
+        "project_set_theme_stylebox"
+      ],
+      "notes": "Theme resource writes: create the theme and set its four entry kinds (colour, constant, font size, stylebox)."
+    },
+    {
+      "name": "project_shader_read",
+      "batch": "B5",
+      "channel": "project",
+      "scope": "both",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_get_shader_params",
+        "project_read_shader"
+      ],
+      "notes": "Project shader reads: the parameters of a shader resource and the raw shader text."
+    },
+    {
+      "name": "project_theme_read",
+      "batch": "B5",
+      "channel": "project",
+      "scope": "both",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_get_theme_info"
+      ],
+      "notes": "project_get_theme_info is alone: the one theme read."
+    },
+    {
+      "name": "project_export_read",
+      "batch": "B5",
+      "channel": "project",
+      "scope": "both",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_get_export_info",
+        "project_list_export_presets"
+      ],
+      "notes": "Export reads: the export info and the export presets."
+    },
+    {
+      "name": "project_android_read",
+      "batch": "B5",
+      "channel": "project",
+      "scope": "both",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_get_android_preset_info"
+      ],
+      "notes": "project_get_android_preset_info is alone: the Android export preset read."
+    },
+    {
+      "name": "os_android_read",
+      "batch": "B5",
+      "channel": "os",
+      "scope": "both",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "os_list_android_devices"
+      ],
+      "notes": "os_list_android_devices is alone: the one os-channel read."
+    },
+    {
+      "name": "os_android_write",
+      "batch": "B5",
+      "channel": "os",
+      "scope": "both",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "os_deploy_to_android_device"
+      ],
+      "notes": "os_deploy_to_android_device is alone: the one os-channel write, and the only tool of the module that talks to a device."
+    },
+    {
+      "name": "running_game_navigation_write",
+      "batch": "B5",
+      "channel": "running_game",
+      "scope": "game",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "running_game_move_player_to_target"
+      ],
+      "notes": "running_game_move_player_to_target is alone: the one game-scope movement write, split from running_game_test_execution because it is a movement and not a test."
+    }
+  ]
+}

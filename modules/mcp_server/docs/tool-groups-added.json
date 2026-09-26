@@ -1,0 +1,106 @@
+{
+  "_comment": "Added-tool group manifest for TASK-052 (DESIGN-DETAIL.md section 26 / GDR-28), extended by TASK-053. The tools that are NOT ports of the frozen 174 entry rename map live here, in their own file: the five batch manifests (tool-groups.json and its -b2/-b3/-b4/-b5 sisters) are historical partition records and are not touched by an expansion. Every invariant of a ported batch applies unchanged (one channel, one scope, one mutating value per group, at most 10 tools per group, every tool exactly once), plus the one thing a batch manifest does not need: the union of this file is cross-checked against the contract's own _meta.added_tools, so the manifest and the generator cannot drift apart. check_tool_groups.py --added makes all of that executable. TASK-053 adds two entries (project_validate_scripts, editor_set_node_script_batch); the M-5 sampling stride is a SCHEMA_OVERRIDES change to a ported tool and therefore does NOT appear here. TASK-057 adds source.generator_version: the version used to be mentioned only inside source.entries' free text and nothing checked it, so it drifted twice (D2 of the first ADDED audit); it is now a field of its own and check_tool_groups.py --added asserts that it, GENERATOR_VERSION in gen_renamed_contract.py and _meta.generator_version in the contract are the same string.",
+  "batch": "ADDED",
+  "total": 4,
+  "source": {
+    "generator_version": "1.18.0",
+    "entries": "modules/mcp_server/scripts/gen_renamed_contract.py ADDED_TOOLS (generator v1.18.0, TASK-052 section 1 + TASK-053 section 2.1/2.2; v1.18 changed no ADDED_TOOLS entry and no inputSchema - it is the TASK-059 D-4 description rewrite of five ported tools, kept in lockstep by this same field)",
+    "contract": "docs/tools_list.renamed.json - _meta.added_tools (ordered) and _meta.added_count",
+    "map": "none: an added tool has no tool-rename-map.json row. channel/scope/mutating are declared here; gate 1 (the live tools/list) and scripts/mcp052_added_tools_evidence.ps1 / scripts/mcp053_added_tools_evidence.ps1 are what check them end to end.",
+    "excluded": "none: nothing in this file comes from the 174 entry map"
+  },
+  "counts": {
+    "added_tools": 4,
+    "groups": 4
+  },
+  "verb_extensions": [
+    {
+      "verb": "build",
+      "reason": "project_build_csharp - no verb of the map's closed set names 'compile the project with an external toolchain': run/execute name a script or a scenario and export names a Godot export preset."
+    },
+    {
+      "verb": "write",
+      "reason": "project_write_text_file - the destination may or may not exist, so create (claims it is new), edit (claims it was there), set (names a setting; project_set_setting owns that) and save (names the engine's save_* writers) all overclaim."
+    }
+  ],
+  "groups": [
+    {
+      "name": "project_csharp_build",
+      "batch": "ADDED",
+      "channel": "project",
+      "verb": "build",
+      "scope": "both",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "project_build_csharp"
+      ],
+      "notes": "The one added tool that talks to an external toolchain. mutating=true is the conservative classification of GDR-18: the build writes obj/ and bin/ next to the project and the default rescan touches the editor's own caches, so a caller must not be told it was a read. scope=both: the .NET SDK is a property of the machine and of the engine build, not of the editor process, and a game process may build too (only the rescan half is editor-only)."
+    },
+    {
+      "name": "project_text_write",
+      "batch": "ADDED",
+      "channel": "project",
+      "verb": "write",
+      "scope": "both",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "project_write_text_file"
+      ],
+      "notes": "The plain project text writer (.csproj / .sln / NuGet.config / .cfg). One tool in its own group because the group rules are per tools/<group>.{h,cpp} file and the two added tools of TASK-052 share nothing but the channel; mutating=true is unconditional (there is no dry-run branch and the file really changes); scope=both matches the ported project disk writers (project_create_script / project_edit_script / project_create_theme are all scope=both), and a game process of a development run can write its project directory the same way."
+    },
+    {
+      "name": "project_validate_scripts",
+      "batch": "ADDED",
+      "channel": "project",
+      "verb": "validate",
+      "scope": "both",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_validate_scripts"
+      ],
+      "notes": "TASK-053 section 2.1 (C-4 (3), the racing trace's six-deep runs of the singular tool). mutating=false is unconditional and is the conservative classification's opposite direction: the tool only reads files, and the doctest 'the validate tools never write to the project' pins that no file of the scratch tree moves. scope=both matches its ported sibling project_validate_script (a game process can validate its own project's scripts the same way). The plural tool and the singular one share one per-file decision (MCPTools::validate_script_source), so a file can never get two different verdicts from this module."
+    },
+    {
+      "name": "editor_set_node_script_batch",
+      "batch": "ADDED",
+      "channel": "editor",
+      "verb": "set",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_set_node_script_batch"
+      ],
+      "notes": "TASK-053 section 2.2 (C-4 (4), the racing trace's eight-in-a-row editor_set_node_script calls). scope=editor because it writes the nodes of the *edited* scene, exactly like its singular sibling editor_set_node_script (which is editor-only in the rename map); mutating=true is unconditional - an attachment that lands IS a change to the scene. All-or-nothing like editor_add_nodes_batch: one script_path for the whole batch, so a node whose engine refuses the script takes the whole call back."
+    },
+    {
+      "name": "editor_set_node_property_updates",
+      "batch": "ADDED",
+      "channel": "editor",
+      "verb": "set",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_set_node_property_updates"
+      ],
+      "notes": "TASK-063 section 3 (TASK-060 M-1/D-6: the ported batch property write is type-scoped, so a level layout cost one single-node write per node - the round-2 trace called editor_set_node_property 60 times, 57 of them back to back). scope=editor for the same reason its two siblings are (it writes the nodes of the *edited* scene: editor_set_node_property is editor-only in the rename map, and editor_set_node_script_batch declares editor here). mutating=true is unconditional. It is NOT all-or-nothing by default: the contract's own description promises 'answer per entry whether the value landed', so stop_on_error:false reports every entry and leaves the ones that landed in place, while stop_on_error:true is the all-or-nothing mode (first refusal stops the call and every entry that landed is put back). Every write goes through the one MCPTools::write_node_property path, so the TASK-022/TASK-023 ValueSlot narrowing gate and the TASK-014 D-1 property-existence refusal apply unchanged - this tool is not a back door around section 20/22."
+    },
+    {
+      "name": "project_text_read",
+      "batch": "ADDED",
+      "channel": "project",
+      "verb": "read",
+      "scope": "both",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_read_text_file"
+      ],
+      "notes": "TASK-075 section 2 (PLATFORMER-FINDINGS M1/D3; the round-5 judgement table's section 0.6 (8) could not be constructed with a tool). scope=both matches its ported siblings (project_read_script / project_read_resource / project_read_scene_file_content) and its added write half (project_write_text_file declares both here): reading a project text file is the same act in an editor process and in a game process, and the tool touches no editor state. mutating=false is unconditional - the tool opens the file for reading only and its doctest pins that no byte of the scratch tree moves. The answer is built from FileAccess::get_file_as_bytes() + FileAccess::get_sha256(), the two calls project_write_text_file's receipt is read from, so the write receipt and the read answer are byte-comparable, and max_bytes bounds only the `text` field (size and sha256 always describe the whole file)."
+    }
+  ]
+}
