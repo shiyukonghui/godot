@@ -319,29 +319,18 @@ python work\task085\run_godot.ps1 -ArgLine '<args>' -Tag <tag>
 | marker | **none** — no byte of this file was invented |
 | behaviour risk | none: documentation only, no code path reads it |
 
-## E-2. `scripts/accept_m1.ps1` — G6, in progress (see the TASK-087 report §②)
+## E-2. `scripts/accept_m1.ps1` — G6, `[Parser]::ParseFile` 10 errors → **0**
 
-The tree copy is 57 469 B / 1 008 lines and still carries **10** `[Parser]::ParseFile`
-errors. `reconstruction.jsonl` records this path as `"chosen": "read-epoch"`, `"conf": "mid"`,
-`"bytes": 57469`, `"notes": ["REPLAY_UNRELIABLE(5 failed edits)…", "PS1_PARSE_ERRORS(10)"]` —
-i.e. the 10 errors are inherited from the TASK-078 staging body, and the tree and
-`staging\modules\mcp_server\scripts\accept_m1.ps1` are the same 57 469 bytes.
-
-What this batch established:
-
-* the errors are **splice artifacts**, not lost syntax: `Test-Listener`/`Get-ListenerPid` are
-  defined twice (`:250`/`:266` and `:275`/`:287`), the whole `case13` body is duplicated
-  (`:876`–`:895`), the `#  Main` banner appears twice (`:477`, `:545`), and the final
-  `SUMMARY`/exit block is triplicated (`:942`–`:1081`). `Try` at `:644`, the hash literal at
-  `:888` and the trailing braces are the same damage seen from the parser's side.
-* `epoch.py` + `merge3.py` found a **clean** recorded revision: the 1 022-line-lineage window
-  set (27 read rows, every line 1–1022 present, zero holes) reconstructs to 49 502 B and
-  `[Parser]::ParseFile` reports **0 errors** (`work\task087\ps1_e1022.ps1`). It carries the
-  full M1 case list (case1–case19) and the manifest-derived `$ToolNames`.
-* `editmatch.py` scores each candidate against every applied recorded edit's `old` text:
-  1 022-line base **22/73**, tree 7/73, the 1 355-line union 9/73. The 1 022 base is
-  therefore the closest recorded revision, but it predates `case0_repo_exit_code_propagation`
-  and `case20_tools_list_cross_process_restart`, which the tree already names.
+| item | value |
+|---|---|
+| before | 57 469 B / 1 008 lines, **10** parse errors (first at `:644` `The Try statement is missing its Catch or Finally block`) |
+| after | **49 502 B / 1 022 lines, 0 parse errors** (`[System.Management.Automation.Language.Parser]::ParseFile`) |
+| sha256 | `6e2072ac48ae9f09edb50132fb29cb03a3d52b89cf548181dd7910df71215552` |
+| basis | **recorded window text, no logical rebuild.** The damaged body is not repairable by patching — it is a concatenation of *fragments*: `:644` is a stray `}` opening the "Game side" banner, `:665`–`:675` is case 18's body under case 13's label, `:814` and `:875` repeat whole cases, `:886`–`:895` repeats case 13's body, and `:976`–`:1 083` appends one and a half further copies of the `guard_user_port_9877` block *after* `exit 0`. Worse, the union of all 128 recorded windows carries **foreign text**: the `// ---` C++ banner of `tools/editor_shader_write.cpp` (`// TASK-035 (B5 batch 3): the \`editor_shader_write\` group`) appears at line 556 of the union, so a "newest text per line number" merge over every window is contaminated. |
+| the fix that made it exact | `epoch.py`/`merge2.py --skeleton N` restrict the merge to windows that belong to **one revision skeleton** (`totalLines <= 1022`), which drops the 5 later-revision windows whose bodies are contaminated. 27 window rows, every line 1–1 022 present, **zero holes**; the result parses with 0 errors. The `totalLines <= 1008` skeleton (17 rows, 48 686 B) also parses with 0 errors and is kept as a second witness. |
+| what changed, honestly | the restored body carries **case1–case19** (the M1 case list). Two later cases the damaged copy had already named are **not** re-added: `case0_repo_exit_code_propagation` (TASK-069) and `case20_tools_list_cross_process_restart` (TASK-004). Their text *is* recorded (`events-edit seq=1030 t=1790321324515`, 1 998 B; `seq=858 t=1790015088330`, 3 061 B) and both were grafted experimentally onto the clean base at their recorded anchors, but the graft does **not** reach 0 parse errors (17), so it is **not** what was written. Choosing the parseable recorded revision over a broken superset is the conservative reading; the two cases are therefore recorded here as **not rebuilt**, with their exact event ids, so the next batch can add them deliberately. |
+| marker | **none** in the file (the whole body is recorded text); the scope reduction is declared here instead |
+| behaviour risk | **low, declared.** `accept_m1.ps1` is a *gate*, not shipped code. The restored gate covers the DESIGN-DETAIL §9 M1 rows plus the hardening rows case15–case19; it does not run the TASK-069 exit-propagation probe or the TASK-004 cross-process-restart probe. `case7_parse_error`/`case11`/`case17`/`case18`/`case19` (the GDR-12 rows) are all present. |
 
 ## E-3. `scripts/gen_renamed_contract.py` / G5 — in progress (see the TASK-087 report §④)
 
