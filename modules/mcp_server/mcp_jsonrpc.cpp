@@ -30,6 +30,7 @@
 
 #include "mcp_jsonrpc.h"
 
+#include "mcp_file_effects.h"
 #include "tools/tool_builder.h"
 
 #include "core/io/json.h"
@@ -355,8 +356,7 @@ static Dispatch _dispatch_tools_call(const String &p_id_json, const Variant &p_p
 	if (p_registry.is_deferred_tool(tool_name)) {
 		// GDR-20: the tool answers across frames, so the request is handed over
 		// to the transport's pending table instead of being answered here.
-		MCPDeferred::Task *task = p_registry.call_deferred_tool(tool_name, arguments, tool_error);
-		if (tool_error.is_error() || task == nullptr) {
+		MCPDeferred::Task *task = p_registry.call_deferred_tool(tool_name, arguments, tool_error);		if (tool_error.is_error() || task == nullptr) {
 			if (!tool_error.is_error()) {
 				tool_error = MCPToolError::internal(vformat("Deferred tool returned no task: %s", tool_name));
 			}
@@ -375,10 +375,36 @@ static Dispatch _dispatch_tools_call(const String &p_id_json, const Variant &p_p
 		// so the trace is marked deferred and the transport finishes it.
 		r_trace.deferred = true;
 		r_trace.timeout_ms = deferred.timeout_ms;
+		// TASK-089: a deferred tool's disk work happens after this function has
+		// returned (its task is ticked by the transport), so the file-side
+		// recorder - which is per-call and synchronous - cannot see it. That is
+		// said on the line instead of being left to look like "no mutation".
+		// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
+		// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-1).
+		if (r_trace.traceable) {
+			r_trace.file_effect_status = "not_tracked_deferred";
+		}
+		// [/REBUILT-2C]
 		return _tag(deferred, r_trace);
 	}
 
+	// TASK-089 (item A): the file-side recorder is opened around the one place a
+	// tool is really invoked, so every mutation a tool makes through the
+	// module's publish primitives lands in this call's buffer - and no mutation
+	// made outside a call is ever attributed to one. With the trace off nothing
+	// is opened and no primitive pays for a snapshot.
+	// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
+	// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-1).
+	if (r_trace.traceable) {
+		MCPFileEffect::begin_recording();
+	}
 	const Variant tool_result = p_registry.call_tool(tool_name, arguments, tool_error);
+	if (r_trace.traceable) {
+		MCPFileEffect::end_recording();
+		r_trace.file_effects = MCPFileEffect::take_effects();
+		r_trace.file_effect_status = MCPFileEffect::status_name();
+	}
+	// [/REBUILT-2C]
 	if (tool_error.is_error()) {
 		// The code and the optional `data` (a `suggestion`) come from the tool
 		// layer (GDR-6 / GDR-14): -32602 for an argument problem, -32001 for a

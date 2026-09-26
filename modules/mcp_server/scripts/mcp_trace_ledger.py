@@ -28,15 +28,36 @@ import json
 import sys
 
 # The verdict vocabulary. Every call gets exactly one.
+# [REBUILT-2C low-confidence: verify] TASK-089 item A: the file-side vocabulary
+# is written, not replayed (no recording carries a file-side field);
+# REBUILT-2C-MANIFEST.md section 2c-8 (H-3).
 VERDICT_FAILED = "failed"
+VERDICT_OK_FILE_EFFECT = "ok_file_effect_observed"
 VERDICT_OK_EFFECT = "ok_effect_observed"
 VERDICT_OK_NO_EFFECT = "ok_no_effect_observed"
 VERDICT_OK_UNAVAILABLE = "ok_effect_unavailable"
 VERDICT_OK_UNOBSERVED = "ok_effect_not_observed"
 
+# The file-side half of "did anything happen" (TASK-089 item A). `changed` and
+# `mixed` mean the call really rewrote a destination on disk; `unchanged` means
+# it went through a writer and the bytes are the same as before; `none` means it
+# did not touch the disk at all. `not_recorded` is a trace written before the
+# recorder existed, and `not_tracked` a call whose work happens after the
+# response (the deferred channel) - both are declared absences, never read as
+# "nothing changed".
+FILE_EFFECT_CHANGED = "changed"
+FILE_EFFECT_UNCHANGED = "unchanged"
+FILE_EFFECT_MIXED = "mixed"
+FILE_EFFECT_NONE = "none"
+FILE_EFFECT_NOT_RECORDED = "not_recorded"
+FILE_EFFECT_NOT_TRACKED = "not_tracked"
+
 # The facts a row is reconstructible from. `capture` and `scene_evidence` are
-# conditional: they are only knowable when capture was switched on.
-FACTS = ("request_id", "tool", "args", "times", "result", "capture", "scene_evidence")
+# conditional: they are only knowable when capture was switched on. The same is
+# true of `file_effect`: it is only knowable from a trace written by a build that
+# carries the TASK-089 recorder.
+FACTS = ("request_id", "tool", "args", "times", "result", "capture", "scene_evidence", "file_effect")
+# [/REBUILT-2C]
 
 
 def load(path):
@@ -108,16 +129,44 @@ def _scene_of(record, capture_line):
     return "not_observed", {}
 
 
-def verdict_of(ok, scene):
+def _file_effect_of(record):
+    """(file status, detail) for one call, from the call line's own fields."""
+    # [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not replayed;
+    # REBUILT-2C-MANIFEST.md section 2c-8 (H-3).
+    status = record.get("file_effect_status")
+    if not isinstance(status, str) or status == "":
+        return FILE_EFFECT_NOT_RECORDED, {"status": None}
+    rows = record.get("file_effects")
+    if not isinstance(rows, list):
+        rows = []
+    changed = [r for r in rows if isinstance(r, dict) and r.get("changed") is True]
+    unchanged = [r for r in rows if isinstance(r, dict) and r.get("changed") is not True]
+    if status == "not_tracked_deferred":
+        return FILE_EFFECT_NOT_TRACKED, {"status": status}
+    if status == "no_mutation":
+        return FILE_EFFECT_NONE, {"status": status, "rows": 0}
+    if changed and unchanged:
+        return FILE_EFFECT_MIXED, {"status": status, "rows": len(rows)}
+    if changed:
+        return FILE_EFFECT_CHANGED, {"status": status, "rows": len(rows)}
+    return FILE_EFFECT_UNCHANGED, {"status": status, "rows": len(rows)}
+
+
+def verdict_of(ok, scene, file_effect):
     if not ok:
         return VERDICT_FAILED
+    # The file side is the stronger evidence: a call that really rewrote a
+    # destination did something, whatever the screen did.
+    if file_effect in (FILE_EFFECT_CHANGED, FILE_EFFECT_MIXED):
+        return VERDICT_OK_FILE_EFFECT
     if scene == "changed":
         return VERDICT_OK_EFFECT
-    if scene == "unchanged":
+    if file_effect == FILE_EFFECT_UNCHANGED or scene == "unchanged":
         return VERDICT_OK_NO_EFFECT
     if scene == "unavailable":
         return VERDICT_OK_UNAVAILABLE
     return VERDICT_OK_UNOBSERVED
+# [/REBUILT-2C]
 
 
 def row_for(record, capture_line, generation_index):
@@ -128,6 +177,7 @@ def row_for(record, capture_line, generation_index):
         started = ended - duration
     capture = record.get("capture") if isinstance(record.get("capture"), dict) else {}
     scene, scene_detail = _scene_of(record, capture_line)
+    file_effect, file_detail = _file_effect_of(record)
     ok = bool(record.get("ok"))
 
     args = record.get("args")
@@ -140,6 +190,7 @@ def row_for(record, capture_line, generation_index):
         "result": "ok" in record and "error_code" in record,
         "capture": bool(capture),
         "scene_evidence": scene != "not_observed",
+        "file_effect": file_effect not in (FILE_EFFECT_NOT_RECORDED, FILE_EFFECT_NOT_TRACKED),
     }
     return {
         "generation": generation_index,
@@ -163,13 +214,18 @@ def row_for(record, capture_line, generation_index):
         "capture_reason": capture.get("reason"),
         "scene_effect": scene,
         "scene_evidence": scene_detail,
-        # The runtime trace carries scene-side evidence only. A file the call
-        # wrote is *not* recorded here; the honest value is a declared absence,
-        # not an empty success. See MCP-TRACEABILITY.md section 4.
-        "file_effect_evidence": "not_recorded_in_trace",
+        # TASK-089 (item A): the file-side evidence the call line now carries.
+        # This was the one declared gap in the model; the value is now read off
+        # the trace instead of being a fixed "not_recorded_in_trace".
+        "file_effect": file_effect,
+        "file_effect_status": record.get("file_effect_status"),
+        "file_effect_evidence": ("recorded_in_trace" if file_effect not in (FILE_EFFECT_NOT_RECORDED,)
+                                 else "not_recorded_in_trace"),
+        "file_effects": record.get("file_effects") if isinstance(record.get("file_effects"), list) else [],
+        "file_effect_detail": file_detail,
         "facts": facts,
         "facts_complete": all(facts.values()),
-        "verdict": verdict_of(ok, scene),
+        "verdict": verdict_of(ok, scene, file_effect),
     }
 
 
@@ -191,24 +247,28 @@ def render_text(rows, path, broken, args):
     counts = {}
     for row in rows:
         counts[row["verdict"]] = counts.get(row["verdict"], 0) + 1
+    file_counts = {}
+    for row in rows:
+        file_counts[row["file_effect"]] = file_counts.get(row["file_effect"], 0) + 1
     lines = []
     lines.append("TRACE LEDGER %s" % path)
     lines.append("calls=%d malformed_lines=%d" % (len(rows), broken))
     lines.append("verdicts: " + (", ".join("%s=%d" % (k, counts[k]) for k in sorted(counts)) or "<none>"))
+    lines.append("file_effects: " + (", ".join("%s=%d" % (k, file_counts[k]) for k in sorted(file_counts)) or "<none>"))
     lines.append("")
-    header = ("%-6s %-8s %-38s %-9s %-8s %-8s %-22s %s" %
-              ("seq", "req_id", "tool", "dur_ms", "ok", "err", "scene_effect", "verdict"))
+    header = ("%-6s %-8s %-38s %-9s %-8s %-8s %-14s %-15s %s" %
+              ("seq", "req_id", "tool", "dur_ms", "ok", "err", "scene_effect", "file_effect", "verdict"))
     lines.append(header)
     lines.append("-" * len(header))
     for row in rows:
         if args.tool and row["tool"] != args.tool:
             continue
-        if args.only_ineffective and row["verdict"] in (VERDICT_OK_EFFECT, VERDICT_FAILED):
+        if args.only_ineffective and row["verdict"] in (VERDICT_OK_EFFECT, VERDICT_OK_FILE_EFFECT, VERDICT_FAILED):
             continue
-        lines.append("%-6s %-8s %-38s %-9s %-8s %-8s %-22s %s" % (
+        lines.append("%-6s %-8s %-38s %-9s %-8s %-8s %-14s %-15s %s" % (
             row["call_id"], row["request_id"],
             (row["tool"] or "")[:38], row["duration_ms"], row["ok"],
-            row["error_code"], row["scene_effect"], row["verdict"]))
+            row["error_code"], row["scene_effect"], row["file_effect"], row["verdict"]))
     complete = sum(1 for row in rows if row["facts_complete"])
     lines.append("")
     lines.append("rows whose reconstructible facts are all present: %d/%d" % (complete, len(rows)))

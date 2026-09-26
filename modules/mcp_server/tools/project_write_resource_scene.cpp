@@ -29,6 +29,9 @@
 /**************************************************************************/
 #include "project_write_resource_scene.h"
 
+// TASK-089 (item A): the file-side effect recorder, for `project_delete_scene_file`.
+#include "../mcp_file_effects.h"
+
 #include "tool_builder.h"
 #include "tool_helpers.h"
 
@@ -500,8 +503,15 @@ static Variant _tool_delete_scene_file(const Dictionary &p_args, MCPToolError &r
 		return Variant();
 	}
 
+	// TASK-089 (item A): a deletion is a file-side mutation, so the one recorder
+	// is opened here too (this tool removes a destination without going through
+	// the module's publish primitive).
+	// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
+	// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-2).
+	MCPFileEffect::MutationScope scene_delete(path, "delete");
 	const Error remove_error = DirAccess::remove_absolute(path);
 	if (remove_error != OK) {
+		scene_delete.mark_failed();
 		r_error = MCPToolError::internal(vformat("Failed to delete the scene file: %s",
 				error_names[(int)remove_error]));
 		return Variant();
@@ -509,8 +519,12 @@ static Variant _tool_delete_scene_file(const Dictionary &p_args, MCPToolError &r
 	// A scene that was imported has a sidecar; it is removed with the scene.
 	const String import_path = path + ".import";
 	if (FileAccess::exists(import_path)) {
-		DirAccess::remove_absolute(import_path);
+		MCPFileEffect::MutationScope import_delete(import_path, "delete");
+		if (DirAccess::remove_absolute(import_path) != OK) {
+			import_delete.mark_failed();
+		}
 	}
+	// [/REBUILT-2C]
 
 	Dictionary result;
 	result["path"] = path;

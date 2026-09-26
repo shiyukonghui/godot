@@ -601,3 +601,67 @@ differs is the test header.
   first, no wildcard and no `..`). Nothing else was removed, moved or renamed.
 * Builds and engine runs start from `cmd.exe` (iron rule 4): `scons_run.ps1`,
   `run_mono.ps1`, `run_cmd.ps1`, all with `WaitForExit()` and `/v:on`.
+
+---
+
+# REBUILT-2C MANIFEST — 2c-8 (`H:\rebuild\godot`, branch `feature/mcp-server-module-rebuild`)
+
+* Task: TASK-089 — (A) close the one remaining gap in the traceability model
+  (file-side side effects on the call line), (B) the round-7 test loop against a
+  real mini game project, (C) the nine gates again.
+* Start HEAD: `6b4c29dc81`. Method unchanged: recorded text is replayed at its
+  recorded position; anything written instead is wrapped in
+  `[REBUILT-2C low-confidence: verify] … [/REBUILT-2C]` in the file and listed
+  below with its basis and its behaviour risk.
+* Tooling: `C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task089\`
+  (`run_gates.ps1`, `task089_build_mono.cmd`, `task089_gate1_module.cmd`,
+  `task089_gate2_full.cmd`, `patch_capture.py`, `mcp089_live_evidence.ps1`,
+  `mk_miniproject.py`, `ledger_report.py`); the guards of 2c-7 are reused
+  verbatim (`work/task088/del_stale_objs.py`).
+
+## H-1. Written (marked): the call line gains the file-side half
+
+| # | file | what was written | basis | behaviour risk |
+|---|---|---|---|---|
+| 1 | `mcp_trace.h` | `MCPTrace::Record` gains `Array file_effects` and `String file_effect_status` | the two fields the traceability model declared as missing (`MCP-TRACEABILITY.md` §3.2, `file_effect_evidence: "not_recorded_in_trace"`). Nothing to replay: the recorded `mcp_trace.h` predates any file-side field | **none on the wire** — the fields only reach `Recorder::_build_line` |
+| 2 | `mcp_trace.cpp` | `_build_line`: inside the existing `method == "tools/call"` block, emit `file_effect_status` + `file_effects` when the status is non-empty | the fields belong on the **call line**, at the same level as `id`/`method`/`tool`, which is the object this function builds | **none**: with `--mcp-trace` off no line is built; an older trace has neither field and the ledger reads that as `not_recorded` |
+| 3 | `mcp_jsonrpc.cpp` | (a) `_dispatch_tools_call`: `MCPFileEffect::begin_recording()` before `call_tool` and `end_recording()` + `take_effects()` + `status_name()` after, both guarded by `r_trace.traceable`; (b) the deferred branch sets `file_effect_status = "not_tracked_deferred"` | the one place a tool is really invoked. A deferred tool is ticked after this function returned, so its disk work is not observable here and is named as such instead of being reported as "no mutation" | **none on tool behaviour**; the recorder is inert unless the switch is on. Risk: an extra `Array` copy per traced `tools/call` |
+| 4 | `mcp_file_effects.{h,cpp}` | **new**: `MCPFileEffect` — a per-call buffer plus the `MutationScope` a mutating primitive opens around itself (absolute path, sha256 + byte count before and after, `changed`, `kind` = `write`/`delete`/`mkdir`, and a bounded head/tail line difference for small text destinations) | new files, nothing to replay | **none**: unused unless a trace is on; large files are never read, only hashed |
+
+## H-2. Written (marked): where the one recorder is opened
+
+| # | file | what was written | basis | behaviour risk |
+|---|---|---|---|---|
+| 1 | `tools/tool_helpers.cpp` | `publish_file_atomically()` opens one `MutationScope` (this is the module's single publish primitive — the editor/scene/resource/script/shader/theme/project-settings/screenshot/test-report writers all reach disk through it); the section arm of `publish_project_setting_to()` opens one too (the engine's own `save_custom_section()` bypasses the primitive); `_ensure_user_data_directory()` opens one with `kind=mkdir` | this is the "one place" the task asks for: no writing group computes a hash and no writing group can forget to. The four sites left are the ones that touch disk **without** the primitive | **none on the file contents**: the scope only observes. Risk: three extra `stat` + one `sha256` per publish while tracing |
+| 2 | `tools/project_write_resource_scene.cpp` | `project_delete_scene_file` opens a `MutationScope(kind="delete")` for the scene and for its `.import` sidecar | a deletion is a file mutation and does not go through the publish primitive | **none** |
+| 3 | `tools/csharp_verdict.cpp` | `write_csharp_build_record` opens one **before** `FileAccess::open(..., WRITE)` (that call truncates on open, so a later snapshot would describe the truncated file) | the build record is written directly to `user://` | **none** |
+| 4 | `tools/editor_testing_read.cpp` | `editor_get_test_report`'s `clear` arm opens one for the bridge-file removal | direct `DirAccess::remove_absolute` | **none** |
+| 5 | `tools/project_cross_scene_write.cpp` | both rollback loops (a failed publish, a refused live edit) open one per restored file | a rollback restore writes a destination directly; without it a failed batch call would look like "no mutation" | **none** |
+
+**Declared coverage boundary:** the recorder is opened at disk-mutating
+primitives, not per tool. A tool that mutates purely in memory (an editor node
+property, an InputMap action before it is published) records `no_mutation`
+unless it also publishes a file — that is the intended reading, and the ledger's
+`file_effect` column says `none` rather than implying the call did nothing.
+
+## H-3. Written (marked): the reader and the tests
+
+| # | file | what was written | basis | behaviour risk |
+|---|---|---|---|---|
+| 1 | `scripts/mcp_trace_ledger.py` | `file_effect` is derived from the call line (`changed` / `unchanged` / `mixed` / `none` / `not_recorded` / `not_tracked`); a new verdict `ok_file_effect_observed` when the file side really changed; `file_effect` added to the reconstructible-`FACTS` set; a `file_effect` column in the text table | the reader half of H-1/H-2. The old fixed value `file_effect_evidence: "not_recorded_in_trace"` was the declared gap and is now read off the trace | **none**: read-only. `check_hardcoded_counts.py` scans it and passes |
+| 2 | `tests/test_mcp_server.h` | four cases: the recorder is inert with no trace; a create / a real rewrite / a same-content rewrite are told apart (including the head/tail summary); a deleting tool is recorded through the same hook; the rows are emitted on the call line at the top level | the recorder had no test at all (`MCPTrace` had none either) | **none**: the cases create and remove their own `res://mcp_server_file_effect_fixture` tree |
+
+## H-4. Route notes worth keeping
+
+* `bin\obj` is shared between the plain and the mono variant, and scons keeps no
+  dependency edge from `tests/test_mcp_server.h` to its object, so
+  `del_stale_objs.py --apply` (dry run first) ran before every build — 3 present,
+  1 absent, both times.
+* `scons platform=windows target=editor module_mono_enabled=yes tests=yes -j8 -k`
+  takes ~37-42 s incrementally here.
+* `Start-Process -PassThru` on a redirected `cmd.exe` does **not** always expose
+  `$p.ExitCode` in this PowerShell (it came back empty for every child), so the
+  gate runner echoes `%ERRORLEVEL%` **inside** the cmd child and parses that line.
+  This is the same class of trap as 2c-7's G-5 notes.
+
+

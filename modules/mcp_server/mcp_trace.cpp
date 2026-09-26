@@ -339,6 +339,18 @@ String Recorder::_build_line(uint64_t p_connection_id, const Record &p_record, u
 		fields["args"] = _truncate_utf8(p_record.args_json, max_args_bytes, args_truncated);
 		fields["args_bytes"] = p_record.args_bytes;
 		fields["args_truncated"] = args_truncated;
+
+		// TASK-089 (item A): the file-side side effects of exactly this call.
+		// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
+		// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-1).
+		// `file_effect_status` is only set when a recording really ran around the
+		// tool, so an absence of both fields means "this trace predates the
+		// recorder or the trace switch was off" and never "nothing changed".
+		if (!p_record.file_effect_status.is_empty()) {
+			fields["file_effect_status"] = p_record.file_effect_status;
+			fields["file_effects"] = p_record.file_effects;
+		}
+		// [/REBUILT-2C]
 	}
 
 	if (p_record.is_tools_list) {

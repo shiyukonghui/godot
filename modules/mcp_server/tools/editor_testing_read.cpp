@@ -29,6 +29,9 @@
 /**************************************************************************/
 #include "editor_testing_read.h"
 
+// TASK-089 (item A): the file-side effect recorder, for the bridge-file removal
+// of `editor_get_test_report`'s `clear` arm.
+#include "../mcp_file_effects.h"
 #include "tool_builder.h"
 #include "tool_helpers.h"
 
@@ -209,7 +212,15 @@ static Variant _tool_get_test_report(const Dictionary &p_args, MCPToolError &r_e
 		clear_test_results();
 		cleared.push_back("editor_process");
 		if (file_present) {
-			DirAccess::remove_absolute(bridge_path);
+			// TASK-089 (item A): this arm deletes the bridge file, so it is a
+			// file mutation and is recorded as one.
+			// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
+			// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-2).
+			MCPFileEffect::MutationScope bridge_delete(bridge_path, "delete");
+			if (DirAccess::remove_absolute(bridge_path) != OK) {
+				bridge_delete.mark_failed();
+			}
+			// [/REBUILT-2C]
 			cleared.push_back("game_process_file");
 		}
 	}

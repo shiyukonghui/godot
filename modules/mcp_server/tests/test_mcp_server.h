@@ -33,6 +33,10 @@
 #include "../mcp_http_server.h"
 #include "../mcp_jsonrpc.h"
 #include "../mcp_server.h"
+// TASK-089 (item A): the file-side recorder's own tests live at the end of this
+// header; `mcp_trace.h` is what the call line is asserted against.
+#include "../mcp_file_effects.h"
+#include "../mcp_trace.h"
 #include "../tool_registry.h"
 // TASK-045: the timing half of the raw-byte comparison's doctest needs the clock
 // (`OS::get_ticks_usec`) and a way to print its distribution; neither is pulled
@@ -9236,6 +9240,197 @@ TEST_CASE("[MCPServer] the editor inspectors never write to the project") {
 	CHECK(after.size() == before.size());
 	CHECK(TestMCPServer::canonical(after) == TestMCPServer::canonical(before));
 }
+
+// ---------------------------------------------------------------------------
+// TASK-089 (item A): the file-side half of the call trace.
+// [REBUILT-2C low-confidence: verify] TASK-089 item A: these cases are written,
+// not replayed (the recorded suite predates the recorder);
+// REBUILT-2C-MANIFEST.md section 2c-8 (H-3).
+//
+// The trace records the request and the answer, and the capture extension
+// records whether the screen changed; the one declared gap left in that model
+// was "the trace says nothing about the files a call wrote". These cases pin the
+// three facts the gap needed: the recorder is inert unless a trace is on, a real
+// rewrite is recorded as one, a same-content rewrite is recorded as *no* change,
+// and the rows are emitted on the call line itself.
+// ---------------------------------------------------------------------------
+
+static String file_effect_fixture_dir() {
+	return String::utf8("res://mcp_server_file_effect_fixture");
+}
+
+TEST_CASE("[MCPServer] the file-effect recorder is inert while no trace records") {
+	const String dir = file_effect_fixture_dir();
+	TestMCPServer::remove_tree(dir);
+
+	// No `begin_recording()`: the exact state of a process without
+	// `--mcp-trace`. The primitive must still do its job and must leave the
+	// recorder (and therefore the hash cost) untouched.
+	CHECK(!MCPFileEffect::is_recording());
+	const String path = dir.path_join("off.txt");
+	CHECK(MCPTools::publish_text_atomically(path, "hello\n") == OK);
+	CHECK(FileAccess::exists(path));
+	CHECK(MCPFileEffect::last_total_rows() == 0);
+	CHECK(MCPFileEffect::status_name() == "no_mutation");
+	CHECK(MCPFileEffect::take_effects().is_empty());
+
+	TestMCPServer::remove_tree(dir);
+}
+
+TEST_CASE("[MCPServer] a create, a real rewrite and a same-content rewrite are told apart") {
+	const String dir = file_effect_fixture_dir();
+	TestMCPServer::remove_tree(dir);
+	const String path = dir.path_join("notes.txt");
+
+	// (1) a create: there was no file, now there is one.
+	MCPFileEffect::begin_recording();
+	CHECK(MCPTools::publish_text_atomically(path, "alpha\nbeta\ngamma\n") == OK);
+	MCPFileEffect::end_recording();
+	CHECK(MCPFileEffect::status_name() == "observed_changed");
+	Array rows = MCPFileEffect::take_effects();
+	CHECK(rows.size() == 1);
+	Dictionary created = rows[0];
+	CHECK(bool(created["changed"]) == true);
+	CHECK(bool(created["existed_before"]) == false);
+	CHECK(String(created["kind"]) == "write");
+	CHECK(created["before"].get_type() == Variant::NIL);
+	// The absolute path is part of the contract: a trace that only says
+	// `res://...` cannot be checked without knowing which project was open.
+	const String absolute = created["abs_path"];
+	CHECK(!absolute.begins_with("res://"));
+	CHECK(!absolute.is_empty());
+	Dictionary after = created["after"];
+	CHECK((int64_t)after["bytes"] == 17);
+	CHECK(!String(after["sha256"]).is_empty());
+	// A create does have a difference: every line is new.
+	CHECK(created.has("diff"));
+	Dictionary diff = created["diff"];
+	CHECK(String(diff["type"]) == "line_head_tail");
+	CHECK((int64_t)diff["head_lines"] == 3);
+	CHECK((int64_t)diff["same_head_lines"] == 0);
+	CHECK((int64_t)diff["same_tail_lines"] == 0);
+	Dictionary changed_lines = diff["changed_lines"];
+	CHECK((int64_t)changed_lines["before"] == 0);
+	CHECK((int64_t)changed_lines["after"] == 3);
+
+	// (2) the very same bytes again: the writer ran, the destination did not
+	// change. This is the "reports success, nothing happened" shape the ledger
+	// has to be able to see on the file side as well as on the screen side.
+	MCPFileEffect::begin_recording();
+	CHECK(MCPTools::publish_text_atomically(path, "alpha\nbeta\ngamma\n") == OK);
+	MCPFileEffect::end_recording();
+	CHECK(MCPFileEffect::status_name() == "observed_no_change");
+	rows = MCPFileEffect::take_effects();
+	CHECK(rows.size() == 1);
+	Dictionary same = rows[0];
+	CHECK(bool(same["changed"]) == false);
+	CHECK(bool(same["existed_before"]) == true);
+	Dictionary same_before = same["before"];
+	Dictionary same_after = same["after"];
+	CHECK(String(same_before["sha256"]) == String(same_after["sha256"]));
+	CHECK((int64_t)same_before["bytes"] == (int64_t)same_after["bytes"]);
+
+	// (3) one line really changes: the head/tail summary has to name it.
+	MCPFileEffect::begin_recording();
+	CHECK(MCPTools::publish_text_atomically(path, "alpha\nBETA\ngamma\n") == OK);
+	MCPFileEffect::end_recording();
+	rows = MCPFileEffect::take_effects();
+	CHECK(rows.size() == 1);
+	Dictionary rewrite = rows[0];
+	CHECK(bool(rewrite["changed"]) == true);
+	Dictionary rewrite_before = rewrite["before"];
+	Dictionary rewrite_after = rewrite["after"];
+	CHECK(String(rewrite_before["sha256"]) != String(rewrite_after["sha256"]));
+	Dictionary rewrite_diff = rewrite["diff"];
+	CHECK((int64_t)rewrite_diff["same_head_lines"] == 1);
+	CHECK((int64_t)rewrite_diff["same_tail_lines"] == 1);
+	Dictionary rewrite_changed = rewrite_diff["changed_lines"];
+	CHECK((int64_t)rewrite_changed["before"] == 1);
+	CHECK((int64_t)rewrite_changed["after"] == 1);
+	Array head = rewrite_diff["head"];
+	CHECK(head.size() == 2);
+	CHECK(String(head[0]) == "- beta");
+	CHECK(String(head[1]) == "+ BETA");
+
+	TestMCPServer::remove_tree(dir);
+}
+
+TEST_CASE("[MCPServer] a deleting tool is recorded through the same one hook") {
+	const String dir = file_effect_fixture_dir();
+	TestMCPServer::remove_tree(dir);
+	const String path = dir.path_join("doomed.tscn");
+	CHECK(MCPTools::publish_text_atomically(path, "[gd_scene format=3]\n") == OK);
+
+	MCPToolRegistry registry;
+	TestMCPServer::build_all_tools_registry(registry);
+
+	MCPFileEffect::begin_recording();
+	Dictionary args;
+	args["path"] = path;
+	MCPToolError error;
+	const Variant out = registry.call_tool("project_delete_scene_file", args, error);
+	MCPFileEffect::end_recording();
+	CHECK(!error.is_error());
+	CHECK(out.get_type() == Variant::DICTIONARY);
+
+	CHECK(MCPFileEffect::status_name() == "observed_changed");
+	const Array rows = MCPFileEffect::take_effects();
+	CHECK(rows.size() == 1);
+	Dictionary row = rows[0];
+	CHECK(String(row["kind"]) == "delete");
+	CHECK(bool(row["changed"]) == true);
+	CHECK(bool(row["existed_before"]) == true);
+	CHECK(row["after"].get_type() == Variant::NIL);
+	CHECK(!FileAccess::exists(path));
+
+	TestMCPServer::remove_tree(dir);
+}
+
+TEST_CASE("[MCPServer] the file-effect rows are emitted on the call line, at the top level") {
+	const String dir = file_effect_fixture_dir();
+	TestMCPServer::remove_tree(String::utf8("res://mcp_server_file_effect_fixture"));
+	DirAccess::make_dir_recursive_absolute(ProjectSettings::get_singleton()->globalize_path(dir));
+	const String trace_path = dir.path_join("trace.jsonl");
+	DirAccess::remove_absolute(trace_path);
+
+	MCPTrace::Recorder recorder;
+	CHECK(recorder.open(trace_path));
+	CHECK(recorder.is_active());
+
+	MCPTrace::Record record;
+	record.traceable = true;
+	record.method = "tools/call";
+	record.tool = "project_write_text_file";
+	record.id_json = "7";
+	record.result_bytes = 42;
+
+	Dictionary row;
+	row["path"] = "res://notes.txt";
+	row["abs_path"] = "C:/scratch/notes.txt";
+	row["kind"] = "write";
+	row["changed"] = true;
+	Array effects;
+	effects.push_back(row);
+	record.file_effects = effects;
+	record.file_effect_status = "observed_changed";
+
+	recorder.record(1, record, 5, 0);
+	recorder.close();
+
+	const String line = FileAccess::get_file_as_string(trace_path).strip_edges();
+	CHECK(!line.is_empty());
+	// The two fields are on the request line itself - the same object that
+	// carries `id` / `method` / `tool` - not on a line of their own.
+	CHECK(line.begins_with("{\"id\":7,"));
+	CHECK(line.contains("\"method\":\"tools/call\""));
+	CHECK(line.contains("\"tool\":\"project_write_text_file\""));
+	CHECK(line.contains("\"file_effect_status\":\"observed_changed\""));
+	CHECK(line.contains("\"file_effects\":["));
+	CHECK(line.contains("\"path\":\"res://notes.txt\""));
+
+	TestMCPServer::remove_tree(dir);
+}
+// [/REBUILT-2C]
 
 
 

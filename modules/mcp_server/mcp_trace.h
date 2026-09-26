@@ -33,6 +33,7 @@
 #include "core/io/file_access.h"
 #include "core/string/ustring.h"
 #include "core/templates/vector.h"
+#include "core/variant/array.h"
 #include "core/variant/dictionary.h"
 
 // ---------------------------------------------------------------------------
@@ -179,6 +180,29 @@ struct Record {
 	String capture_status;
 	String capture_reason;
 	int capture_token = -1;
+
+	// TASK-089 (item A): the **file-side** half of "did this call do anything".
+	// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not replayed
+	// (no recording carries a file-side field). Registered in
+	// REBUILT-2C-MANIFEST.md section 2c-8 (H-1).
+	// The capture extension above observes the screen; neither it nor anything
+	// else observed the disk, which is the gap MCP-TRACEABILITY.md §3.2 declared
+	// as `file_effect_evidence: "not_recorded_in_trace"`.
+	//
+	// `file_effects` is one row per destination the call mutated (`write` /
+	// `delete` / `mkdir`), each carrying the absolute path, the sha256 and byte
+	// count before and after, whether they really differ, and - for a small text
+	// destination - a bounded head/tail line difference. `file_effect_status`
+	// summarises the rows (`no_mutation` / `observed_changed` /
+	// `observed_no_change` / `observed_mixed`).
+	//
+	// Both are empty exactly when the call carries no file-side evidence at all:
+	// the trace was off, the method was not `tools/call`, or the request was
+	// refused before a tool ran. The fields are emitted on the **call line**, at
+	// the same level as `id` / `method` / `tool` (see `_build_line`).
+	Array file_effects;
+	String file_effect_status;
+	// [/REBUILT-2C]
 };
 
 // Appends one JSON object per request to one file. Never propagates a failure.

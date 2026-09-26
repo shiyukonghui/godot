@@ -29,6 +29,9 @@
 /**************************************************************************/
 #include "csharp_verdict.h"
 
+// TASK-089 (item A): the file-side effect recorder, for the build record write.
+#include "../mcp_file_effects.h"
+
 #include "core/config/project_settings.h"
 #include "core/io/file_access.h"
 #include "core/io/json.h"
@@ -235,8 +238,20 @@ void write_csharp_build_record(const String &p_configuration, const Array &p_pro
 	record["truncated"] = p_truncated;
 	record["errors"] = errors;
 
+	// TASK-089 (item A): the build record is a file the tool writes on its own,
+	// without the module's publish primitive, so the one recorder is opened here
+	// too - a caller must be able to see that `project_build_csharp` wrote
+	// something even when its build output is truncated. The scope is opened
+	// **before** the file: `FileAccess::open(..., WRITE)` truncates on open, so a
+	// snapshot taken afterwards would describe the truncated file, not the one
+	// the call found.
+	// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
+	// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-2).
+	MCPFileEffect::MutationScope record_effect(csharp_build_record_path(), "write");
+	// [/REBUILT-2C]
 	Ref<FileAccess> file = FileAccess::open(csharp_build_record_path(), FileAccess::WRITE);
 	if (file.is_null()) {
+		record_effect.mark_failed();
 		// The build itself already happened and its answer does not depend on
 		// this record; a project that cannot write `user://` simply keeps the
 		// engine-only half of the verdict.

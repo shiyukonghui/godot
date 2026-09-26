@@ -29,6 +29,12 @@
 /**************************************************************************/
 #include "tool_helpers.h"
 
+// TASK-089 (item A): the file-side effect recorder. It is opened in exactly the
+// two write primitives of this file (`publish_file_atomically` and the section
+// arm of `publish_project_setting_to`) plus the one directory creation, so the
+// whole write family of the module is covered from one place.
+#include "../mcp_file_effects.h"
+
 // `MCPTools::vector_from_dictionary` for `assertion_expectation_for` below: the
 // assertion comparison has to put a caller's `{"x":3,"y":4}` expectation into the
 // same shape the property writer accepts, so `{"x":3,"y":4}` against a `Vector2`
@@ -490,6 +496,15 @@ String temporary_sibling_path(const String &p_path) {
 }
 
 Error publish_file_atomically(const String &p_path, AtomicWriteFunc p_write, void *p_userdata) {
+	// TASK-089 (item A): the module's single publish primitive is the one place
+	// the file-side recorder is opened for the write family, so no writing
+	// group computes a hash and no writing group can forget to. The scope
+	// snapshots the destination here and snapshots it again when it goes out of
+	// scope, i.e. after the rename has published the new bytes.
+	// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
+	// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-2).
+	MCPFileEffect::MutationScope file_effect(p_path, "write");
+	// [/REBUILT-2C]
 	const bool destination_exists = FileAccess::exists(p_path);
 	const String temp_path = temporary_sibling_path(p_path);
 	const String backup_path = temporary_sibling_path(p_path) + ".bak";
@@ -497,6 +512,7 @@ Error publish_file_atomically(const String &p_path, AtomicWriteFunc p_write, voi
 	if (!destination_exists && !DirAccess::dir_exists_absolute(p_path.get_base_dir())) {
 		const Error dir_error = DirAccess::make_dir_recursive_absolute(p_path.get_base_dir());
 		if (dir_error != OK) {
+			file_effect.mark_failed();
 			return dir_error;
 		}
 	}
@@ -505,6 +521,7 @@ Error publish_file_atomically(const String &p_path, AtomicWriteFunc p_write, voi
 			? DirAccess::copy_absolute(p_path, backup_path)
 			: OK;
 	if (backup_error != OK) {
+		file_effect.mark_failed();
 		return backup_error;
 	}
 
@@ -526,6 +543,9 @@ Error publish_file_atomically(const String &p_path, AtomicWriteFunc p_write, voi
 		if (!FileAccess::exists(p_path) && FileAccess::exists(backup_path)) {
 			DirAccess::copy_absolute(backup_path, p_path);
 		}
+	}
+	if (result != OK) {
+		file_effect.mark_failed();
 	}
 
 	DirAccess::remove_absolute(backup_path);
@@ -642,8 +662,21 @@ bool publish_project_setting_to(const String &p_target_path, const String &p_key
 		// `core/config/project_settings.cpp:1200`), so the bytes published here are
 		// the bytes the whole-file writer would have produced for this one key.
 		custom[p_key] = settings->get_setting(p_key);
-		if (settings->save_custom_section(p_target_path, section, custom) == OK) {
-			return true;
+		// TASK-089 (item A): this is the one writer that publishes a file without
+		// going through `publish_file_atomically` - the engine's own
+		// `save_custom_section()` does its own temp + backup + rename - so the
+		// file-side recorder is opened here as well. A refused section write is
+		// recorded too (the fall-back below writes the file a second time), and
+		// both rows describe the destination rather than the intent.
+		{
+			// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
+			// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-2).
+			MCPFileEffect::MutationScope file_effect(p_target_path, "write");
+			if (settings->save_custom_section(p_target_path, section, custom) == OK) {
+				return true;
+			}
+			file_effect.mark_failed();
+			// [/REBUILT-2C]
 		}
 		// Fall-back 3: the engine refused (an unwritable section name, a value it
 		// cannot serialize, a file it could not read back). Falling through is the
@@ -3321,8 +3354,16 @@ static bool _ensure_user_data_directory(String &r_reason) {
 	if (DirAccess::dir_exists_absolute(directory)) {
 		return true;
 	}
+	// TASK-089 (item A): a directory creation is a file-side mutation like any
+	// other, and the one place this module creates a directory on a caller's
+	// behalf is here.
+	// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
+	// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-2).
+	MCPFileEffect::MutationScope make_dir_effect(directory, "mkdir");
+	// [/REBUILT-2C]
 	const Error error = DirAccess::make_dir_recursive_absolute(directory);
 	if (error != OK) {
+		make_dir_effect.mark_failed();
 		r_reason = vformat("could not create the user data directory '%s' (%s)", directory,
 				VariantUtilityFunctions::error_string(error));
 		return false;

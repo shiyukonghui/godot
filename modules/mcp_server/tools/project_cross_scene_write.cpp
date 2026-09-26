@@ -29,6 +29,11 @@
 /**************************************************************************/
 #include "project_cross_scene_write.h"
 
+// TASK-089 (item A): the file-side effect recorder, for the two rollback
+// restores below (they write a destination without going through the module's
+// publish primitive).
+#include "../mcp_file_effects.h"
+
 #include "running_game_node_write.h"
 #include "tool_builder.h"
 #include "tool_helpers.h"
@@ -643,12 +648,22 @@ bool set_node_property_across_scenes(const String &p_path_filter, const String &
 			if (save_error != OK) {
 				// Roll back every file this call already replaced.
 				for (int k = 0; k < written_count; k++) {
+					// TASK-089 (item A): a rollback restore is a file mutation
+					// too, and it is recorded like any other write - the call
+					// line then shows both the publish and the restore instead
+					// of claiming nothing was touched.
+					// [REBUILT-2C low-confidence: verify] TASK-089 item A:
+					// written, not replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-2).
+					MCPFileEffect::MutationScope rollback_effect(to_write[k], "write");
 					Ref<FileAccess> file = FileAccess::open(to_write[k], FileAccess::WRITE);
 					if (file.is_valid()) {
 						file->store_buffer(originals[k].ptr(), originals[k].size());
 						file->close();
 						rollback.push_back(to_write[k]);
+					} else {
+						rollback_effect.mark_failed();
 					}
+					// [/REBUILT-2C]
 				}
 				MCPToolError error = MCPToolError::internal(vformat(
 						"Failed to save scene '%s': %s. %d earlier scene(s) were restored from their original bytes",
@@ -677,12 +692,19 @@ bool set_node_property_across_scenes(const String &p_path_filter, const String &
 				// The live edit was undone by the callee; put back the files this
 				// call already replaced too, so "all or nothing" keeps meaning all.
 				for (int k = 0; k < written_count; k++) {
+					// TASK-089 (item A): same recorder as the failure path above.
+					// [REBUILT-2C low-confidence: verify] TASK-089 item A:
+					// written, not replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-2).
+					MCPFileEffect::MutationScope rollback_effect(to_write[k], "write");
 					Ref<FileAccess> file = FileAccess::open(to_write[k], FileAccess::WRITE);
 					if (file.is_valid()) {
 						file->store_buffer(originals[k].ptr(), originals[k].size());
 						file->close();
 						rollback.push_back(to_write[k]);
+					} else {
+						rollback_effect.mark_failed();
 					}
+					// [/REBUILT-2C]
 				}
 				live_error.message = vformat("Scene '%s' (the active open scene): %s", plan.path, live_error.message);
 				Dictionary data = live_error.data.get_type() == Variant::DICTIONARY ? (Dictionary)live_error.data : Dictionary();
