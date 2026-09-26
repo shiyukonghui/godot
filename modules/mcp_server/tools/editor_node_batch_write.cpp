@@ -138,6 +138,15 @@ static Variant _transaction_fail(Vector<_PendingNode> &p_pending, MCPToolError &
 		entry["type"] = p_pending[i].actual_class;
 		entry["node_path"] = p_pending[i].pending_path;
 		entry["reason"] = "transaction rollback";
+		rolled_back.push_back(entry);
+	}
+	for (int i = p_pending.size() - 1; i >= 0; i--) {
+		memdelete(p_pending[i].node);
+	}
+	p_pending.clear();
+
+	Array errors;
+	errors.push_back(_batch_error_entry(p_index, p_type, p_property, p_parent_path, p_reason));
 
 // TASK-051 C-3: is the parent this element cannot find the *requested* path of a
 // later element of the same batch? Only used to improve the refusal message -
@@ -338,11 +347,11 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 		}
 
 		Dictionary properties;
-		const Variant properties_value = entry.get("properties", Variant());
-		if (properties_value.get_type() != Variant::NIL) {
-			if (properties_value.get_type() != Variant::DICTIONARY) {
-				return _transaction_fail(pending, r_error, i, type, String(), String(), "Invalid 'properties'",
-						MCP_ERR_INVALID_PARAMS, vformat("'nodes[%d].properties' must be an object", i), BATCH_ROLLBACK_SUGGESTION);
+	result["count"] = created.size();
+	result["errors"] = Array();
+	return result;
+}
+
 			}
 			properties = properties_value;
 		}
@@ -403,21 +412,21 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 		if (node == nullptr) {
 			// Unreachable after the `is_parent_class` check; kept so the cascade
 			// to `memdelete` cannot be reached by accident.
-			memdelete(created);
-			return _transaction_fail(pending, r_error, i, type, String(), parent_path,
-					vformat("'%s' is not a Node subclass", type), MCP_ERR_INVALID_PARAMS,
-					vformat("nodes[%d]: type '%s' is not a Node subclass", i, type), BATCH_ROLLBACK_SUGGESTION);
-		}
 
-		// The name is applied only when the caller gave one: `Node::set_name("")`
-		// is an `ERR_FAIL_COND` (scene/main/node.cpp:1441), and an unnamed node
-		// gets the engine's own `@Type@N` name on `add_child` - which is what the
-		// migration source's `if !node_name.is_empty()` produced.
-		if (!requested_name.is_empty()) {
-			node->set_name(requested_name);
-		}
-
-		// Every property goes through the module's one property write. Its first
+	Vector<Node *> written;
+	Vector<Variant> previous_values;
+	// TASK-037 D2 (self-audit): the same read-back question the single-node
+	// writer answers, asked per matched node. `write_node_property` returns the
+	// engine's `ignored` bag for the node it just wrote; a batch that answered
+	// only `{"updated": N, "status": "ok"}` hid the fact that the engine's own
+	// setter clamped the value on some (or every) node - the exact shape
+	// `editor_set_node_property(path=Sprite, property=hframes, value=0)` exposes
+	// live (`new_value: 1`). The bag is keyed by the node's relative path so one
+	// entry is still readable, and `ignored_count` says at a glance whether the
+	// call stored the request everywhere.
+	Dictionary ignored;
+	for (Node *node : matched) {
+		// TASK-028 G-1: the value to put back is read through the same property
 		// action is the existence check, so an undeclared name is refused here
 		// with the element index and the property name instead of being silently
 		// skipped (the migration source's `if exists` at batch.rs:358-387).

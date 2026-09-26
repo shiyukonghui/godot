@@ -35,7 +35,6 @@
 #include "core/object/class_db.h"
 #include "core/object/object.h"
 #include "core/string/string_name.h"
-#include "core/templates/list.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
 #include "scene/main/node.h"
@@ -74,7 +73,8 @@ using namespace MCPTools;
 //     with `Parameter 'value' ...` (the TASK-010 semantics: a caller who asked
 //     for an integer and sent `1e20` is refused, not given a different number);
 //   * no current scene -> `-32000`; the node is not there -> `-32001` with a
-//     suggestion;
+//     suggestion; **a property the node does not have -> `-32001` with a
+//     suggestion** (TASK-014 D-1, see below);
 //   * the write is **observed**, not assumed: the answer's `new_value` is read
 //     back from the object after `Object::set()`, so a property that silently
 //     refuses the value (a setter that clamps, a read-only property) shows up as
@@ -100,30 +100,22 @@ using namespace MCPTools;
 // gives it the documented `-32602` refusals above.
 // ---------------------------------------------------------------------------
 // JSON has no vector type, so a caller names the components: `{"x":1,"y":2}`.
-// The migration source did exactly this in its own `_parse_value_for_type`
-// (`mcp_game_inspector_service.gd:610-660`: Dictionary -> Vector2 / Vector2i /
-// Vector3 / Vector3i / Color), and it is the only way the tool's declared
-// "supports numbers, strings, booleans, arrays, objects" can reach a Vector2
-// property - `property_value_from_json` deliberately keeps a JSON object a
-// Dictionary (its comment: "retain the structure").
-//
-// Without this step the observed behaviour was "the call succeeds and the
-// property becomes (0,0)": `property_value_from_json({"x":321,"y":123}, Vector2)`
-// answers a Dictionary, and `type_convert` of a Dictionary with no matching keys
-// to a Vector2 is the zero vector. That is the silent-wrong-value shape this
-// module refuses to ship (measured in the TASK-012 evidence run, check g04).
-//
-// The map is deliberately *partial* and never invents a component: a Dictionary
-// whose members do not match the target type answers a **null** Variant, which is
-// how the caller learns "I could not build the value you asked for" instead of
-// receiving a silent zero.
+// The component mapping and the whole per-node write live in
+// `write_node_property` below (TASK-014 split it out of the tool so that the
+// doctest can reach it without a `SceneTree`); its comment carries the argument
+// for the mapping and for the refusal that replaces the silent zero vector.
+// `vector_from_dictionary` folds the components this function has already
+// checked. **Every narrowing cast below is safe because
+// `_check_components`/`shape_vector_from_json` runs first** (TASK-020 section 1,
+// TASK-021 A-3/A-4, TASK-023 D-15 for `Color`): each object that reaches this
+// function has been rebuilt with every component either passed through
+// `coerce_to_property_type` or judged by `_component_fits_slot`, so a narrowing
+// cast can only ever see a value that fits the slot it is copied into. The
+// comment is the TASK-023 D-7 scan marker for the constructors below (nine
+// types since TASK-025 E-3 added `Vector4i`/`Rect2`/`Rect2i`).
 namespace MCPTools {
 
 Variant vector_from_dictionary(const Dictionary &p_value, Variant::Type p_target_type) {
-	switch (p_target_type) {
-		case Variant::VECTOR2: {
-			if (!p_value.has("x") || !p_value.has("y")) {
-				return Variant();
 Variant vector_from_dictionary(const Dictionary &p_value, Variant::Type p_target_type) {
 	switch (p_target_type) {
 		case Variant::VECTOR2: {
@@ -228,21 +220,6 @@ Variant vector_from_dictionary(const Dictionary &p_value, Variant::Type p_target
 			// an unfit value.
 			return Rect2((real_t)(double)p_value["x"], (real_t)(double)p_value["y"], (real_t)(double)p_value["width"], (real_t)(double)p_value["height"]);
 		}
-		// TASK-033 (B5 batch 1): the `Quaternion` spelling, added to the table
-		// together with `vector_component_hint` and the read side in
-		// `serialize_variant` - the three parts of the round trip section 23.4
-		// requires. It is what makes a rotation animation key readable *and*
-		// writable in one shape.
-		case Variant::QUATERNION: {
-			if (!p_value.has("x") || !p_value.has("y") || !p_value.has("z") || !p_value.has("w")) {
-				return Variant();
-			}
-			// MCP-NARROWING: G24-NW-COMPONENTS - every component was rebuilt by
-			// `_check_components` with the `REAL_T` slot above (the four members of
-			// a `Quaternion` are `real_t`), so the four casts on the line below
-			// cannot narrow an unfit value.
-			return Quaternion((real_t)(double)p_value["x"], (real_t)(double)p_value["y"], (real_t)(double)p_value["z"], (real_t)(double)p_value["w"]);
-		}
 		default: {
 			// Not a vector-shaped type: nothing to map, and no component naming
 			// to demand. The caller passes objects of every other type straight
@@ -270,13 +247,6 @@ String vector_component_hint(Variant::Type p_target_type) {
 			return "\"x\", \"y\" and \"z\"";
 		case Variant::VECTOR4:
 		case Variant::VECTOR4I:
-			return "\"x\", \"y\", \"z\" and \"w\"";
-		// TASK-033 (B5 batch 1): the four members of a `Quaternion`, the shape
-		// `serialize_variant` answers for one since this batch. Without this case
-		// the object the read side produces is refused by
-		// `coerce_to_property_type` (`can_convert(DICTIONARY, QUATERNION)` is
-		// false), which is the round-trip gap section 23.4 forbids.
-		case Variant::QUATERNION:
 			return "\"x\", \"y\", \"z\" and \"w\"";
 		case Variant::COLOR:
 			return "\"r\", \"g\" and \"b\"";
@@ -394,17 +364,6 @@ static int _vector_components(Variant::Type p_target_type, _VectorComponent *r_o
 			r_out[count++] = _VectorComponent{ "g", Variant::FLOAT, COMPONENT_WIDTH_FLOAT32 };
 			r_out[count++] = _VectorComponent{ "b", Variant::FLOAT, COMPONENT_WIDTH_FLOAT32 };
 			r_out[count++] = _VectorComponent{ "a", Variant::FLOAT, COMPONENT_WIDTH_FLOAT32 };
-		} break;
-		// TASK-033 (B5 batch 1): `Quaternion`'s four `real_t` members
-		// (`core/math/quaternion.h: real_t x, y, z, w`). The read side answers
-		// this shape for a rotation animation key, so the write side has to take
-		// it back; the components run through the same `REAL_T` gate as a
-		// `Vector4`'s.
-		case Variant::QUATERNION: {
-			r_out[count++] = _VectorComponent{ "x", Variant::FLOAT, COMPONENT_WIDTH_REAL };
-			r_out[count++] = _VectorComponent{ "y", Variant::FLOAT, COMPONENT_WIDTH_REAL };
-			r_out[count++] = _VectorComponent{ "z", Variant::FLOAT, COMPONENT_WIDTH_REAL };
-			r_out[count++] = _VectorComponent{ "w", Variant::FLOAT, COMPONENT_WIDTH_REAL };
 		} break;
 		// TASK-025 E-3: the two halves of a `Rect2`/`Rect2i`, named exactly the
 		// way `serialize_variant` spells them (`position.x`, `position.y`,
@@ -577,86 +536,107 @@ bool shape_vector_from_json(const Variant &p_json_value, Variant::Type p_target_
 		return false;
 	}
 	r_shaped = shaped;
+}
+
+} // namespace MCPTools
+
+// ---------------------------------------------------------------------------
+// TASK-014 D-1: the write itself.
+//
+// Split out of `_tool_set_node_property` (behaviour preserving at the split, the
+// tool now only resolves the `node_path` and delegates here) so that the
+// doctest can reach it: the doctest binary has no `SceneTree`
+// (`SceneTree::get_singleton() == nullptr`), so a tool-level test can only ever
+// observe the -32000 "no current scene" guard. This entry point takes the node,
+// which lets the case below pin both halves of D-1 against a real `Node2D`:
+// a real property still writes and reads back, and a property the node does not
+// have is a -32001 instead of a success shape.
+//
+// JSON has no vector type, so a caller names the components: `{"x":1,"y":2}`.
+// The migration source did exactly this in its own `_parse_value_for_type`
+// (`mcp_game_inspector_service.gd:610-660`: Dictionary -> Vector2 / Vector2i /
+// Vector3 / Vector3i / Color), and it is the only way the tool's declared
+// "supports numbers, strings, booleans, arrays, objects" can reach a Vector2
+// property - `property_value_from_json` deliberately keeps a JSON object a
+// Dictionary (its comment: "retain the structure").
+//
+// Without this step the observed behaviour was "the call succeeds and the
+// property becomes (0,0)": `property_value_from_json({"x":321,"y":123}, Vector2)`
+// answers a Dictionary, and `type_convert` of a Dictionary with no matching keys
+// to a Vector2 is the zero vector. That is the silent-wrong-value shape this
+// module refuses to ship (measured in the TASK-012 evidence run, check g04).
+//
+// The map is deliberately *partial* and never invents a component: a Dictionary
+// whose members do not match the target type answers a **null** Variant, which is
+// how the caller learns "I could not build the value you asked for" instead of
+// receiving a silent zero.
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// The definition lives in `MCPTools` like its declaration
+// (`tools/running_game_node_write.h`): with `using namespace MCPTools;` at the
+// top of this file, a global-scope definition of a name the namespace already
+// declares would be an ambiguous overload at every call site.
+// ---------------------------------------------------------------------------
+namespace MCPTools {
+
+// TASK-014 D-1: does the object *really* have this property?
+//
+// The rule now lives once, as `MCPTools::object_has_property`
+// (tools/tool_helpers.*), because TASK-017's batch and setup groups have to ask
+// the same pre-write question and a group may not copy another group's
+// file-private helper (PLAYBOOK section 2.4). The former `_object_has_property`
+// here was a verbatim move into that function: the body is unchanged, so every
+// answer `write_node_property` gives is byte-identical.
+//
+// `property_type_of` cannot answer the question on its own: it answers
+// `Variant::NIL` both for "there is no such property" and for "there is one
+// whose declared type is the `Variant` type" (`Object::get()` is NIL for both,
+// and the property list entry of a `Variant`-typed declaration carries
+// `Variant::NIL` as its type). The property list is the one place a declaration
+// always shows up in, so it is what decides; the "it has a value right now"
+// shortcut above it costs nothing and keeps the answer true for anything the
+// engine can read back.
+
+// The node path of the object the write is reported against. TASK-017 widened
+// the receiver to `Object *` (a shape resource has to go through the same one
+// property write); for a non-node the class name is the honest identifier,
+// because a `Resource` has no scene path.
+//
+// TASK-027 E-8: the body is now the shared `MCPTools::wire_node_path`, because
+// `Node::get_path()` spelled the editor's **internal absolute** path in this
+// group's refusals (`Property 'x' on node '/root/@EditorNode@<id>/.../Main/Actor'
+// not found`) while the same tool's success answer spelled the very same node
+// relatively (`"Actor"`). The engine's own `get_path_to()` is what the answer
+// should have used inside the editor; a running game keeps its byte-identical
+// `/root/Main/Actor` (the `edited_scene_root()` branch is unreachable there).
+static String _node_path_for_result(const Object *p_object) {
+	return wire_node_path(p_object);
+}
+
+Variant write_node_property(Object *p_object, const String &p_property, const Variant &p_raw_value, MCPToolError &r_error) {
+	const StringName property_name(p_property);
+	// TASK-018 section 1.2: the validation half (existence, declared type, the
+	// component mapping, the coercion and its `Variant::can_convert` gate) is
+	// `prepare_node_property_value` below, so a batch can run exactly this
+	// validation over every matched node *before* it writes the first one, and
+	// the two steps cannot drift apart.
+	Variant converted;
+	if (!prepare_node_property_value(p_object, p_property, p_raw_value, converted, r_error)) {
+		return Variant();
+	}
+
+	const Variant old_value = p_object->get(property_name);
+	p_object->set(property_name, converted);
+	const Variant new_value = p_object->get(property_name);
+
+	Dictionary result;
+	result["node_path"] = _node_path_for_result(p_object);
 	result["property"] = p_property;
 	result["old_value"] = serialize_variant(old_value);
 	result["new_value"] = serialize_variant(new_value);
 	return result;
 }
 
-bool prepare_node_property_value(Object *p_object, const String &p_property, const Variant &p_raw_value,
-		Variant &r_converted, MCPToolError &r_error) {
-	const StringName property_name(p_property);
-	const Variant::Type target_type = property_type_of(p_object, property_name);
-
-	// TASK-014 D-1: ask the object *before* writing anything. Without this the
-	// steps below report a success for a name that does not exist at all:
-	// `target_type` is NIL, `Object::set()` of an unknown name is a silent no-op
-	// and the read-back is null as well, so the caller received
-	// `{"old_value":null,"new_value":null}` next to a top-level success. A caller
-	// that only branches on "error or not" read "nothing happened" as "written".
-	if (!object_has_property(p_object, property_name)) {
-		r_error = MCPToolError::not_found(
-				vformat("Property '%s' on node '%s'", p_property, _node_path_for_result(p_object)),
-				"Use running_game_get_node_properties to list the properties this node has");
-		return false;
-	}
-
-	// `property_value_from_json` first (the migration source's "parse the string
-	// with the property's own type" step), then the type coercion and its range
-	// guard - the same two steps every other write tool of the module takes.
-	const Variant json_value = property_value_from_json(p_raw_value, target_type);
-	// A JSON *object* is still a Dictionary at this point. When the target is a
-	// vector-shaped type the object has to name its components (`{"x":1,"y":2}`),
-	// because `property_value_from_json` deliberately keeps an object a
-	// Dictionary and `type_convert` of a keyless Dictionary to a Vector2 is the
-	// **zero vector** - the silent wrong value the first TASK-012 evidence run
-	// measured (`{"x":321,"y":123}` answered `new_value: {"x":0,"y":0}`).
-	// TASK-018 section 3: the step itself is `shape_vector_from_json`, the one
-	// definition `project_set_setting` shares.
-	Variant shaped_value;
-	if (!shape_vector_from_json(json_value, target_type, p_property, "value", shaped_value, r_error)) {
-		return false;
-	}
-	// TASK-018 section 1: `coerce_to_property_type` is where a value that cannot
-	// fall into the target type is refused (`Variant::can_convert`), so the
-	// layout-incompatible case never reaches `Object::set()`.
-	return coerce_to_property_type(shaped_value, target_type, r_converted, r_error, "value");
-}
-
-} // namespace MCPTools
-
-static Variant _tool_set_node_property(const Dictionary &p_args, MCPToolError &r_error) {
-	String node_path;
-	if (!require_string(p_args, "node_path", node_path, r_error)) {
-		return Variant();
-	}
-	if (node_path.strip_edges().is_empty()) {
-		r_error = MCPToolError::invalid_params("Parameter 'node_path' must not be empty");
-		return Variant();
-	}
-	String property;
-	if (!require_string(p_args, "property", property, r_error)) {
-		return Variant();
-	}
-	if (property.strip_edges().is_empty()) {
-		r_error = MCPToolError::invalid_params("Parameter 'property' must not be empty");
-		return Variant();
-	}
-	// `value` has no `type` in the contract (it accepts every JSON type), so it
-	// cannot go through `require_*`. Presence, not nullness, is what "required"
-	// means here: `"value": null` is a real request to set `null`.
-	if (!p_args.has("value")) {
-		r_error = MCPToolError::invalid_params("Missing required parameter 'value'");
-		return Variant();
-	}
-	const Variant raw_value = p_args["value"];
-
-	Node *root = nullptr;
-	SceneTree *tree = nullptr;
-	if (!game_current_scene(root, tree, r_error)) {
-		return Variant();
-	}
-	(void)tree;
 // `Node::get_path()` spelled the editor's **internal absolute** path in this
 // group's refusals (`Property 'x' on node '/root/@EditorNode@<id>/.../Main/Actor'
 // not found`) while the same tool's success answer spelled the very same node
@@ -1055,70 +1035,11 @@ Variant write_node_property(Object *p_object, const String &p_property, const Va
 	const Variant new_value = _read_path_value(p_object, segments);
 	const Variant parent_new_value = is_path ? _read_path_value(p_object, parent_segments) : Variant();
 
-	// -----------------------------------------------------------------------
-	// TASK-037 D2 (self-audit of the node-write family): "the engine stored what
-	// I asked for" is a **read-back** question here too.
-	//
-	// `new_value` alone is honest but easy to misread: a caller that branches on
-	// "is there an error" sees `code=0` and a success object, and the fact that
-	// the engine's own setter clamped the request is only visible to a caller
-	// that compares `new_value` with the value it sent. Measured on this tree:
-	// `editor_set_node_property(path=Sprite, property=hframes, value=0)` answers
-	// `new_value: 1` - `Sprite2D::set_hframes` floors it - with nothing else
-	// saying so. The resource writers and the particle/theme writers already name
-	// such an entry under `ignored` with `requested` / `stored` / `reason`
-	// (DESIGN-DETAIL section 20.6), so this family answers the same shape:
-	// `ignored: {<property>: {requested, stored, reason}}`, present (and empty)
-	// only when the write really stored the request.
-	//
-	// The comparison is made on the **converted** value, not on the raw JSON: the
-	// declared deterministic conversions of section 20.4 (`1.9 -> 1` for an int
-	// target, `"#ff0000"` for a Color, an object dropped to a vector's components)
-	// are not clamps and must not be reported as "the engine changed my value".
-	// `requested` therefore carries the value as the write submitted it.
-	// -----------------------------------------------------------------------
-	Dictionary ignored;
-	Dictionary entry;
-	if (!is_path) {
-		const bool finite_float = converted.get_type() != Variant::FLOAT || (double)converted != 0.0;
-		Variant request_image;
-		bool matches = false;
-		if (converted.get_type() == Variant::FLOAT && finite_float) {
-			// MCP-NARROWING: G24-NW-SET-WIDTH - the `(real_t)` casts below are the
-			// comparison's own width, exactly like the resource writers'
-			// `G24-RESOURCE-SET-WIDTH`: a single-precision member keeps the nearest
-			// `float`, so `(double)(float)0.1 != 0.1` and comparing doubles would
-			// report a perfectly good write as "ignored". The requested side
-			// reached this function through `coerce_to_property_type` (the
-			// `REAL_T` slot for a `FLOAT` target), so no value the gate accepted
-			// can be lost here.
-			request_image = Variant((double)(real_t)(double)converted);
-			// MCP-NARROWING: G24-NW-SET-WIDTH - see the cast above.
-			matches = (real_t)new_value == (real_t)converted;
-		} else {
-			request_image = serialize_variant(converted);
-			matches = request_image == serialize_variant(new_value);
-		}
-		if (!matches) {
-			entry["requested"] = request_image;
-			entry["stored"] = serialize_variant(new_value);
-			entry["reason"] = "the engine's own property setter stored a different value for this property "
-							  "(it clamps or refuses input outside its own range), so it is not stored as asked";
-			ignored[p_property] = entry;
-		}
-	} else {
-		// A sub-property path is written through `set_indexed`, which writes the
-		// whole compound back; comparing the component alone would report a
-		// mismatch every time the engine normalises a sibling component. The
-		// `parent_*` pair below is what shows such a normalisation.
-	}
-
 	Dictionary result;
 	result["node_path"] = _node_path_for_result(p_object);
 	result["property"] = p_property;
 	result["old_value"] = serialize_variant(old_value);
 	result["new_value"] = serialize_variant(new_value);
-	result["ignored"] = ignored;
 	if (is_path) {
 		String parent_property;
 		for (int i = 0; i < parent_segments.size(); i++) {
@@ -1186,6 +1107,27 @@ bool prepare_node_property_value(Object *p_object, const String &p_property, con
 	// with the property's own type" step), then the type coercion and its range
 	// guard - the same two steps every other write tool of the module takes.
 	const Variant json_value = property_value_from_json(p_raw_value, target_type);
+	// A JSON *object* is still a Dictionary at this point. When the target is a
+	// vector-shaped type the object has to name its components (`{"x":1,"y":2}`),
+	// because `property_value_from_json` deliberately keeps an object a
+	// Dictionary and `type_convert` of a keyless Dictionary to a Vector2 is the
+	// **zero vector** - the silent wrong value the first TASK-012 evidence run
+	// measured (`{"x":321,"y":123}` answered `new_value: {"x":0,"y":0}`).
+	// TASK-018 section 3: the step itself is `shape_vector_from_json`, the one
+	// definition `project_set_setting` shares.
+	Variant shaped_value;
+	if (!shape_vector_from_json(json_value, target_type, p_property, "value", shaped_value, r_error)) {
+		return false;
+	}
+	// TASK-018 section 1: `coerce_to_property_type` is where a value that cannot
+	// fall into the target type is refused (`Variant::can_convert`), so the
+	// layout-incompatible case never reaches `Object::set()`.
+	//
+	// TASK-027 D-8: for an Object-valued property the engine's own conversion
+	// relation is not the rule any more (`DICTIONARY -> OBJECT` is not listed, yet
+	// `{"type","path"}` has to be taken back). What is passed along is the class
+	// the *property* declares (`Texture2D` for `Sprite2D.texture`), so a resource
+	// of a class the setter would silently drop is refused with both names in the
 		return false;
 	}
 	// The parameter name stays `value`, exactly as the whole-property write spells
