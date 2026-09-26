@@ -1,0 +1,30 @@
+WARNING: The ANGLE rendering driver requires dependencies to be installed.
+You can install them by running `python misc\scripts\install_angle.py`.
+See the documentation for more information:
+	https://docs.godotengine.org/en/latest/engine_details/development/compiling/compiling_for_windows.html#compiling-with-angle-support
+Alternatively, disable this driver by compiling with `angle=no` explicitly.
+.\modules/mcp_server/tests/test_mcp_server.h(1253): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(141): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry::register_tool鈥濈殑澹版槑
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(125): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry鈥濈殑澹版槑
+.\modules/mcp_server/tests/test_mcp_server.h(1270): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(141): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry::register_tool鈥濈殑澹版槑
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(125): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry鈥濈殑澹版槑
+.\modules/mcp_server/tests/test_mcp_server.h(1283): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(141): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry::register_tool鈥濈殑澹版槑
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(125): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry鈥濈殑澹版槑
+.\modules/mcp_server/tests/test_mcp_server.h(1298): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(141): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry::register_tool鈥濈殑澹版槑
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(125): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry鈥濈殑澹版槑
+.\modules/mcp_server/tests/test_mcp_server.h(1309): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(141): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry::register_tool鈥濈殑澹版槑
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(125): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry鈥濈殑澹版槑
+.\modules/mcp_server/tests/test_mcp_server.h(1327): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(141): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry::register_tool鈥濈殑澹版槑
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(125): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry鈥濈殑澹版槑
+.\modules/mcp_server/tests/test_mcp_server.h(1352): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(141): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry::register_tool鈥濈殑澹版槑
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(125): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry鈥濈殑澹版槑
+.\modules/mcp_server/tests/test_mcp_server.h(1390): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(141): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry::register_tool鈥濈殑澹版槑
+H:\rebuild\godot\modules\mcp_server\tool_registry.h(125): note: 鍙傝\ufffd佲\ufffd淢CPToolRegistry鈥濈殑澹版槑
+scons: *** [bin\obj\tests\test_main.windows.editor.x86_64.obj] Error 2

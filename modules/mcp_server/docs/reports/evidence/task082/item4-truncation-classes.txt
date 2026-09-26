@@ -1,0 +1,56 @@
+scanned=172
+
+## CLASS A - HEAD does not open with the Godot licence block  (head truncation, unambiguous): 3
+  mcp_server.cpp                               20934 B   522 lines  first='static const int DEFAULT_EDITOR_PORT = 9877;'
+  tools/editor_node_read.cpp                   21233 B   501 lines  first='// ---------------------------------------------------------------------------'
+  tools/running_game_read_scene.cpp             7665 B   166 lines  first='if (p_a.distance != p_b.distance) {'
+
+## CLASS B - TAIL does not end in a C++ terminator (tail truncation, unambiguous): 5
+  tools/project_write_resource_scene.cpp       24324 B   530 lines  bd=0   pd=2    last='// two apart.'
+  tools/running_game_frame_observation.cpp     24265 B   554 lines  bd=4   pd=0    last='if (!game_framebuffer_available()) {'
+  tools/running_game_node_write.cpp            55362 B  1174 lines  bd=4   pd=0    last='// END generated'
+  tools/running_game_read_scene.cpp             7665 B   166 lines  bd=-1  pd=0    last='for (int i = 0; i < keep; i++) {'
+  tools/tool_helpers.h                         67121 B  1110 lines  bd=0   pd=0    last='//'
+
+## CLASS C - unterminated string/comment found by the lexer (unambiguous): 1
+  tools/project_validate_scripts.cpp           14255 B  last='}'
+
+## CLASS D - well-formed ends but unbalanced braces/parens (interior damage SUSPECTED, needs review): 9
+  tool_registry.cpp                            25026 B   593 lines  bd=3    pd=0   
+  tools/editor_input_simulation.cpp            46403 B  1004 lines  bd=2    pd=2   
+  tools/editor_node_batch_write.cpp            34848 B   737 lines  bd=1    pd=0   
+  tools/editor_node_setup.cpp                  27389 B   578 lines  bd=-1   pd=0   
+  tools/editor_node_write.cpp                  34020 B   706 lines  bd=6    pd=0   
+  tools/editor_write_scene_editor.cpp          31738 B   724 lines  bd=5    pd=0   
+  tools/project_read_files.h                   11846 B   192 lines  bd=-1   pd=0   
+  tools/running_game_script_execution.cpp      11581 B   247 lines  bd=-1   pd=0   
+  tools/running_game_test_execution.cpp        31267 B   699 lines  bd=8    pd=0   
+
+## UNION (files carrying at least one structural red flag): 17 of 172
+  mcp_server.cpp
+  tool_registry.cpp
+  tools/editor_input_simulation.cpp
+  tools/editor_node_batch_write.cpp
+  tools/editor_node_read.cpp
+  tools/editor_node_setup.cpp
+  tools/editor_node_write.cpp
+  tools/editor_write_scene_editor.cpp
+  tools/project_read_files.h
+  tools/project_validate_scripts.cpp
+  tools/project_write_resource_scene.cpp
+  tools/running_game_frame_observation.cpp
+  tools/running_game_node_write.cpp
+  tools/running_game_read_scene.cpp
+  tools/running_game_script_execution.cpp
+  tools/running_game_test_execution.cpp
+  tools/tool_helpers.h
+
+## PROVEN damage (A + B + C), the list the fix plan must start from: 8
+  mcp_server.cpp
+  tools/editor_node_read.cpp
+  tools/project_validate_scripts.cpp
+  tools/project_write_resource_scene.cpp
+  tools/running_game_frame_observation.cpp
+  tools/running_game_node_write.cpp
+  tools/running_game_read_scene.cpp
+  tools/tool_helpers.h

@@ -1,0 +1,593 @@
+=== ERROR TOTALS ===
+total error lines    : 1575
+distinct files       : 48
+  module mcp_server  : 42 files, 1348 errors
+  other/engine       : 6 files, 227 errors
+
+=== error codes (all) ===
+  C2065    316
+  C4430    198
+  C3861    167
+  C2143    161
+  C2059    111
+  C2653    73
+  C2146    63
+  C3646    58
+  C2447    55
+  C2825    32
+  C2510    32
+  C2601    30
+  C2267    24
+  C2039    21
+  C2057    18
+  C2040    16
+  C2086    15
+  C2371    14
+  C2196    12
+  C2737    11
+  C2061    11
+  C2131    10
+  C2051    10
+  C2668    10
+  C2238    8
+  C2440    7
+  C2672    7
+  C2334    7
+  C1075    6
+  C3927    6
+  C3613    6
+  C1003    5
+  C2660    5
+  C1004    4
+  C2593    4
+  C2530    4
+  C3484    4
+  C2050    3
+  C2064    2
+  C2870    2
+  C2374    2
+  C2144    2
+  C2923    2
+  C2955    2
+  C2248    2
+  C2614    2
+  C2562    2
+  C2275    2
+  C2062    1
+  C2027    1
+  C1907    1
+  C1020    1
+  C3516    1
+  C1903    1
+  C2534    1
+  C2236    1
+  C2011    1
+  C2373    1
+  C2370    1
+
+=== failing targets (scons ***) : 38 ===
+  scons: *** [bin\obj\modules\mcp_server\mcp_server.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tool_registry.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_animation_tree_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_animation_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_audio_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_control_layout_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_node_read.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_input_simulation.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_node_setup.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_node_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_particle_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_script_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_shader_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_testing_read.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_read_scene_inspector.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_tilemap_read.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_node_batch_write.windows.editor.x86_64.obj] Error 3221225477
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_tilemap_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\editor_write_scene_editor.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\project_cross_scene_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\particle_shared.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\project.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\project_setting_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\project_read_files.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\project_theme_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\project_validate_scripts.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\registration.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\project_write_resource_scene.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\running_game_read_scene.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\running_game_frame_observation.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\running_game_assertion.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\running_game_input.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\running_game_node_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\running_game_navigation_write.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\running_game_script_execution.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\running_game_observation.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\running_game_test_execution.windows.editor.x86_64.obj] Error 2
+  scons: *** [bin\obj\modules\mcp_server\tools\tool_helpers.windows.editor.x86_64.obj] Error 2
+
+=== MODULE mcp_server errors, per file ===
+modules/mcp_server/mcp_server.cpp                     109 errors   first@line 4   codes=['C1003', 'C2059', 'C2062', 'C2065', 'C2143', 'C2146', 'C2447', 'C2510', 'C2653', 'C2737', 'C2825', 'C3861', 'C4430']
+modules/mcp_server/tools/running_game_read_scene.cpp  106 errors   first@line 1   codes=['C1004', 'C2059', 'C2064', 'C2065', 'C2086', 'C2143', 'C2146', 'C2447', 'C2510', 'C2653', 'C2737', 'C2825', 'C3484', 'C3613', 'C3861', 'C3927', 'C4430']
+modules/mcp_server/tools/tool_helpers.cpp             106 errors   first@line 254   codes=['C1003', 'C2050', 'C2051', 'C2061', 'C2065', 'C2131', 'C2143', 'C2146', 'C2196', 'C2370', 'C2447', 'C2510', 'C2737', 'C2825', 'C4430']
+modules/mcp_server/tools/running_game_node_write.cpp  103 errors   first@line 85   codes=['C1003', 'C2039', 'C2050', 'C2059', 'C2061', 'C2065', 'C2143', 'C2146', 'C2238', 'C2267', 'C2275', 'C2510', 'C2601', 'C2653', 'C2672', 'C2825', 'C2870', 'C3646', 'C3861', 'C4430']
+modules/mcp_server/tools/editor_node_read.cpp         101 errors   first@line 9   codes=['C1004', 'C2059', 'C2064', 'C2065', 'C2086', 'C2143', 'C2146', 'C2447', 'C2510', 'C2653', 'C2825', 'C3861', 'C4430']
+modules/mcp_server/tools/editor_input_simulation.cpp   90 errors   first@line 189   codes=['C1075', 'C2039', 'C2050', 'C2051', 'C2065', 'C2086', 'C2131', 'C2143', 'C2146', 'C2267', 'C2371', 'C2593', 'C2601', 'C2653', 'C2672', 'C3861']
+H:/rebuild/godot/modules/mcp_server/tools/tool_helpers.h   87 errors   first@line 83   codes=['C1003', 'C2059', 'C2061', 'C2086', 'C2143', 'C2146', 'C2371', 'C2923', 'C2955', 'C4430']
+modules/mcp_server/tools/editor_node_batch_write.cpp   73 errors   first@line 153   codes=['C1907', 'C2040', 'C2057', 'C2059', 'C2065', 'C2086', 'C2143', 'C2267', 'C2447', 'C2601', 'C2870', 'C3861', 'C4430']
+modules/mcp_server/tools/editor_node_setup.cpp         69 errors   first@line 100   codes=['C1075', 'C2040', 'C2057', 'C2059', 'C2065', 'C2086', 'C2143', 'C2267', 'C2440', 'C2447', 'C2601', 'C3861', 'C4430']
+modules/mcp_server/tools/running_game_script_execution.cpp   59 errors   first@line 84   codes=['C2040', 'C2057', 'C2059', 'C2065', 'C2143', 'C2146', 'C2371', 'C2373', 'C2447', 'C2562', 'C2660', 'C2737', 'C3484', 'C3613', 'C3861', 'C3927', 'C4430']
+modules/mcp_server/tools/project_write_resource_scene.cpp   47 errors   first@line 86   codes=['C1004', 'C2040', 'C2057', 'C2059', 'C2065', 'C2086', 'C2143', 'C2447', 'C2653', 'C3861', 'C4430']
+modules/mcp_server/tools/running_game_frame_observation.cpp   44 errors   first@line 204   codes=['C1075', 'C2011', 'C2040', 'C2057', 'C2059', 'C2065', 'C2086', 'C2143', 'C2236', 'C2238', 'C2267', 'C2334', 'C2447', 'C2534', 'C2562', 'C2601', 'C2614', 'C4430']
+modules/mcp_server/tools/editor_testing_read.cpp       37 errors   first@line 114   codes=['C1004', 'C2027', 'C2059', 'C2065', 'C2086', 'C2143', 'C2447', 'C2737', 'C3861', 'C4430']
+modules/mcp_server/tool_registry.cpp                   35 errors   first@line 179   codes=['C1075', 'C2065', 'C2267', 'C2440', 'C2601', 'C2737']
+H:/rebuild/godot/modules/mcp_server/tools/tool_builder.h   32 errors   first@line 71   codes=['C2061', 'C2143', 'C2146', 'C2371', 'C4430']
+modules/mcp_server/tools/editor_write_scene_editor.cpp   29 errors   first@line 51   codes=['C1020', 'C2057', 'C2059', 'C2065', 'C2143', 'C2374', 'C2440', 'C2447', 'C2653', 'C3861', 'C4430']
+modules/mcp_server/tools/editor_animation_tree_write.cpp   22 errors   first@line 408   codes=['C2065', 'C2653', 'C2660', 'C3861']
+H:/rebuild/godot/modules/mcp_server/tools/project_cross_scene_write.h   22 errors   first@line 118   codes=['C2059', 'C2065', 'C2143', 'C2144', 'C2530', 'C4430']
+H:/rebuild/godot/modules/mcp_server/tools/running_game_node_write.h   22 errors   first@line 59   codes=['C2086', 'C2143', 'C2146', 'C2371', 'C4430']
+modules/mcp_server/tools/editor_script_write.cpp       16 errors   first@line 142   codes=['C2065', 'C2146', 'C2660', 'C3861', 'C4430']
+modules/mcp_server/tools/particle_shared.cpp           16 errors   first@line 423   codes=['C2065', 'C2653', 'C3861']
+modules/mcp_server/tools/editor_particle_write.cpp     13 errors   first@line 150   codes=['C2039', 'C2065', 'C2653', 'C2737', 'C3646', 'C3861', 'C4430']
+modules/mcp_server/tools/editor_shader_write.cpp       12 errors   first@line 218   codes=['C2065', 'C2146', 'C2510', 'C2825', 'C3861', 'C4430']
+modules/mcp_server/tools/project_read_files.cpp        11 errors   first@line 480   codes=['C2668', 'C3861']
+modules/mcp_server/tools/project_theme_write.cpp       11 errors   first@line 156   codes=['C2065', 'C2653', 'C3861']
+modules/mcp_server/tools/editor_tilemap_write.cpp       9 errors   first@line 293   codes=['C2065', 'C2653', 'C3861']
+modules/mcp_server/tools/running_game_navigation_write.cpp    9 errors   first@line 151   codes=['C2065', 'C2653', 'C3861']
+modules/mcp_server/tools/editor_animation_write.cpp     7 errors   first@line 320   codes=['C2065', 'C2653', 'C3861']
+modules/mcp_server/tools/editor_tilemap_read.cpp        6 errors   first@line 164   codes=['C2065', 'C2653', 'C3861']
+modules/mcp_server/tools/project_setting_write.cpp      6 errors   first@line 156   codes=['C2065', 'C2653', 'C3861']
+H:/rebuild/godot/modules/mcp_server/tools/project_read_files.h    6 errors   first@line 192   codes=['C2059', 'C2143']
+modules/mcp_server/tools/running_game_observation.cpp    6 errors   first@line 163   codes=['C2672', 'C3861']
+modules/mcp_server/tools/editor_audio_write.cpp         4 errors   first@line 303   codes=['C2065', 'C2653', 'C3861']
+modules/mcp_server/tools/project.cpp                    4 errors   first@line 273   codes=['C2248', 'C2440']
+modules/mcp_server/tools/running_game_test_execution.cpp    4 errors   first@line 173   codes=['C1075', 'C2065', 'C2653', 'C3861']
+modules/mcp_server/tools/editor_node_write.cpp          3 errors   first@line 210   codes=['C1075', 'C2601']
+modules/mcp_server/tools/editor_read_scene_inspector.cpp    3 errors   first@line 225   codes=['C3861']
+modules/mcp_server/tools/running_game_input.cpp         3 errors   first@line 304   codes=['C2065', 'C2653', 'C3861']
+H:/rebuild/godot/modules/mcp_server/tools/csharp_verdict.h    2 errors   first@line 37   codes=['C2143', 'C2447']
+modules/mcp_server/tools/project_validate_scripts.cpp    2 errors   first@line 344   codes=['C1903', 'C3516']
+modules/mcp_server/tools/editor_control_layout_write.cpp    1 errors   first@line 123   codes=['C3861']
+modules/mcp_server/tools/running_game_assertion.cpp     1 errors   first@line 217   codes=['C3861']
+
+=== MODULE mcp_server: first 12 error lines of each file ===
+--- modules/mcp_server/mcp_server.cpp (109 errors) ---
+   modules\mcp_server\mcp_server.cpp(4): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   modules\mcp_server\mcp_server.cpp(4): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\mcp_server.cpp(5): error C2065: 鈥減_text鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\mcp_server.cpp(8): error C2065: 鈥減_text鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\mcp_server.cpp(8): error C2737: 鈥減arsed鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+   modules\mcp_server\mcp_server.cpp(12): error C2065: 鈥渞_port鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\mcp_server.cpp(16): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   modules\mcp_server\mcp_server.cpp(16): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd減arse鈥濈殑鍓嶉潰)
+   modules\mcp_server\mcp_server.cpp(16): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+   modules\mcp_server\mcp_server.cpp(16): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\mcp_server.cpp(56): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   modules\mcp_server\mcp_server.cpp(56): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+--- modules/mcp_server/tools/running_game_read_scene.cpp (106 errors) ---
+   modules\mcp_server\tools\running_game_read_scene.cpp(1): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+   modules\mcp_server\tools\running_game_read_scene.cpp(1): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\running_game_read_scene.cpp(1): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+   modules\mcp_server\tools\running_game_read_scene.cpp(4): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渞eturn鈥\ufffd
+   modules\mcp_server\tools\running_game_read_scene.cpp(5): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渳鈥\ufffd
+   modules\mcp_server\tools\running_game_read_scene.cpp(5): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渳鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\running_game_read_scene.cpp(6): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渳鈥\ufffd
+   modules\mcp_server\tools\running_game_read_scene.cpp(6): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渳鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\running_game_read_scene.cpp(17): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\running_game_read_scene.cpp(17): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\tools\running_game_read_scene.cpp(18): error C2064: 椤逛笉浼氳\ufffd＄畻涓烘帴鍙\ufffd 0 涓\ufffd鍙傛暟鐨勫嚱鏁\ufffd
+   modules\mcp_server\tools\running_game_read_scene.cpp(18): error C2065: 鈥減_component鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/tool_helpers.cpp (106 errors) ---
+   modules\mcp_server\tools\tool_helpers.cpp(254): error C2196: case 鍊尖\ufffd\ufffd12鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(263): error C2196: case 鍊尖\ufffd\ufffd13鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(415): error C2196: case 鍊尖\ufffd\ufffd29鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(423): error C2196: case 鍊尖\ufffd\ufffd30鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(431): error C2196: case 鍊尖\ufffd\ufffd31鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(439): error C2196: case 鍊尖\ufffd\ufffd32鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(447): error C2196: case 鍊尖\ufffd\ufffd33鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(455): error C2196: case 鍊尖\ufffd\ufffd34鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(463): error C2196: case 鍊尖\ufffd\ufffd35鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(475): error C2196: case 鍊尖\ufffd\ufffd36鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(488): error C2196: case 鍊尖\ufffd\ufffd38鈥濆凡浣跨敤
+   modules\mcp_server\tools\tool_helpers.cpp(502): error C2196: case 鍊尖\ufffd\ufffd37鈥濆凡浣跨敤
+--- modules/mcp_server/tools/running_game_node_write.cpp (103 errors) ---
+   modules\mcp_server\tools\running_game_node_write.cpp(85): error C2601: 鈥渧ector_from_dictionary鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\running_game_node_write.cpp(200): error C2870: 鈥淢CPTools鈥\ufffd: 鍛藉悕绌洪棿瀹氫箟蹇呴』鍑虹幇鍦ㄦ枃浠惰寖鍥村唴鎴栫揣鎺ョ潃鍑虹幇鍦ㄥ彟涓\ufffd鍛藉悕绌洪棿瀹氫箟鍐\ufffd
+   modules\mcp_server\tools\running_game_node_write.cpp(206): error C2601: 鈥淢CPTools::MCPTools::vector_component_hint鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\running_game_node_write.cpp(370): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_node_write.cpp(370): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\running_game_node_write.cpp(370): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_node_write.cpp(376): error C2065: 鈥淔LOAT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_node_write.cpp(376): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\running_game_node_write.cpp(376): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_node_write.cpp(379): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_node_write.cpp(379): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\running_game_node_write.cpp(379): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/editor_node_read.cpp (101 errors) ---
+   modules\mcp_server\tools\editor_node_read.cpp(9): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_node_read.cpp(9): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\tools\editor_node_read.cpp(10): error C2065: 鈥減_args鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_read.cpp(10): error C2065: 鈥減_key鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_read.cpp(10): error C2065: 鈥渞_error鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_read.cpp(10): error C2065: 鈥渞_out鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_read.cpp(10): error C3861: 鈥渞equire_string鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_read.cpp(13): error C2065: 鈥渞_out鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_read.cpp(14): error C2065: 鈥減_key鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_read.cpp(14): error C2065: 鈥渞_error鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_read.cpp(14): error C2653: 鈥淢CPToolError鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_node_read.cpp(14): error C3861: 鈥渋nvalid_params鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/editor_input_simulation.cpp (90 errors) ---
+   modules\mcp_server\tools\editor_input_simulation.cpp(189): error C2672: 鈥渧format鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤鐨勯噸杞藉嚱鏁\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(190): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd)鈥\ufffd(鍦ㄢ\ufffd\ufffd;鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_input_simulation.cpp(197): error C2267: 鈥淿optional_number鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(197): error C2601: 鈥淿optional_number鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(216): error C2267: 鈥淿make_key_event鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(216): error C2601: 鈥淿make_key_event鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(228): error C2039: "set_position": 涓嶆槸 "InputEventKey" 鐨勬垚鍛\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(228): error C2065: 鈥減_x鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(228): error C2065: 鈥減_y鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(229): error C2039: "set_global_position": 涓嶆槸 "InputEventKey" 鐨勬垚鍛\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(229): error C2065: 鈥減_x鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_input_simulation.cpp(229): error C2065: 鈥減_y鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+--- H:/rebuild/godot/modules/mcp_server/tools/tool_helpers.h (87 errors) ---
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(83): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd渏oin_path鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(83): error C2371: 鈥淢CPTools::String鈥\ufffd: 閲嶅畾涔夛紱涓嶅悓鐨勫熀绫诲瀷
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(83): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(90): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(90): error C2923: "Vector": "MCPTools::String" 涓嶆槸鍙傛暟 "T" 鐨勬湁鏁\ufffd 妯℃澘 绫诲瀷鍙傛暟
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(90): error C2955: 鈥淰ector鈥\ufffd: 浣跨敤 绫\ufffd 妯℃澘 闇\ufffd瑕\ufffd 妯℃澘 鍙傛暟鍒楄〃
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(90): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(112): error C2086: 鈥渋nt MCPTools::Variant鈥\ufffd: 閲嶅畾涔\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(112): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd渟erialize_variant鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(112): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(118): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(118): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+--- modules/mcp_server/tools/editor_node_batch_write.cpp (73 errors) ---
+   modules\mcp_server\tools\editor_node_batch_write.cpp(153): error C2267: 鈥淿later_element_requesting鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(153): error C2601: 鈥淿later_element_requesting鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(174): error C3861: 鈥淿pending_path_for鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(175): error C3861: 鈥淿pending_path_matches鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(184): error C2267: 鈥淿batch_error_entry鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(184): error C2601: 鈥淿batch_error_entry鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(198): error C2267: 鈥淿rollback_envelope鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(198): error C2601: 鈥淿rollback_envelope鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(215): error C2267: 鈥淿attach_batch_envelope鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(215): error C2601: 鈥淿attach_batch_envelope鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(229): error C2267: 鈥淿transaction_fail鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+   modules\mcp_server\tools\editor_node_batch_write.cpp(229): error C2601: 鈥淿transaction_fail鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+--- modules/mcp_server/tools/editor_node_setup.cpp (69 errors) ---
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd)鈥\ufffd
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd++鈥\ufffd
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd<鈥\ufffd
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渇or鈥\ufffd
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2086: 鈥渋nt i鈥\ufffd: 閲嶅畾涔\ufffd
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd)鈥\ufffd(鍦ㄢ\ufffd\ufffd;鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd\ufffd++鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd\ufffd<鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\tools\editor_node_setup.cpp(100): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+--- modules/mcp_server/tools/running_game_script_execution.cpp (59 errors) ---
+   modules\mcp_server\tools\running_game_script_execution.cpp(84): error C2660: 鈥渂uild_execute_gdscript_source鈥\ufffd: 鍑芥暟涓嶆帴鍙\ufffd 4 涓\ufffd鍙傛暟
+   modules\mcp_server\tools\running_game_script_execution.cpp(90): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_script_execution.cpp(90): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd渞eload鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\running_game_script_execution.cpp(90): error C3861: 鈥渞eload_gdscript_capturing鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_script_execution.cpp(90): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\tools\running_game_script_execution.cpp(91): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_script_execution.cpp(95): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_script_execution.cpp(95): error C3861: 鈥済dscript_reload_failure_text鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_script_execution.cpp(96): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_script_execution.cpp(98): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_script_execution.cpp(98): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_script_execution.cpp(99): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/project_write_resource_scene.cpp (47 errors) ---
+   modules\mcp_server\tools\project_write_resource_scene.cpp(86): error C3861: 鈥減roperty_value_from_json鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_write_resource_scene.cpp(91): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_write_resource_scene.cpp(92): error C2065: 鈥淔ROM_TARGET_TYPE鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_write_resource_scene.cpp(92): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\project_write_resource_scene.cpp(93): error C3861: 鈥渙bject_property_class_hint鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_write_resource_scene.cpp(304): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+   modules\mcp_server\tools\project_write_resource_scene.cpp(304): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\project_write_resource_scene.cpp(304): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+   modules\mcp_server\tools\project_write_resource_scene.cpp(308): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+   modules\mcp_server\tools\project_write_resource_scene.cpp(308): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\project_write_resource_scene.cpp(308): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+   modules\mcp_server\tools\project_write_resource_scene.cpp(312): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+--- modules/mcp_server/tools/running_game_frame_observation.cpp (44 errors) ---
+   modules\mcp_server\tools\running_game_frame_observation.cpp(204): error C2065: 鈥渘ode_id鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+   modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+   modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2040: 鈥渟ample鈥\ufffd:鈥渋nt []鈥濅笌鈥淒ictionary鈥濈殑闂存帴瀵诲潃绾у埆涓嶅悓
+   modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2057: 搴旇緭鍏ュ父閲忚〃杈惧紡
+   modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2065: 鈥渃ollected鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd)鈥\ufffd
+   modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd++鈥\ufffd
+   modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd<鈥\ufffd
+   modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渇or鈥\ufffd
+--- modules/mcp_server/tools/editor_testing_read.cpp (37 errors) ---
+   modules\mcp_server\tools\editor_testing_read.cpp(114): error C2027: 浣跨敤浜嗘湭瀹氫箟绫诲瀷鈥淔ileAccess鈥\ufffd
+   modules\mcp_server\tools\editor_testing_read.cpp(114): error C3861: 鈥渆xists鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_testing_read.cpp(153): error C2065: 鈥渋mage_a鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_testing_read.cpp(153): error C2737: 鈥渨idth鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+   modules\mcp_server\tools\editor_testing_read.cpp(154): error C2065: 鈥渋mage_a鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_testing_read.cpp(154): error C2737: 鈥渉eight鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+   modules\mcp_server\tools\editor_testing_read.cpp(155): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+   modules\mcp_server\tools\editor_testing_read.cpp(155): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_testing_read.cpp(155): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+   modules\mcp_server\tools\editor_testing_read.cpp(161): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+   modules\mcp_server\tools\editor_testing_read.cpp(161): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_testing_read.cpp(161): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+--- modules/mcp_server/tool_registry.cpp (35 errors) ---
+   modules\mcp_server\tool_registry.cpp(179): error C2440: 鈥渞eturn鈥\ufffd: 鏃犳硶浠庘\ufffd淢CPToolScope鈥濊浆鎹\ufffd涓衡\ufffd渂ool鈥\ufffd
+   modules\mcp_server\tool_registry.cpp(181): error C2065: 鈥減_scope鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tool_registry.cpp(182): error C2065: 鈥渞_ok鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tool_registry.cpp(183): error C2440: 鈥渞eturn鈥\ufffd: 鏃犳硶浠庘\ufffd淢CPToolScope鈥濊浆鎹\ufffd涓衡\ufffd渂ool鈥\ufffd
+   modules\mcp_server\tool_registry.cpp(185): error C2065: 鈥渞_ok鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tool_registry.cpp(186): error C2440: 鈥渞eturn鈥\ufffd: 鏃犳硶浠庘\ufffd淢CPToolScope鈥濊浆鎹\ufffd涓衡\ufffd渂ool鈥\ufffd
+   modules\mcp_server\tool_registry.cpp(382): error C2065: 鈥渕arker鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tool_registry.cpp(383): error C2065: 鈥渕arker鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tool_registry.cpp(383): error C2737: 鈥渟tart鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+   modules\mcp_server\tool_registry.cpp(384): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tool_registry.cpp(384): error C2737: 鈥渃lose鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+   modules\mcp_server\tool_registry.cpp(386): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+--- H:/rebuild/godot/modules/mcp_server/tools/tool_builder.h (32 errors) ---
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(71): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(71): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(73): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(73): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(74): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(74): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(78): error C2061: 璇\ufffd娉曢敊璇\ufffd: 鏍囪瘑绗︹\ufffd淰ariant鈥\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(82): error C2061: 璇\ufffd娉曢敊璇\ufffd: 鏍囪瘑绗︹\ufffd淢CPToolError鈥\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(87): error C2061: 璇\ufffd娉曢敊璇\ufffd: 鏍囪瘑绗︹\ufffd淪tring鈥\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(123): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(123): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(132): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+--- modules/mcp_server/tools/editor_write_scene_editor.cpp (29 errors) ---
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(51): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渞eturn鈥\ufffd
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(52): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渳鈥\ufffd
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(52): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渳鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(53): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(53): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(56): error C2057: 搴旇緭鍏ュ父閲忚〃杈惧紡
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(56): error C2065: 鈥減_node鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(56): error C2440: 鈥滃垵濮嬪寲鈥\ufffd: 鏃犳硶浠庘\ufffd淪tring鈥濊浆鎹\ufffd涓衡\ufffd渋nt []鈥\ufffd
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(56): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(57): error C2057: 搴旇緭鍏ュ父閲忚〃杈惧紡
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(57): error C2065: 鈥減_node鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_write_scene_editor.cpp(57): error C2065: 鈥減_node鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/editor_animation_tree_write.cpp (22 errors) ---
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(408): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(408): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(408): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(412): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(412): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(412): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(522): error C2065: 鈥淔LOAT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(522): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(522): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(538): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(538): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_animation_tree_write.cpp(538): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- H:/rebuild/godot/modules/mcp_server/tools/project_cross_scene_write.h (22 errors) ---
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd>鈥\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2065: 鈥淣ode鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2144: 璇\ufffd娉曢敊璇\ufffd:鈥渦nknown-type鈥濈殑鍓嶉潰搴旀湁鈥\ufffd)鈥\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2144: 璇\ufffd娉曢敊璇\ufffd:鈥渦nknown-type鈥濈殑鍓嶉潰搴旀湁鈥\ufffd;鈥\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2530: 鈥淢CPTools::p_nodes鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲寮曠敤
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2530: 鈥淢CPTools::p_property鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲寮曠敤
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2530: 鈥淢CPTools::p_raw_value鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲寮曠敤
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+--- H:/rebuild/godot/modules/mcp_server/tools/running_game_node_write.h (22 errors) ---
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(59): error C2086: 鈥渋nt MCPTools::Variant鈥\ufffd: 閲嶅畾涔\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(59): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd渧ector_from_dictionary鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(59): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(81): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd渧ector_component_hint鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(81): error C2371: 鈥淢CPTools::String鈥\ufffd: 閲嶅畾涔夛紱涓嶅悓鐨勫熀绫诲瀷
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(81): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(121): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(121): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(141): error C2086: 鈥渋nt MCPTools::Variant鈥\ufffd: 閲嶅畾涔\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(141): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd渨rite_node_property鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(141): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(156): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+--- modules/mcp_server/tools/editor_script_write.cpp (16 errors) ---
+   modules\mcp_server\tools\editor_script_write.cpp(142): error C2660: 鈥渂uild_execute_gdscript_source鈥\ufffd: 鍑芥暟涓嶆帴鍙\ufffd 4 涓\ufffd鍙傛暟
+   modules\mcp_server\tools\editor_script_write.cpp(150): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_script_write.cpp(150): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd渞eload鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_script_write.cpp(150): error C3861: 鈥渞eload_gdscript_capturing鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_script_write.cpp(150): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\tools\editor_script_write.cpp(151): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_script_write.cpp(152): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_script_write.cpp(152): error C3861: 鈥済dscript_reload_failure_text鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_script_write.cpp(153): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_script_write.cpp(158): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_script_write.cpp(158): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_script_write.cpp(159): error C2065: 鈥渞eload鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/particle_shared.cpp (16 errors) ---
+   modules\mcp_server\tools\particle_shared.cpp(423): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\particle_shared.cpp(435): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\particle_shared.cpp(440): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\particle_shared.cpp(516): error C2065: 鈥淔LOAT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\particle_shared.cpp(516): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\particle_shared.cpp(516): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\particle_shared.cpp(522): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\particle_shared.cpp(522): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\particle_shared.cpp(522): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\particle_shared.cpp(539): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\particle_shared.cpp(549): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\particle_shared.cpp(552): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/editor_particle_write.cpp (13 errors) ---
+   modules\mcp_server\tools\editor_particle_write.cpp(150): error C3646: 鈥渟lot鈥\ufffd: 鏈\ufffd鐭ラ噸鍐欒\ufffd存槑绗\ufffd
+   modules\mcp_server\tools\editor_particle_write.cpp(150): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\tools\editor_particle_write.cpp(157): error C2039: "slot": 涓嶆槸 "`anonymous-namespace'::NodeMemberSpec" 鐨勬垚鍛\ufffd
+   modules\mcp_server\tools\editor_particle_write.cpp(157): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_particle_write.cpp(180): error C2737: 鈥渟pecs鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+   modules\mcp_server\tools\editor_particle_write.cpp(181): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_particle_write.cpp(181): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_particle_write.cpp(182): error C2065: 鈥淲IDE鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_particle_write.cpp(182): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_particle_write.cpp(183): error C2065: 鈥淲IDE鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_particle_write.cpp(183): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_particle_write.cpp(184): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/editor_shader_write.cpp (12 errors) ---
+   modules\mcp_server\tools\editor_shader_write.cpp(218): error C3861: 鈥減roperty_value_from_json鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_shader_write.cpp(227): error C2065: 鈥淔LOAT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_shader_write.cpp(227): error C2065: 鈥淔ROM_TARGET_TYPE鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_shader_write.cpp(227): error C2065: 鈥渟lot_width鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_shader_write.cpp(227): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd渟lot_width鈥濈殑鍓嶉潰)
+   modules\mcp_server\tools\editor_shader_write.cpp(227): error C2510: 鈥淰alueSlot鈥\ufffd:鈥\ufffd::鈥濈殑宸﹁竟蹇呴』鏄\ufffd绫\ufffd/缁撴瀯/鑱斿悎
+   modules\mcp_server\tools\editor_shader_write.cpp(227): error C2510: 鈥淰alueSlot鈥\ufffd:鈥\ufffd::鈥濈殑宸﹁竟蹇呴』鏄\ufffd绫\ufffd/缁撴瀯/鑱斿悎
+   modules\mcp_server\tools\editor_shader_write.cpp(227): error C2825: 'ValueSlot': 褰撳悗闈㈣窡鈥\ufffd::鈥濇椂蹇呴』涓虹被鎴栧懡鍚嶇┖闂\ufffd
+   modules\mcp_server\tools\editor_shader_write.cpp(227): error C2825: 'ValueSlot': 褰撳悗闈㈣窡鈥\ufffd::鈥濇椂蹇呴』涓虹被鎴栧懡鍚嶇┖闂\ufffd
+   modules\mcp_server\tools\editor_shader_write.cpp(227): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+   modules\mcp_server\tools\editor_shader_write.cpp(228): error C2065: 鈥渟lot_width鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_shader_write.cpp(228): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/project_read_files.cpp (11 errors) ---
+   modules\mcp_server\tools\project_read_files.cpp(480): error C3861: 鈥渞ead_csharp_build_record鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(489): error C2668: 鈥淢CPTools::csharp_recorded_error_text鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(549): error C2668: 鈥淢CPTools::validate_script_language_unavailable_reason鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(550): error C2668: 鈥淢CPTools::validate_script_language_unavailable_error鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(572): error C2668: 鈥淢CPTools::validate_script_language_unavailable_reason鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(573): error C2668: 鈥淢CPTools::validate_script_language_unavailable_error鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(584): error C2668: 鈥淢CPTools::validate_csharp_script_source鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(638): error C2668: 鈥淢CPTools::validate_script_unverifiable_error鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(668): error C2668: 鈥淢CPTools::validate_script_source鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(674): error C2668: 鈥淢CPTools::validate_script_language_unavailable_error鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+   modules\mcp_server\tools\project_read_files.cpp(684): error C2668: 鈥淢CPTools::validate_script_verdict_refusal鈥\ufffd: 瀵归噸杞藉嚱鏁扮殑璋冪敤涓嶆槑纭\ufffd
+--- modules/mcp_server/tools/project_theme_write.cpp (11 errors) ---
+   modules\mcp_server\tools\project_theme_write.cpp(156): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_theme_write.cpp(177): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_theme_write.cpp(177): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\project_theme_write.cpp(177): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_theme_write.cpp(280): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_theme_write.cpp(315): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_theme_write.cpp(315): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\project_theme_write.cpp(315): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_theme_write.cpp(350): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_theme_write.cpp(350): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\project_theme_write.cpp(350): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/editor_tilemap_write.cpp (9 errors) ---
+   modules\mcp_server\tools\editor_tilemap_write.cpp(293): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_tilemap_write.cpp(293): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_tilemap_write.cpp(293): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_tilemap_write.cpp(430): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_tilemap_write.cpp(430): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_tilemap_write.cpp(430): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_tilemap_write.cpp(467): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_tilemap_write.cpp(467): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_tilemap_write.cpp(467): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/running_game_navigation_write.cpp (9 errors) ---
+   modules\mcp_server\tools\running_game_navigation_write.cpp(151): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_navigation_write.cpp(151): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\running_game_navigation_write.cpp(151): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_navigation_write.cpp(861): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_navigation_write.cpp(861): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\running_game_navigation_write.cpp(861): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_navigation_write.cpp(870): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_navigation_write.cpp(870): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\running_game_navigation_write.cpp(870): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/editor_animation_write.cpp (7 errors) ---
+   modules\mcp_server\tools\editor_animation_write.cpp(320): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_write.cpp(320): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_animation_write.cpp(320): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_write.cpp(430): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_write.cpp(523): error C2065: 鈥淩EAL_T鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_animation_write.cpp(523): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_animation_write.cpp(523): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/editor_tilemap_read.cpp (6 errors) ---
+   modules\mcp_server\tools\editor_tilemap_read.cpp(164): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_tilemap_read.cpp(164): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_tilemap_read.cpp(164): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_tilemap_read.cpp(165): error C2065: 鈥淚NT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_tilemap_read.cpp(165): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_tilemap_read.cpp(165): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/project_setting_write.cpp (6 errors) ---
+   modules\mcp_server\tools\project_setting_write.cpp(156): error C3861: 鈥減roperty_type_of鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_setting_write.cpp(186): error C3861: 鈥減roperty_value_from_json鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_setting_write.cpp(195): error C3861: 鈥減roperty_value_from_json鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_setting_write.cpp(211): error C2065: 鈥淲IDE鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\project_setting_write.cpp(211): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\project_setting_write.cpp(211): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- H:/rebuild/godot/modules/mcp_server/tools/project_read_files.h (6 errors) ---
+   H:\rebuild\godot\modules\mcp_server\tools\project_read_files.h(192): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渳鈥\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\project_read_files.h(192): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渳鈥\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\project_read_files.h(192): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渳鈥\ufffd
+   H:\rebuild\godot\modules\mcp_server\tools\project_read_files.h(192): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渳鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\project_read_files.h(192): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渳鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\project_read_files.h(192): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渳鈥濈殑鍓嶉潰)
+--- modules/mcp_server/tools/running_game_observation.cpp (6 errors) ---
+   modules\mcp_server\tools\running_game_observation.cpp(163): error C3861: 鈥減roperty_is_label鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_observation.cpp(172): error C3861: 鈥渄ictionary_has_key_ignoring_case鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_observation.cpp(177): error C2672: 鈥渧format鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤鐨勯噸杞藉嚱鏁\ufffd
+   modules\mcp_server\tools\running_game_observation.cpp(177): error C3861: 鈥渨ire_node_path鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_observation.cpp(280): error C3861: 鈥減roperty_is_label鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_observation.cpp(283): error C3861: 鈥渄ictionary_has_key_ignoring_case鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/editor_audio_write.cpp (4 errors) ---
+   modules\mcp_server\tools\editor_audio_write.cpp(303): error C2065: 鈥淔LOAT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_audio_write.cpp(303): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\editor_audio_write.cpp(303): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_audio_write.cpp(320): error C3861: 鈥渃oerce_to_property_type鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/project.cpp (4 errors) ---
+   modules\mcp_server\tools\project.cpp(273): error C2440: 鈥\ufffd=鈥\ufffd: 鏃犳硶浠庘\ufffd淰ariant (__cdecl *)(const Dictionary &,String &)鈥濊浆鎹\ufffd涓衡\ufffd淰ariant (__cdecl *)(const Dictionary &,MCPToolError &)鈥\ufffd
+   modules\mcp_server\tools\project.cpp(274): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+   modules\mcp_server\tools\project.cpp(301): error C2440: 鈥\ufffd=鈥\ufffd: 鏃犳硶浠庘\ufffd淰ariant (__cdecl *)(const Dictionary &,String &)鈥濊浆鎹\ufffd涓衡\ufffd淰ariant (__cdecl *)(const Dictionary &,MCPToolError &)鈥\ufffd
+   modules\mcp_server\tools\project.cpp(302): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+--- modules/mcp_server/tools/running_game_test_execution.cpp (4 errors) ---
+   modules\mcp_server\tools\running_game_test_execution.cpp(173): error C2065: 鈥淔LOAT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_test_execution.cpp(173): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\running_game_test_execution.cpp(173): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_test_execution.cpp(697): fatal error C1075: 鈥渰鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤浠ょ墝
+--- modules/mcp_server/tools/editor_node_write.cpp (3 errors) ---
+   modules\mcp_server\tools\editor_node_write.cpp(210): error C2601: 鈥渃onnect_signal_on鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\editor_node_write.cpp(257): error C2601: 鈥渄isconnect_signal_from鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+   modules\mcp_server\tools\editor_node_write.cpp(456): fatal error C1075: 鈥渰鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤浠ょ墝
+--- modules/mcp_server/tools/editor_read_scene_inspector.cpp (3 errors) ---
+   modules\mcp_server\tools\editor_read_scene_inspector.cpp(225): error C3861: 鈥淿require_editor_ui鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_read_scene_inspector.cpp(322): error C3861: 鈥淿require_editor_ui鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\editor_read_scene_inspector.cpp(382): error C3861: 鈥淿require_editor_ui鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/running_game_input.cpp (3 errors) ---
+   modules\mcp_server\tools\running_game_input.cpp(304): error C2065: 鈥淔LOAT32鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+   modules\mcp_server\tools\running_game_input.cpp(304): error C2653: 鈥淰alueSlot鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+   modules\mcp_server\tools\running_game_input.cpp(304): error C3861: 鈥渧alue_fits_slot鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- H:/rebuild/godot/modules/mcp_server/tools/csharp_verdict.h (2 errors) ---
+   H:\rebuild\godot\modules\mcp_server\tools\csharp_verdict.h(37): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+   H:\rebuild\godot\modules\mcp_server\tools\csharp_verdict.h(37): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+--- modules/mcp_server/tools/project_validate_scripts.cpp (2 errors) ---
+   modules\mcp_server\tools\project_validate_scripts.cpp(344): fatal error C1903: 鏃犳硶浠庝互鍓嶇殑閿欒\ufffd\ufffd涓\ufffd鎭㈠\ufffd嶏紱姝ｅ湪鍋滄\ufffd㈢紪璇\ufffd
+   modules\mcp_server\tools\project_validate_scripts.cpp(344): error C3516: 澶勭悊鍘熷\ufffd嬪瓧绗︿覆鏂囨湰鏃跺彂鐜版剰澶栫殑鏂囦欢灏撅紱鍒嗛殧绗﹀簭鍒椻\ufffd渄esc)鈥濅笉鍖归厤
+--- modules/mcp_server/tools/editor_control_layout_write.cpp (1 errors) ---
+   modules\mcp_server\tools\editor_control_layout_write.cpp(123): error C3861: 鈥淿relative_path鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+--- modules/mcp_server/tools/running_game_assertion.cpp (1 errors) ---
+   modules\mcp_server\tools\running_game_assertion.cpp(217): error C3861: 鈥渃ollect_visible_texts鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+
+=== ENGINE errors (non-module), grouped ===
+core/object/object.h                                          132 errors  codes=['C2039', 'C2059', 'C2143', 'C2238', 'C2334', 'C3646', 'C4430']
+core/io/resource.h                                             40 errors  codes=['C2039', 'C2061', 'C2065', 'C2146', 'C3861']
+core/object/method_info.h                                      20 errors  codes=['C2065', 'C2143', 'C4430']
+core/object/property_info.h                                    16 errors  codes=['C2065', 'C2143', 'C4430']
+scene/main/node.h                                              15 errors  codes=['C1003', 'C2039', 'C2061', 'C2065', 'C2146', 'C3861']
+core/extension/gdextension_interface.gen.h                      4 errors  codes=['C2143', 'C2447']
+
+=== tail of stdout ===
+  Generating servers\rendering\renderer_rd\shaders\canvas_uniforms_inc.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\cluster_data_inc.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\environment\voxel_gi_sdf.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\giprobe_write.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\half_inc.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\oct_inc.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\samplers_inc.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\scene_forward_aa_inc.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\scene_forward_gi_inc.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\scene_forward_lights_inc.glsl.gen.h ...
+  Generating servers\rendering\renderer_rd\shaders\scene_forward_vertex_lights_inc.glsl.gen.h ...
+  Linking Static Library bin\obj\core\core.windows.editor.x86_64.lib ...
+  Ranlib Library bin\obj\core\core.windows.editor.x86_64.lib ...
+  scons: done building targets (errors occurred during build).
+  INFO: Time elapsed: 00:10:20.95

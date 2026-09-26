@@ -1,0 +1,118 @@
+WARNING: The ANGLE rendering driver requires dependencies to be installed.
+You can install them by running `python misc\scripts\install_angle.py`.
+See the documentation for more information:
+	https://docs.godotengine.org/en/latest/engine_details/development/compiling/compiling_for_windows.html#compiling-with-angle-support
+Alternatively, disable this driver by compiling with `angle=no` explicitly.
+modules\mcp_server\mcp_server.cpp(4): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\mcp_server.cpp(4): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(5): error C2065: 鈥減_text鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(8): error C2065: 鈥減_text鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(8): error C2737: 鈥減arsed鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+modules\mcp_server\mcp_server.cpp(12): error C2065: 鈥渞_port鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(16): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\mcp_server.cpp(16): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd減arse鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(16): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(16): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(56): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\mcp_server.cpp(56): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd,鈥\ufffd(鍦ㄢ\ufffd\ufffd&鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(57): error C2065: 鈥減_config鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(64): error C2065: 鈥減_config鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(64): error C2065: 鈥減_enabled_in_game鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(67): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渳鈥\ufffd
+modules\mcp_server\mcp_server.cpp(67): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渳鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(69): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(69): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(82): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(82): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\mcp_server.cpp(83): error C3861: 鈥渟et_process鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(84): warning C4508: 鈥淢CPServer鈥\ufffd: 鍑芥暟搴旇繑鍥炰竴涓\ufffd鍊硷紱鍋囧畾鈥渧oid鈥濊繑鍥炵被鍨\ufffd
+modules\mcp_server\mcp_server.cpp(86): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(86): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\mcp_server.cpp(87): error C3861: 鈥淿shutdown鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(88): warning C4508: 鈥渰dtor}鈥\ufffd: 鍑芥暟搴旇繑鍥炰竴涓\ufffd鍊硷紱鍋囧畾鈥渧oid鈥濊繑鍥炵被鍨\ufffd
+modules\mcp_server\mcp_server.cpp(90): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(91): error C2653: 鈥淐lassDB鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(91): error C3861: 鈥淒_METHOD鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(91): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(91): error C2065: 鈥渂ootstrap鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(91): error C3861: 鈥渂ind_method鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(92): error C2653: 鈥淐lassDB鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(92): error C3861: 鈥淒_METHOD鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(92): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(92): error C2065: 鈥済et_port鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(92): error C3861: 鈥渂ind_method鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(93): error C2653: 鈥淐lassDB鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(93): error C3861: 鈥淒_METHOD鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(93): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(93): error C2065: 鈥渋s_listening鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(93): error C3861: 鈥渂ind_method鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(94): error C2653: 鈥淐lassDB鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(94): error C3861: 鈥淒_METHOD鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(94): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(94): error C2065: 鈥済et_frame_count鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(94): error C3861: 鈥渂ind_method鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(95): error C2653: 鈥淐lassDB鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(95): error C3861: 鈥淒_METHOD鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(95): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(95): error C2065: 鈥済et_tool_count鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(95): error C3861: 鈥渂ind_method鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(99): error C2653: 鈥淐lassDB鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(99): error C3861: 鈥淒_METHOD鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(99): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(99): error C2065: 鈥淿get_endpoint_state_bind鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(99): error C3861: 鈥渂ind_method鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(100): error C2653: 鈥淐lassDB鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(100): error C3861: 鈥淒_METHOD鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(100): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(100): error C2065: 鈥済et_endpoint_state_reason鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(100): error C3861: 鈥渂ind_method鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(101): error C2653: 鈥淐lassDB鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(101): error C3861: 鈥淒_METHOD鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(101): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(101): error C2065: 鈥済et_requested_port鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(101): error C3861: 鈥渂ind_method鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(102): error C2653: 鈥淐lassDB鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(102): error C3861: 鈥淒_METHOD鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(102): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(102): error C2065: 鈥渋s_endpoint_bind_failed鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(102): error C3861: 鈥渂ind_method鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(105): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(105): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\mcp_server.cpp(105): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd淿get_endpoint_state_bind鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(105): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(105): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(109): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(109): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\mcp_server.cpp(109): error C2146: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄦ爣璇嗙\ufffd︹\ufffd渄ebug_endpoint_state鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(109): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(109): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(121): error C2062: 鎰忓\ufffd栫殑绫诲瀷鈥渧oid鈥\ufffd 
+modules\mcp_server\mcp_server.cpp(128): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd\ufffd*鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(128): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\mcp_server.cpp(128): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\mcp_server.cpp(128): error C2825: 'SceneTree': 褰撳悗闈㈣窡鈥\ufffd::鈥濇椂蹇呴』涓虹被鎴栧懡鍚嶇┖闂\ufffd
+modules\mcp_server\mcp_server.cpp(128): error C2510: 鈥淪ceneTree鈥\ufffd:鈥\ufffd::鈥濈殑宸﹁竟蹇呴』鏄\ufffd绫\ufffd/缁撴瀯/鑱斿悎
+modules\mcp_server\mcp_server.cpp(128): error C3861: 鈥済et_singleton鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\mcp_server.cpp(129): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\mcp_server.cpp(129): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(129): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(131): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渆lse鈥\ufffd
+modules\mcp_server\mcp_server.cpp(131): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(131): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(137): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\mcp_server.cpp(137): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(137): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(140): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\mcp_server.cpp(140): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(140): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(150): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\mcp_server.cpp(150): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(150): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(153): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渳鈥\ufffd
+modules\mcp_server\mcp_server.cpp(153): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渳鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(155): error C2653: 鈥淢CPServer鈥\ufffd: 涓嶆槸绫绘垨鍛藉悕绌洪棿鍚嶇О
+modules\mcp_server\mcp_server.cpp(155): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\mcp_server.cpp(155): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\mcp_server.cpp(155): fatal error C1003: 閿欒\ufffd\ufffd璁℃暟瓒呰繃 100锛涙\ufffdｅ湪鍋滄\ufffd㈢紪璇\ufffd
+scons: *** [bin\obj\modules\mcp_server\mcp_server.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\mcp_jsonrpc.cpp(83): warning C4834: 鏀惧純鍏锋湁 [[nodiscard]] 灞炴\ufffdх殑鍑芥暟鐨勮繑鍥炲\ufffd\ufffd

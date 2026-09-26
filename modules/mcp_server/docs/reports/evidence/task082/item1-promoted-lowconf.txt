@@ -1,0 +1,32 @@
+﻿# TASK-082 item 1 - promoted low-confidence module sources
+# date: 2026-09-26T11:47:56.1195342+08:00
+# columns: relpath | source(abs) | bytes | sha256 | confidence(read-cov%) | tail | failed_edits | dest_bytes | sha_match | suspicious
+
+mcp_capture.h|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\mcp_capture.h|13549|1CFD5D172DFCE901BC7C87DEB01C2DB98AA5CFC5A8763301F2AF0E0D8B9672B4|8.8|no|1|13549|True|-
+    tail: nc = nullptr; / 	void *snapshot_userdata = nullptr; / }; /  / } // namespace MCPCapture / 
+tools\editor_animation_tree_write.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\editor_animation_tree_write.cpp|58985|5FB726B8AB5A74011A40230C9658CE29E89F312677B6086474898FCD98CCAF97|13.7|no|4|58985|True|tail_no_namespace_close
+    tail: der.handler(_tool_set_animation_tree_parameter).register_into(r_registry); / 	} / } / 
+tools\editor_control_layout_write.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\editor_control_layout_write.cpp|10401|D2766133B32A1D22FD9ED81E61A7A0978510B73CFC51EA002F5113D775F38619|34.2|no|1|10401|True|tail_no_namespace_close
+    tail: ")); / 		builder.handler(_tool_set_anchor_preset).register_into(r_registry); / 	} / } / 
+tools\editor_node_read.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\editor_node_read.cpp|21233|0477C57193AB5038F975B1B3CBB0C8A1AC5AB12A8F3A2A0F7E0182B9FEBF0C64|64.1|yes|14|21233|True|brace_delta=2;tail_no_namespace_close;no_copyright_header
+    tail: ")); / 		builder.handler(_tool_get_node_properties).register_into(r_registry); / 	} / 
+tools\editor_playback.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\editor_playback.cpp|29222|DA8CA8930AC78C17B9EFC01B70859A14D61FD33EE6AD6EC67588F25A521A972C|100.0|no|20|29222|True|tail_no_namespace_close
+    tail: r(_tool_stop_scene); / 		builder.register_into(r_registry); / 	} / 	// END generated / }
+tools\editor_read_scene_inspector.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\editor_read_scene_inspector.cpp|24190|4E02EDBF1C3D9C0298706C3BEAA543F2F46AFDD8E4D0AFB42663EC7060EBDB11|55.1|no|7|24190|True|tail_no_namespace_close;registration_placeholder_marker
+    tail: cene_inspector_tools(MCPToolRegistry &r_registry) { / // @@REGISTRATION_BLOCK@@ / } / 
+tools\editor_write_scene_editor.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\editor_write_scene_editor.cpp|31738|9FE085A9DAC665D758F76A6E88231D04D7AB51D7DA6E8D6BFFBD6F1B53802131|61.1|yes|32|31738|True|brace_delta=5;tail_no_namespace_close;no_copyright_header
+    tail: ription":"保存路径 (可选)","type":"string"}},"required":[],"type":"object"})schema"));
+tools\project_read_analysis.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\project_read_analysis.cpp|40722|B286661BBEF7123D23F885CA7726876EDD4173EF1BD9D1AF48AA5A6805E87578|46.5|no|1|40722|True|tail_no_namespace_close
+    tail: ma).handler(_tool_get_scene_exports); / 		builder.register_into(r_registry); / 	} / } / 
+tools\project_write_resource_scene.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\project_write_resource_scene.cpp|24324|006E0DBA6F82189F98ED0F53A2BC46DB54D7A51DEC264F40C72AF07B696A22D9|62.2|yes|26|24324|True|tail_no_namespace_close;no_copyright_header
+    tail:  `{"no_such_property": 1}` and left the caller unable to tell the / 	// two apart.
+tools\running_game_assertion.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\running_game_assertion.cpp|32801|F61EDCB1E3991CB94A25774A884EB4CDB964FC2B9895EBF1AE94D71EE6661A40|40.7|no|2|32801|True|tail_no_namespace_close
+    tail: assert_node_state); / 		builder.register_into(r_registry); / 	} / 	// END generated / } / 
+tools\running_game_node_write.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\running_game_node_write.cpp|55362|6F238776018139AB976F506E541023D036EDA5BFDBC673AFEE31E7410CC749D9|91.6|yes|12|55362|True|brace_delta=4;tail_no_namespace_close;no_copyright_header
+    tail: ol_set_node_property); / 		builder.register_into(r_registry); / 	} / 	// END generated
+tools\running_game_observation.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\running_game_observation.cpp|36895|DDC5B5DC12696F03A4E6C756F36630C2009BE88D58D6CF682562E912481931B7|52.4|no|1|36895|True|tail_no_namespace_close;empty_generated_block?
+    tail: on_tools(MCPToolRegistry &r_registry) { / 	// BEGIN generated / 	// END generated / } / 
+tools\tool_helpers.cpp|C:\Users\wyl\AppData\Local\Temp\mcp-recovery\rebuild\_low-confidence\modules\mcp_server\tools\tool_helpers.cpp|155309|B90691597BEEC70C25C694C2AA91C56F918B85359EF189616BFD72B2123022D7|49.1|no|3|155309|True|-
+    tail:  nullptr) { / 			return label; / 		} / 	} / 	return nullptr; / } /  / } // namespace MCPTools / 
+
+files_promoted=13
