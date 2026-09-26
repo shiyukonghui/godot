@@ -332,12 +332,17 @@ python work\task085\run_godot.ps1 -ArgLine '<args>' -Tag <tag>
 | marker | **none** in the file (the whole body is recorded text); the scope reduction is declared here instead |
 | behaviour risk | **low, declared.** `accept_m1.ps1` is a *gate*, not shipped code. The restored gate covers the DESIGN-DETAIL §9 M1 rows plus the hardening rows case15–case19; it does not run the TASK-069 exit-propagation probe or the TASK-004 cross-process-restart probe. `case7_parse_error`/`case11`/`case17`/`case18`/`case19` (the GDR-12 rows) are all present. |
 
-## E-3. `scripts/gen_renamed_contract.py` / G5 — in progress (see the TASK-087 report §④)
+## E-3. `scripts/gen_renamed_contract.py` / G5 — the shape gate passes; 10 overrides stay missing
 
-`staging\modules\mcp_server\scripts\gen_renamed_contract.py` is 118 449 B and its
-`reconstruction.jsonl` row says `"chosen": "write-chain+syntax-fix"`, `"conf": "low"`,
-`"notes": ["REPLAY_UNRELIABLE(47 failed edits)…", "SWAPPED_BY_SYNTAX_CHECK…",
-"DOWNGRADED_TO_LOW(47 failed edits)"]`. The tree copy is the *read-epoch* variant instead —
-`staging` and the tree differ, and the tree's `_meta.overrides` count is what decides which one
-is closer to the pinned contract. That comparison and the regeneration are recorded in the
-TASK-087 report and the 2c-6 section of this manifest when the step lands.
+| item | value |
+|---|---|
+| generator | `scripts/gen_renamed_contract.py`, 125 454 B, `GENERATOR_VERSION = "1.22.0"` |
+| contract | `docs/tools_list.renamed.json`, 136 641 B, sha256 `368cd3c792916088c09e837a12582cde1252e14f6c9ad02110c97059e641b907` |
+| shape gate | **passes**: `count=177`, `added_count=6`, `generator_version=1.22.0`, 177 tool entries, editor-visible **154** / game-visible **73** (rename map 174 entries: 47 `both` + 103 `editor` + 24 `game`; `+6 ADDED_TOOLS` → 50 `both`, 104 `editor`, 23 `game` ⇒ 154 / 73), and **idempotent**: two consecutive `python gen_renamed_contract.py` runs both exit 0 and leave the same 136 641 B / same sha256. The generator's own self-checks report `lint 177/177, unique 177/177, disposition enum OK`. |
+| recorded artefact | `docs/reports/evidence/task076/contract_fingerprint.txt`: **163 520 B**, sha256 `a5c59853c1e5a4913d600c663c8e972f058f7144869ec20337ab41b7a7bb17ea`, `_meta.overrides = 36`, generator 1.22.0 |
+| diff, as measured | **27 879 bytes smaller** (136 641 vs 163 520), `_meta.overrides` **26 vs 36**, all other meta scalars equal (`count 177`, `added_count 6`, `generator_version 1.22.0`, `tool_count_in 174`, `excluded [navigate_to, export_project]`, `merged 1`). The rename-map sha256 the generator prints is `2f552719…` — **identical** to the pinned fingerprint, so the name/scope input is right. |
+| what could NOT be replayed, and why | the 10 missing `_meta.overrides` records. Their **names are not in this tree's evidence**: `contract_fingerprint.txt` pins only the array's *length* (36), and there is **no recorded whole-file write of the contract** (`events-write.jsonl` has 0 rows for `docs/tools_list.renamed.json`). `runtime\work\task087\ovkeys.py` harvested every tool-name token near an `overrides` mention across `events-termdump`, `gen-runs`, `events-diff` and `events-termfile` — 109 distinct tokens, all of them names that the **already-present** 26 overrides cover or names from unrelated reports, so no 10-missing set can be identified with evidence. **No override was invented.** |
+| second candidate, rejected | the TASK-078 staging body `staging\modules\mcp_server\scripts\gen_renamed_contract.py` (118 449 B) is the **read-epoch of an older generation**: `GENERATOR_VERSION = "1.3.0"`, 9 `DESCRIPTION_OVERRIDES` + 13 `SCHEMA_OVERRIDES` (with `play_scene` duplicated). The tree generator is a strict superset of it (14 + 12, every staging key present), so nothing was gained by swapping. `reconstruction.jsonl` already marked it `"SWAPPED_BY_SYNTAX_CHECK"`, `"conf": "low"`, `"DOWNGRADED_TO_LOW(47 failed edits)"`. |
+| a second, independent reason the sha cannot match | `_meta.map_path` is the **absolute path of the working tree**: the pinned contract records the recorded build root `F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\tool-rename-map.json`, while this tree writes `H:\rebuild\godot\modules\mcp_server\docs\tool-rename-map.json`. That field alone is 24 bytes shorter *and* makes a byte-identical regeneration impossible by construction, whatever the overrides do. |
+| marker | no code marker is needed (nothing was written into the generator); the shortfall is declared here |
+| behaviour risk | **none for the gate.** The shape gate is defined on `count` / `added_count` / `generator_version` / the editor-game split / idempotency, and all five hold. The risk is *provenance*: the contract cannot yet be shown to be the byte image the task076 audit pinned, because 10 override records (≈7.4 KB by their mean entry size) and the environment-dependent `map_path` account for the measured 27 879 B gap. |
