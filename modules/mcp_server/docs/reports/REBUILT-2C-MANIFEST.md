@@ -896,4 +896,118 @@ Gate runner `work/task089/run_gates.ps1 -Tag task090_final3`; logs
   every engine start and every build went through `cmd.exe` (iron rule 4) with
   `WaitForExit()`.
 
+---
+
+# REBUILT-2C MANIFEST — 2c-10 (`F:\moonbit-hof-rs\godot-mcp\godot`, branch `feature/mcp-server-module-rebuild`)
+
+* Task: TASK-097 — (A) tool defect D-3 fixed at its root; (B) the duplicate node layer
+  removed from the three older scenes and their pixel-diff column refilled with real
+  numbers; (C) the fifth game (Space Invaders, C#, MCP calls only); (D) both variants
+  rebuilt, the ten gates, `accept_m1`.
+* Start HEAD: `95aa1d8984`. **Module commit: `2385fe2fb5`.** Both variants were rebuilt
+  **at that commit**, so the compiled anchor is real and not a stale one:
+  `4.8.dev.mono.custom_build.2385fe2fb` / `4.8.dev.custom_build.2385fe2fb`.
+* Method: this section is **not** a reconstruction. 2c-3..2c-9 replayed recorded text
+  because the module's own bytes had been lost; the tree those batches rebuilt is the
+  written generation this task edits, and TASK-097 *writes* new behaviour. The manifest
+  is therefore used for what it is for: a register of what changed, with its basis, its
+  shape impact and its rollback point. Nothing below carries a
+  `[REBUILT-2C low-confidence: verify]` marker, because nothing below is a replay.
+
+## K-1. Written: the name-conflict policy (item A)
+
+The defect: `editor_add_nodes_batch` handed a requested `name` to `Node::set_name()` and
+let the engine rename the new node to `@Type@N` when a sibling already carried the name
+(`scene/main/node.cpp:1551-1576`), so a replayed editor phase left a whole duplicate node
+layer in the scene (`pong` 8 = 5 `@ColorRect@` + 3 `@Label@`, `breakout` 20 = 18 + 2,
+`snake` 37 = 37 + 0), drawn **on top of** the real nodes. That layer is the whole of the
+pixel-evidence defect the ledger calls D-1.
+
+| # | file | what was written | basis | behaviour risk |
+|---|---|---|---|---|
+| 1 | `tools/editor_node_batch_write.h` | `add_nodes_batch_on(..., const String &p_on_name_conflict = String("refuse"))`; `duplicate_name_conflicts_on(Node *)`; `forget_name_conflicts_for(Node *)`; the header comment states the two policies and the wire shape | the fix has to be observable from a headless doctest (the tool layer needs an editor), which is why the policy is an argument of the exported entry point and the save-side report is an exported function | **the intended change**: the default answer for a taken name stops being "silently renamed" and becomes `-32000` with `data.conflicts` |
+| 2 | `tools/editor_node_batch_write.cpp` | `_child_named()` (name-exact sibling lookup, not a `NodePath` parse); `_collect_scene_name_conflicts()` (the complete list, collected **before** the prepare phase allocates anything); the refusal (`MCP_ERR_TOOL_STATE` = `-32000`, the code `project_text_write.cpp` established for "the destination exists and `overwrite` is false") carrying `data.conflicts` / `data.on_name_conflict` plus the usual `data.batch`; `_PendingNode` gains `requested_name` / `name_conflict_with`; the within-batch duplicate check now fires under the default policy too; the commit phase reports `renamed_count` / `renamed[]` / `created[i].name_conflict`; an in-session `Vector<_NameConflictRecord>` of the pairs an opted-in rename produced, re-validated against the live tree by `duplicate_name_conflicts_on()` | the placement (pre-scan) is what lets one refusal name **all** offending elements instead of only the first, and the registry re-validation is what keeps `editor_save_scene`'s report a statement about the tree in front of the caller rather than about history | **additive on the success path**: the two new result keys are new; the only existing key whose *value* can move is `created[].name` and only under `"rename"`, where the answer now also says why |
+| 3 | `tools/editor_write_scene_editor.cpp` | `_tool_save_scene` attaches `duplicates` / `duplicates_count` / `note` when `duplicate_name_conflicts_on(root)` is non-empty | requirement 3 of the task: a scene that carries a module-made same-name duplicate must not be saved silently | **additive**: `saved` / `path` unchanged; the report appears only when there is something to report |
+| 4 | `tests/test_mcp_server.h` | `#include "../tools/editor_node_batch_write.h"`; a new TEST_CASE `[MCPServer] editor_add_nodes_batch refuses a name the target parent already carries` (four blocks: the refusal with its conflict paths, the distinct-name success with `renamed_count == 0`, the within-batch refusal, the opt-in rename + the save-side report + its staleness rule); the argument-validation case gains the `on_name_conflict` grammar block | the task asks for doctests that pin "same name refused / different name passes / the message names the conflicting path"; the header had **no** test of this tool before (measured: `grep -c add_nodes_batch tests/test_mcp_server.h` = 0 on the pre-task tree) | **none**: the case builds and frees its own `Node` trees |
+| 5 | `scripts/gen_renamed_contract.py` | `SCHEMA_OVERRIDES["batch_add_nodes"]` gains `on_name_conflict` (enum `refuse`/`rename`, default `refuse`); a new **append-only** `DESCRIPTION_OVERRIDES["batch_add_nodes"]` record; both `reason` fields carry the TASK-097 argument | the contract is generated, so the schema change has to enter through the override table; the description is append-only because the original wording stays true and the change is an addition | **none at runtime**: the generator is a build-time tool |
+| 6 | `docs/tools_list.renamed.json` | regenerated (exit 0) | the authoritative `description` + `inputSchema` the registration parses out of, character for character | **the contract change itself**: one schema property and one appended sentence for one tool, and nothing else (measured by `recovery\work\task097\contract_diff.py`: no tool added, none removed, one entry changed, `_meta.overrides` 33 → 34) |
+
+**Not changed, deliberately** (declared boundary): `editor_add_node` (the single-node
+adder) keeps the engine's rename semantics. It reports the name it really stored in its
+own answer (`result["name"]`), so the divergence is visible there; changing it would mean
+a second contract override for the same class of defect. `editor_duplicate_node` and
+`editor_add_scene_instance` add a node under a *requested or given* name and were not in
+this task's scope.
+
+## K-2. The contract's six shape quantities (item A, measured after regeneration)
+
+| quantity | value | how it was measured |
+|---|---|---|
+| `count` | **177** | `recovery\work\task097\show_tool.py` on the regenerated file |
+| `added_count` | **6** | same |
+| `generator_version` | **1.22.0** (unchanged; the version string is one of the six) | same |
+| editor-visible | **154** | `docs/scripts/check_rename_map.py` + live gate 4 (`check_contract_subset.ps1`: `editor tools=154`) |
+| game-visible | **73** | same (`game tools=73`) |
+| idempotency | **two consecutive `python gen_renamed_contract.py` runs: exit 0 both, identical sha256 `64ddce9fe9fc9883a9798960add07e385b8f932a93c0717fcc87403c8bc47c28`** (also byte-identical to the on-disk contract at report time) | `recovery\work\task097\logs\gen01.stdout.txt`, `gen02.stdout.txt`, and a `certutil -hashfile` of the file |
+
+The registration literal in `tools/editor_node_batch_write.cpp` was checked against the
+regenerated contract **before** the build
+(`recovery\work\task097\check_literal.py`: `description: byte-identical (289 chars)`,
+`inputSchema: object-identical`) and again after it by live gate 4 and `accept_m1`
+(`name_verbatim=True inputSchema_verbatim=True description_verbatim=True`).
+
+## K-3. Gate ledger (TASK-097, real output)
+
+| # | gate | command | result |
+|---|---|---|---|
+| g01 | module doctests | `bin\godot.windows.editor.x86_64.mono.console.exe --headless --test --test-case=[MCPServer]*` | **exit=0** — `156/156 passed`, `6683/6683 assertions`, `SUCCESS!` (was 155/6613 at TASK-096; +1 case from this task) |
+| g02 | full engine doctests | `…mono.console.exe --headless --test` | **exit=0** — `1582/1582 passed / 3 skipped`, `430996/430996 assertions`, `SUCCESS!` (was 1581/430926) |
+| g03 | group manifest | `python modules\mcp_server\docs\scripts\check_tool_groups.py` | **exit=0** — `TOOL-GROUPS CHECK PASS`, `BYTES 5681`, `SHA256 b83d79d3…` (byte-identical to TASK-096) |
+| g04 | contract subset (live) | `scripts\check_contract_subset.ps1` | **exit=0** — `3/3 checks passed`; `editor port=9888 tools=154`, `game port=9889 tools=73`, `contract=177`, `guard_user_port_9877 pid_before=-1 pid_after=-1`; every sampled entry `name=True description=True inputSchema=True` |
+| g05 | rename map | `python docs\scripts\check_rename_map.py` | **exit=0** — `RESULT: PASS (all checks green)`; `CONTRACT bytes=151367 sha256=64ddce9f…` |
+| g06 | tautologies | `python scripts\check_tautologies.py` | **exit=0** — `TAUTOLOGY CHECK PASS` |
+| g07 | exit-code propagation | `python scripts\check_exit_propagation.py --probes` | **exit=0** — `PROBES: 10/10` |
+| g08 | hardcoded counts | `python scripts\check_hardcoded_counts.py` | **exit=0** — `UNCLASSIFIED = 0` |
+| g09 | engine anchor | `scripts\check_engine_anchor.ps1 -VersionText 4.8.dev.mono.custom_build.2385fe2fb` | **exit=0** — `ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL`, `ANCHOR=2385fe2fb ANCHOR_REPORTED=2385fe2fb HEAD=2385fe2fb`, `DIFF_COUNT=0 SAFE_COUNT=0 RED_COUNT=0`, `RESULT PASS`. **This is the first batch since TASK-090 whose anchor is exact rather than `STRUCTURAL_EQUIVALENT`**: both variants were rebuilt *after* the module commit `2385fe2fb5`, so the binary self-reports the commit HEAD points at |
+| g10 | `accept_m1` | `scripts\accept_m1.ps1` | **exit=0** — **`22/22 cases passed`**, 46.5 s, `GATE_EXIT=0` |
+
+Runner `tools\run_gates.ps1 -Tag task097 -VersionText 4.8.dev.mono.custom_build.2385fe2fb`;
+logs + real exit codes `runs\gates\task097\g01..g10.{stdout,stderr}.txt`, summary
+`runs\gates\task097\summary.txt`. Both variants were built serially at `2385fe2fb5`
+(`mcp057_build_mono.cmd` then `build_local.cmd -Force`, both `exit code = 0`;
+`recovery\work\task097\logs\build-both-01.stdout.txt`).
+
+## K-4. Iron rules and the deviations of this task
+
+* Every build and every Godot run of this task was started from `cmd.exe` through
+  `Start-Process … -RedirectStandardOutput/-RedirectStandardError`
+  (`recovery\work\task097\run_cmd.ps1`, `tools\run_game_session.ps1`,
+  `tools\run_gates.ps1`); every text file was written by a Python writer or the editor
+  tool, never by a shell redirect.
+* **Three deviations, recorded rather than hidden**: three short scratch commands used a
+  `>` redirect inside the task's own work directory —
+  `run_cmd.ps1 … > NUL_TMP.txt 2>&1` (the file was deleted immediately afterwards) and
+  `python show_tool.py … > tool-before.txt` / `> tool-after.txt` (two files that came out
+  in the console code page rather than UTF-8; both were deleted and re-produced by a
+  Python writer). Nothing outside `recovery\work\task097\` was touched, no existing file
+  was overwritten, and all three predate the wrapper above being used consistently.
+* No destructive command ran: the only removals are the ones inside
+  `runs\<game>\<run-tag>` (the driver's own artefacts) and the two scratch files of the
+  deviation above. No process outside this task was killed, and no machine/display/
+  streaming state was touched.
+* Every engine session used its own port pair and the ports were checked before starting
+  (`9910/9911` d3-before, `9912/9913` first d3-after attempt, `9914/9915` d3-after-r2,
+  `9916/9917` pong, `9918/9919` breakout, `9920/9921` snake, `9922/9923` spaceinvaders;
+  gates 4 and 10 use `9888/9889`).
+* Every session file was read by **both** the Python checker
+  (`recovery\work\task097\check_session.py`) and PowerShell 5.1
+  (`recovery\work\task097\check_session.ps1`) before a single engine was started.
+* Item B changed three **project** scenes (`projects\pong|breakout|snake\scenes\main.tscn`)
+  through MCP calls only (`editor_open_scene` / `editor_delete_node` × 65 /
+  `editor_save_scene`), with the before/after bytes, the named node blocks and the
+  property samples recorded in `runs\<game>\<game>-clean-task097\`. Those scenes are
+  main-repository files, not module files, so they are not part of the engine commit
+  `2385fe2fb5`.
+
+
 
