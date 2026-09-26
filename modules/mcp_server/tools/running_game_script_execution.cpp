@@ -40,6 +40,8 @@
 #include "core/variant/callable.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
+#include "scene/main/node.h"
+#include "scene/main/scene_tree.h"
 
 using namespace MCPTools;
 
@@ -55,8 +57,24 @@ using namespace MCPTools;
 //   * `code` (string, required, must not be blank) is a GDScript **function
 //     body**: statements, `return`, loops, `match`, and `func` declarations at
 //     column 0 (which are lifted to class level so the body can call them);
-//   * the code is compiled into `extends RefCounted` / `func _mcp_execute()` in
-//     the process that serves the endpoint, and called once;
+//   * the code is compiled into `func _mcp_execute()` in the process that serves
+//     the endpoint, and called once. Its base class is `Node` when the running
+//     game has a reachable scene tree, and `RefCounted` otherwise:
+//     [REBUILT-2C low-confidence: verify] TASK-090 (item B, decision D-3) - the
+//     executor now reaches the **running scene tree**; see
+//     `tools/running_game_script_execution.h` for the mounting contract and
+//     REBUILT-2C-MANIFEST.md section 2c-9 (J-2).
+//   * with a scene tree: the instance is added as the last child of the current
+//     scene root (or of the tree root when no current scene is set) for the
+//     duration of the call, so `get_node()` / `$Path` / signals / `get_tree()` /
+//     node properties are the real `Node` facilities - the E3 lever can finally
+//     drive the game it is executing inside. It is removed again on every path,
+//     success or failure, so the game's own node tree is left exactly as it was;
+//     because the node lives for less than a frame, `_process` /
+//     `_physics_process` do not tick;
+//   * without a scene tree: `extends RefCounted`, no mounting, the engine
+//     singletons reachable - byte for byte the pre-TASK-090 behaviour.
+//   // [/REBUILT-2C]
 //   * the answer is
 //     `{"result": <serialize_variant of the returned value>, "result_type":
 //     "<Variant type name>"}`; a body without `return` answers
@@ -122,15 +140,7 @@ using namespace MCPTools;
 // one parse error two different ways. They share the definition now.
 // ---------------------------------------------------------------------------
 
-static Variant _tool_execute_gdscript(const Dictionary &p_args, MCPToolError &r_error) {
-	String code;
-	if (!require_string(p_args, "code", code, r_error)) {
-		return Variant();
-	}
-	if (code.strip_edges().is_empty()) {
-		r_error = MCPToolError::invalid_params("Parameter 'code' must not be empty");
-		return Variant();
-	}
+Variant execute_gdscript_code(const String &p_code, bool p_tool_script, Node *p_mount_point, MCPToolError &r_error) {
 	// The script *languages* are a second, independent prerequisite: GDScript is
 	// registered by the gdscript module when the engine initialises its modules,
 	// but `ScriptServer::init_languages()` - which is what populates the
@@ -170,16 +180,20 @@ static Variant _tool_execute_gdscript(const Dictionary &p_args, MCPToolError &r_
 	// [REBUILT-2C low-confidence: verify] TASK-089 F1: written, not replayed;
 	// REBUILT-2C-MANIFEST.md section 2c-8 (H-6).
 	//
-	// Both helpers are named `MCPTools::` on purpose: `tool_helpers.h` declares
-	// `build_execute_gdscript_source` and `execute_gdscript_method_name` **twice**
-	// - once inside `namespace MCPTools` (lines 1137 / 1112) and once after the
-	// namespace closes (lines 1531 / 1513) - so an unqualified call in a file that
-	// has `using namespace MCPTools;` is ambiguous (MSVC C2668, measured). The
-	// duplicate declarations are a pre-existing hazard in the header and are
-	// recorded in the report rather than removed here.
+	// Both helpers are named `MCPTools::` on purpose. `tool_helpers.h` used to
+	// declare `build_execute_gdscript_source` and `execute_gdscript_method_name`
+	// **twice** - once inside `namespace MCPTools` and once after the namespace
+	// closed - so an unqualified call in a file that has `using namespace
+	// MCPTools;` was ambiguous (MSVC C2668, measured in TASK-089 as D-4). The
+	// stale second block is gone now (TASK-090 item B, manifest 2c-9 (J-2)); the
+	// `MCPTools::` qualifiers stay because they are correct either way.
+	//
+	// TASK-090 (item B): `p_node_base` follows the mount point - a body that is
+	// going to be attached under the running scene root must compile to
+	// `extends Node`, or `get_node()` / `$Path` / signals do not exist on it.
 	String generated_source;
 	int body_start_line = 0;
-	MCPTools::build_execute_gdscript_source(code, false, generated_source, &body_start_line);
+	MCPTools::build_execute_gdscript_source(p_code, p_tool_script, generated_source, &body_start_line, p_mount_point != nullptr);
 	script->set_source_code(generated_source);
 	// TASK-063 (d) / TASK-089 (F1): `reload()` alone answers a bare `Error`; the
 	// capture reads the line and the message the engine itself reports
@@ -217,29 +231,105 @@ static Variant _tool_execute_gdscript(const Dictionary &p_args, MCPToolError &r_
 	}
 	// [/REBUILT-2C]
 
-	// The generated source always extends `RefCounted`, so the instance is one.
-	Ref<RefCounted> instance;
-	instance.instantiate();
-	instance->set_script(script);
-
-	Callable::CallError call_error;
-	// `Callable::callp` rather than `Object::call` / `Callable::call`: both of
-	// those are variadic *templates* in this fork, and the explicit
-	// `(const Variant **, int, CallError &)` form is the one that reports a call
-	// failure instead of templating it away.
-	const Callable entry_point(instance.ptr(), StringName(MCPTools::execute_gdscript_method_name()));
+	const StringName method(MCPTools::execute_gdscript_method_name());
 	Variant result;
-	entry_point.callp(nullptr, 0, result, call_error);
-	if (call_error.error != Callable::CallError::CALL_OK) {
-		r_error = MCPToolError::internal(vformat("the generated GDScript method could not be called (%s)",
-				Variant::get_call_error_text(instance.ptr(), StringName(MCPTools::execute_gdscript_method_name()), nullptr, 0, call_error)));
-		return Variant();
+	Callable::CallError call_error;
+
+	// TASK-090 (item B): the scene-tree path. The instance is a real `Node`
+	// mounted under the mount point the caller supplied, so the body sees the
+	// running tree exactly as game code does. The removal below runs on **every**
+	// path - the resource is returned whether the entry call succeeded or failed.
+	// [REBUILT-2C low-confidence: verify] TASK-090 item B: written, not replayed
+	// (no recording carries a mount point); REBUILT-2C-MANIFEST.md 2c-9 (J-2).
+	if (p_mount_point != nullptr) {
+		Node *instance = memnew(Node);
+		instance->set_script(script);
+		p_mount_point->add_child(instance);
+
+		// `Callable::callp` rather than `Object::call` / `Callable::call`: both of
+		// those are variadic *templates* in this fork, and the explicit
+		// `(const Variant **, int, CallError &)` form is the one that reports a call
+		// failure instead of templating it away.
+		const Callable entry_point(instance, method);
+		entry_point.callp(nullptr, 0, result, call_error);
+
+		// Away from the game's tree before anything else can happen, and before the
+		// instance may be freed. A body that freed itself (`queue_free()`) is left
+		// to the message queue that already owns it; freeing it here as well would
+		// hand the queue a dangling id.
+		const bool queued_for_deletion = instance->is_queued_for_deletion();
+		if (instance->get_parent() != nullptr) {
+			instance->get_parent()->remove_child(instance);
+		}
+
+		if (call_error.error != Callable::CallError::CALL_OK) {
+			r_error = MCPToolError::internal(vformat("the generated GDScript method could not be called (%s)",
+					Variant::get_call_error_text(instance, method, nullptr, 0, call_error)));
+			if (!queued_for_deletion) {
+				memdelete(instance);
+			}
+			return Variant();
+		}
+		if (!queued_for_deletion) {
+			memdelete(instance);
+		}
+	} else {
+		// The fallback, kept byte for byte: a process with no reachable scene tree
+		// behaves exactly as it did before this task - `extends RefCounted`, engine
+		// singletons reachable, nothing mounted anywhere.
+		Ref<RefCounted> instance;
+		instance.instantiate();
+		instance->set_script(script);
+
+		const Callable entry_point(instance.ptr(), method);
+		entry_point.callp(nullptr, 0, result, call_error);
+		if (call_error.error != Callable::CallError::CALL_OK) {
+			r_error = MCPToolError::internal(vformat("the generated GDScript method could not be called (%s)",
+					Variant::get_call_error_text(instance.ptr(), method, nullptr, 0, call_error)));
+			return Variant();
+		}
 	}
+	// [/REBUILT-2C]
 
 	Dictionary answer;
 	answer["result"] = serialize_variant(result);
 	answer["result_type"] = Variant::get_type_name(result.get_type());
 	return answer;
+}
+
+// The tool's argument half, and the one place that decides what the body can
+// reach: the mount point is the running game's current scene root, or - when the
+// current scene is not set but the tree is there - the tree's own root. With no
+// `SceneTree` at all the core above keeps its pre-TASK-090 behaviour.
+static Variant _tool_execute_gdscript(const Dictionary &p_args, MCPToolError &r_error) {
+	String code;
+	if (!require_string(p_args, "code", code, r_error)) {
+		return Variant();
+	}
+	if (code.strip_edges().is_empty()) {
+		r_error = MCPToolError::invalid_params("Parameter 'code' must not be empty");
+		return Variant();
+	}
+
+	// TASK-090 (item B): the mount point. `get_current_scene()` is what the
+	// contract now says the code runs next to; the tree root is the honest
+	// fallback for a running game whose main scene is not set (a `--path` run with
+	// no `run/main_scene`), where absolute paths still resolve.
+	// [REBUILT-2C low-confidence: verify] TASK-090 item B: written, not replayed;
+	// REBUILT-2C-MANIFEST.md 2c-9 (J-2).
+	Node *mount_point = nullptr;
+	SceneTree *tree = SceneTree::get_singleton();
+	if (tree != nullptr) {
+		mount_point = tree->get_current_scene();
+		if (mount_point == nullptr) {
+			// The tree root is a `RequiredResult<Window>` in this fork, whose
+			// conversion the module already wraps once (`game_tree_root`).
+			mount_point = game_tree_root(tree);
+		}
+	}
+	// [/REBUILT-2C]
+
+	return execute_gdscript_code(code, false, mount_point, r_error);
 }
 
 // ---------------------------------------------------------------------------
@@ -257,7 +347,7 @@ void register_running_game_script_execution_tools(MCPToolRegistry &r_registry) {
 	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
 	//  --in-place reproduces this span byte for byte.)
 	{
-		ToolBuilder builder("running_game_execute_gdscript", String::utf8("在运行中的游戏内执行 GDScript 代码"));
+		ToolBuilder builder("running_game_execute_gdscript", String::utf8("在运行中的游戏内执行 GDScript 代码。有场景树时，代码体作为一个临时 Node 挂到当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。"));
 
 		Dictionary schema;
 		Dictionary v0;

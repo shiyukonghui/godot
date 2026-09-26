@@ -2639,7 +2639,7 @@ static int _space_indent_unit(const Vector<String> &p_lines) {
 // that returns nothing ("Not all code paths return a value"), and a body without
 // `return` is a perfectly reasonable request (the answer is then `null`).
 bool build_execute_gdscript_source(const String &p_code, bool p_tool_script, String &r_source,
-		int *r_body_start_line) {
+		int *r_body_start_line, bool p_node_base) {
 	Vector<String> lines = _split_code_lines(p_code);
 	const int unit = _space_indent_unit(lines);
 	if (unit > 0) {
@@ -2686,7 +2686,14 @@ bool build_execute_gdscript_source(const String &p_code, bool p_tool_script, Str
 	// `GDScript::can_instantiate()` answers false while the editor is running
 	// (`gdscript.cpp`: `valid && (is_tool() || !Engine::is_editor_hint())`), and
 	// the script could be compiled but never instantiated.
-	String source = p_tool_script ? String("@tool\nextends RefCounted\n") : String("extends RefCounted\n");
+	//
+	// TASK-090 (item B): the base class is the one part of the prelude a caller
+	// may choose. `extends Node` is what makes `get_node()` / `$Path` / signals /
+	// `get_tree()` resolvable at all - they are `Node` methods, so a `RefCounted`
+	// body can never call them however the context is handed to it. The default
+	// keeps every existing caller's bytes identical.
+	const String base_class = p_node_base ? "Node" : "RefCounted";
+	String source = p_tool_script ? String("@tool\nextends ") + base_class + "\n" : String("extends ") + base_class + "\n";
 	if (!class_part.is_empty()) {
 		source += "\n" + class_part;
 	}

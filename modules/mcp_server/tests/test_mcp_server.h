@@ -88,6 +88,10 @@
 // tools and the scenario runner really call.
 #include "../tools/running_game_assertion.h"
 #include "../tools/running_game_test_execution.h"
+// TASK-090 (item B): the executor's core with the mount point passed in is what
+// the scene-tree case drives - the doctest binary has no `SceneTree`, so the tree
+// it mounts into is built by the test and handed over.
+#include "../tools/running_game_script_execution.h"
 #include "../tools/tool_builder.h"
 #include "../tools/tool_helpers.h"
 // TASK-033: the animation family. The three group headers declare the entry
@@ -5251,7 +5255,10 @@ TEST_CASE("[MCPServer] the running_game_script_execution group is game-only and 
 	}
 	CHECK(occurrences == 1);
 	if (occurrences == 1) {
-		CHECK(String(listed["description"]) == String::utf8("在运行中的游戏内执行 GDScript 代码"));
+		// TASK-090 (item B): the description now states the scene-tree reach and
+		// its lifecycle boundary; the literal is kept in step with
+		// `docs/tools_list.renamed.json` and with the generated registration block.
+		CHECK(String(listed["description"]) == String::utf8("在运行中的游戏内执行 GDScript 代码。有场景树时，代码体作为一个临时 Node 挂到当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。"));
 		const Dictionary schema = listed["inputSchema"];
 		CHECK(String(schema["type"]) == "object");
 		const Array required = schema["required"];
@@ -9462,6 +9469,206 @@ TEST_CASE("[MCPServer] project_create_script answers created=false for a file th
 	CHECK((int64_t)first["bytes"] == (int64_t)again["bytes"]);
 }
 // [/REBUILT-2C]
+
+// ---------------------------------------------------------------------------
+// TASK-090 (item A): the failure payload on the call line.
+//
+// The last declared hole of TASK-089's traceability model was that a failed
+// `tools/call` kept only `error_code` + a 512 byte `error_message`; the `data`
+// the tool layer attaches - `suggestion`, `parse_error` - never reached the
+// trace, although it is the half a caller acts on. The three cases below are the
+// three shapes the field has to distinguish:
+//
+//   (1) a refusal with a suggestion (`-32602` from the argument gate, whose
+//       suggestion the registry adds - TASK-050 N-7);
+//   (2) a body that does not compile, whose `data.parse_error` carries the line
+//       and the engine's own message (the structured shape TASK-089 F1 built);
+//   (3) a success, which must carry no failure payload at all - the field exists
+//       so that "no payload" and "old trace" cannot be confused, and a success
+//       line is where the second `result_json` half still lives.
+// ---------------------------------------------------------------------------
+TEST_CASE("[MCPServer] a failed tools/call carries its data payload on the trace line") {
+	MCPToolRegistry registry;
+	TestMCPServer::build_all_tools_registry(registry);
+
+	const String dir = file_effect_fixture_dir();
+	TestMCPServer::remove_tree(dir);
+	DirAccess::make_dir_recursive_absolute(ProjectSettings::get_singleton()->globalize_path(dir));
+	const String trace_path = dir.path_join("trace-error-data.jsonl");
+	DirAccess::remove_absolute(trace_path);
+
+	MCPTrace::Recorder recorder;
+	CHECK(recorder.open(trace_path));
+	CHECK(recorder.is_active());
+
+	// (1) a refusal the argument gate turns into a suggestion.
+	{
+		const String body = "{\"jsonrpc\":\"2.0\",\"id\":21,\"method\":\"tools/call\",\"params\":"
+							"{\"name\":\"project_write_text_file\",\"arguments\":{}}}";
+		const MCPJsonRpc::Dispatch refused = MCPJsonRpc::dispatch(body, registry, false, 30000, true);
+		CHECK_FALSE(refused.deferred);
+		CHECK(refused.trace.traceable);
+		CHECK_FALSE(refused.trace.ok);
+		CHECK(refused.trace.error_code == -32602);
+		CHECK(!refused.trace.error_data_json.is_empty());
+		CHECK(refused.trace.error_data_json.contains("suggestion"));
+		// The message alone would not have carried it.
+		CHECK_FALSE(refused.trace.error_message.contains("suggestion"));
+		recorder.record(1, refused.trace, 2, 0);
+	}
+
+	// (2) a body that does not compile: `data.parse_error` names the line and the
+	// engine's message. The script languages have to be up first - the same
+	// prerequisite the sibling case documents.
+	if (!ScriptServer::are_languages_initialized()) {
+		ScriptServer::init_languages();
+	}
+	CHECK(ScriptServer::are_languages_initialized());
+	{
+		const String body = "{\"jsonrpc\":\"2.0\",\"id\":22,\"method\":\"tools/call\",\"params\":"
+							"{\"name\":\"running_game_execute_gdscript\",\"arguments\":{\"code\":\"return (\"}}}";
+		const MCPJsonRpc::Dispatch refused = MCPJsonRpc::dispatch(body, registry, false, 30000, true);
+		CHECK_FALSE(refused.trace.ok);
+		CHECK(refused.trace.error_code == -32602);
+		CHECK(refused.trace.error_data_json.contains("parse_error"));
+		CHECK(refused.trace.error_data_json.contains("line"));
+		CHECK(refused.trace.error_data_json.contains("message"));
+		recorder.record(1, refused.trace, 2, 0);
+	}
+
+	// (3) a success carries no failure payload, and still carries its own body.
+	{
+		const String body = "{\"jsonrpc\":\"2.0\",\"id\":23,\"method\":\"tools/call\",\"params\":"
+							"{\"name\":\"running_game_execute_gdscript\",\"arguments\":{\"code\":\"return 1 + 1\"}}}";
+		const MCPJsonRpc::Dispatch answered = MCPJsonRpc::dispatch(body, registry, false, 30000, true);
+		CHECK(answered.trace.ok);
+		CHECK(answered.trace.error_data_json.is_empty());
+		CHECK_FALSE(answered.trace.result_json.is_empty());
+		recorder.record(1, answered.trace, 2, 0);
+	}
+
+	recorder.close();
+
+	const String text = FileAccess::get_file_as_string(trace_path);
+	const PackedStringArray lines = text.strip_edges().split("\n");
+	CHECK(lines.size() == 3);
+	if (lines.size() == 3) {
+		// The field is on the call line itself, at the top level, in the same
+		// object as `id` / `method` / `tool`.
+		CHECK(lines[0].begins_with("{\"id\":21,"));
+		CHECK(lines[0].contains("\"error_data_json\":\""));
+		CHECK(lines[0].contains("suggestion"));
+		CHECK(lines[0].contains("\"error_data_json_bytes\":"));
+		CHECK(lines[1].contains("parse_error"));
+		CHECK(lines[1].contains("does not compile"));
+		CHECK_FALSE(lines[2].contains("error_data_json"));
+		CHECK(lines[2].contains("\"result_json\""));
+	}
+
+	TestMCPServer::remove_tree(dir);
+}
+
+// ---------------------------------------------------------------------------
+// TASK-090 (item B / decision D-3): the game executor reaches the running scene
+// tree, and leaves it exactly as it found it.
+//
+// What was wrong (TASK-089's round-7 measurement): `self` was a bare
+// `extends RefCounted`, so `get_node()` / `$Path` / node properties / signals did
+// not exist on it - the body could reach the global singletons and nothing else,
+// which is not "execute GDScript in the running game".
+//
+// The doctest binary has no `SceneTree`, so the *tool* can only ever answer the
+// state error here. The core behind it takes the mount point as an argument
+// precisely for this: the tree below is built by hand, and the three claims the
+// task makes are checked against it -
+//
+//   * the body is a real in-tree `Node` (its parent is the mount point, and
+//     `get_node()` reaches a node that was already there, property reads and
+//     writes land on the real node);
+//   * the temporary node is gone after the call, on the succeeding path **and**
+//     on the failing ones;
+//   * with no mount point the old `RefCounted` behaviour is untouched.
+// ---------------------------------------------------------------------------
+TEST_CASE("[MCPServer] running_game_execute_gdscript reaches a live scene tree and leaves it alone") {
+	if (!ScriptServer::are_languages_initialized()) {
+		ScriptServer::init_languages();
+	}
+	CHECK(ScriptServer::are_languages_initialized());
+
+	// The tree the tool would mount into: a scene root with one child that was
+	// there before any call. `SceneTree` is absent in this process, so the tree is
+	// a plain node subtree and `add_child` / `remove_child` are the real ones.
+	Node *scene_root = memnew(Node);
+	scene_root->set_name("Main");
+	Node *player = memnew(Node);
+	player->set_name("Player");
+	scene_root->add_child(player);
+	CHECK(scene_root->get_child_count() == 1);
+
+	// (1) `get_parent()` is the mount point and `get_node()` resolves a node that
+	// predates the call: exactly what a `RefCounted` body could never do.
+	{
+		MCPToolError error;
+		const Variant payload = execute_gdscript_code(
+				"return get_parent().get_node(\"Player\").name", false, scene_root, error);
+		CHECK_FALSE(error.is_error());
+		CHECK(payload.get_type() == Variant::DICTIONARY);
+		const Dictionary answer = payload;
+		CHECK(String(answer["result"]) == "Player");
+	}
+	// ... and the temporary node is not there any more.
+	CHECK(scene_root->get_child_count() == 1);
+	CHECK(scene_root->get_child(0) == player);
+
+	// (2) a write through the same path really lands on the game's node, and the
+	// mount is visible from the inside: while `_mcp_execute` runs, the temporary
+	// node *is* the mount point's last child, so the count is 2 (the pre-existing
+	// `Player` and this body). After the call it is 1 again - which is the next
+	// assertion, and the one that matters.
+	{
+		MCPToolError error;
+		const Variant payload = execute_gdscript_code(
+				"var p = get_parent().get_node(\"Player\")\np.set_name(\"Moved\")\nreturn get_parent().get_child_count()",
+				false, scene_root, error);
+		CHECK_FALSE(error.is_error());
+		CHECK((int64_t)((Dictionary)payload)["result"] == 2);
+		CHECK(String(player->get_name()) == "Moved");
+	}
+	CHECK(scene_root->get_child_count() == 1);
+	CHECK(scene_root->get_child(0) == player);
+
+	// (3) a body that does not compile never mounts anything, and a body that
+	// fails *after* it was mounted (a node that is not there, dereferenced) still
+	// hands the mount point back clean.
+	{
+		MCPToolError error;
+		(void)execute_gdscript_code("return (", false, scene_root, error);
+		CHECK(error.code == -32602);
+		CHECK(error.message.contains("does not compile"));
+	}
+	CHECK(scene_root->get_child_count() == 1);
+	{
+		MCPToolError error;
+		// A missing child is a *runtime* error: GDScript reports it through the
+		// engine log and the call still returns (the documented boundary of this
+		// tool). The mount has to be gone either way - that is the failure path
+		// that really runs after `add_child`.
+		(void)execute_gdscript_code("return get_parent().get_node(\"NoSuchChild\").name", false, scene_root, error);
+		CHECK(scene_root->get_child_count() == 1);
+		CHECK(scene_root->get_child(0) == player);
+	}
+
+	// (4) the no-mount-point path is the pre-TASK-090 one: engine singletons
+	// reachable, nothing added anywhere.
+	{
+		MCPToolError error;
+		const Variant payload = execute_gdscript_code("return OS.get_process_id() > 0", false, nullptr, error);
+		CHECK_FALSE(error.is_error());
+		CHECK((bool)((Dictionary)payload)["result"] == true);
+	}
+
+	memdelete(scene_root);
+}
 
 
 

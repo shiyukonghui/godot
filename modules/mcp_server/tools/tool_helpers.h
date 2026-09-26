@@ -1134,8 +1134,25 @@ const char *execute_gdscript_method_name();
 // cannot turn the engine's line into a line of its own code. It is derived by
 // counting the newlines of the header, so it cannot drift from the source that
 // is returned.
+//
+// TASK-090 (item B): `p_node_base` selects the generated script's **base class**,
+// and it is the one thing the two executors need for different reasons:
+//
+//   * `false` (default, and the editor executor's value): `extends RefCounted`.
+//     The code can reach the engine singletons and nothing else - a `RefCounted`
+//     has no `get_node()`, no `$Path` and is not in any tree;
+//   * `true` (the game executor, when a live scene tree is reachable):
+//     `extends Node`, so that the instance can be attached under the running
+//     scene's root and `get_node()` / `$Path` / signals / `get_tree()` are the
+//     real `Node` methods they are in ordinary game code. See
+//     `tools/running_game_script_execution.h` for the mounting contract and its
+//     lifetime boundary.
+//
+// The three layout rules and the entry point are identical in both modes; only
+// the prelude line differs, so a caller that does not opt in gets the exact
+// bytes it always got.
 bool build_execute_gdscript_source(const String &p_code, bool p_tool_script, String &r_source,
-		int *r_body_start_line = nullptr);
+		int *r_body_start_line = nullptr, bool p_node_base = false);
 
 // ---------------------------------------------------------------------------
 // TASK-063 (d): the parser diagnostic of one generated GDScript body.
@@ -1490,45 +1507,18 @@ Dictionary schema_with_integer_defaults(const Dictionary &p_schema, const Vector
 } // namespace MCPTools
 
 // ---------------------------------------------------------------------------
-// GDScript source builder (hoisted by TASK-018 section 3).
-//
-// TASK-010 wrote the module's one "compile the caller's code for real" rule as
-// file-private helpers of `tools/running_game_script_execution.cpp`
-// (`_split_code_lines` / `_space_indent_unit` / `_build_source`). TASK-018's
-// `editor_execute_gdscript` is the same capability in the editor process, and a
-// group may not copy another group's file-private helper (PLAYBOOK section 2.4):
-// if the two executors did not share this, "what counts as a function body today"
-// would have two answers. They share it here.
-//
-// The body is a verbatim move: same three rules (the smallest positive space
-// indent becomes one tab, a `func` at column 0 is lifted to class level with the
-// blank/tab-indented lines that belong to it, everything else is indented into
-// `_mcp_execute`), same `extends RefCounted` prelude, same deliberate
-// untyped `func _mcp_execute():`. `running_game_execute_gdscript`'s doctest and
-// its wire evidence pin the move as behaviour preserving.
+// TASK-090 (item B): the duplicate declaration block of
+// `execute_gdscript_method_name` / `build_execute_gdscript_source` used to sit
+// here, *after* `namespace MCPTools` closed - a second declaration of two
+// functions whose definition is inside that namespace. It declared nothing the
+// module used (every caller names them `MCPTools::...` or includes the
+// namespace), and it made an unqualified call from a file with
+// `using namespace MCPTools;` ambiguous on MSVC (C2668, measured in TASK-089 as
+// defect D-4). The signature change of TASK-090 item B touched both copies, so
+// the stale one is removed instead of being edited a second time.
+// [REBUILT-2C low-confidence: verify] TASK-090 item B:
+// REBUILT-2C-MANIFEST.md section 2c-9 (J-2).
 // ---------------------------------------------------------------------------
-
-// The method the generated script exposes. Both executors answer
-// `{"result","result_type"}` and both find the entry point by this name.
-const char *execute_gdscript_method_name();
-
-// Builds `@tool` (editor only) + `extends RefCounted` + optional lifted
-// functions + `func _mcp_execute()`.
-//
-// `p_tool_script` is the one thing the two executors may *not* share. Godot
-// refuses to instantiate a non-`@tool` script **while the editor is running**:
-//
-//     bool GDScript::can_instantiate() const {
-//         return valid && (is_tool() || !Engine::get_singleton()->is_editor_hint());
-//     }
-//
-// so the editor executor compiles its source with `@tool` and the game executor
-// without it (where the annotation is unnecessary and the generated source
-// stays byte-identical to the one TASK-010's evidence pinned). Measured on the
-// wire before the fix: every `editor_execute_gdscript` call answered `-32602
-// "does not compile: OK"` - `reload()` succeeded, so the message was nonsense,
-// and the real reason was this predicate.
-bool build_execute_gdscript_source(const String &p_code, bool p_tool_script, String &r_source);
 
 // ---------------------------------------------------------------------------
 // Screen-text observation (TASK-019, `running_game_assert_screen_text`).
