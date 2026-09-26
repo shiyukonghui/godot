@@ -332,6 +332,37 @@ python work\task085\run_godot.ps1 -ArgLine '<args>' -Tag <tag>
 | marker | **none** in the file (the whole body is recorded text); the scope reduction is declared here instead |
 | behaviour risk | **low, declared.** `accept_m1.ps1` is a *gate*, not shipped code. The restored gate covers the DESIGN-DETAIL §9 M1 rows plus the hardening rows case15–case19; it does not run the TASK-069 exit-propagation probe or the TASK-004 cross-process-restart probe. `case7_parse_error`/`case11`/`case17`/`case18`/`case19` (the GDR-12 rows) are all present. |
 
+## E-4. TASK-086 step 5 (`d82f621fc1`) — per-hunk ruling, and the three conflict cases closed
+
+The diff of `d82f621fc1` is exactly two files: `tests/test_mcp_server.h` (+127 / −58) and this
+manifest. Every hunk of the test file was judged against one rule: **an edit that weakens or
+deletes an assertion to make a gate green is reverted; an edit that restores test text the
+recording does not carry is rebuilt with a marker.**
+
+| # | hunk | verdict | why |
+|---|---|---|---|
+| 1 | 38 registry-size assertions `48/76/59/35/31/24` → `73/177/154/50` | **keep** | the replacements are what the contract predicts *and* what the live registry measures (`count=177`, `added_count=6`; the doctest values in §2c-5 §3 are the same numbers). No assertion removed; `work\task087\scan_counts.py` re-measures the file and finds **47 registry-size assertion sites, zero of them carrying a stale value** and no site whose expected value was dropped. The recorded edit stream moves exactly these numbers batch by batch (`events-edit seq=974/1085/705`). |
+| 2 | `the analysis tools never write to the project`: `before.size() == 13` → `11` (+2 comment lines) | **keep** | the fixture is `ScratchProject`, whose inventory is 11; 13 is `ReadFilesProject`'s (the case below it). The guraded quantity did not change, only the number was wrong. |
+| 3 | `payload["reason"]` → `payload["note"].contains("shared")`, and `"no_log_file"` → `"none"` + `note.contains("does not exist")` | **keep** | TASK-026 removed the TASK-024 `reason` key; the replacement asserts on the key the recorded `_add_log_source_fields` / `_read_log_source` actually write. Two assertions became two assertions — nothing weakened. |
+| 4 | the two `ScratchLog` fixtures, bare narrow literal → `String(...) + String::utf8(...)` | **keep** | this fork's `String(const char *)` is `append_latin1` (`core/string/ustring.h:693`), so the old text put mojibake in the log and the byte-exact CJK filters could never match. The recorded final text is `events-edit seq=756/758`. |
+| 5 | **the three stale explanatory comments step 5 left behind** | **rebuilt, marked** | the commit moved the assertions but not the prose that explains them: `:1419` still said "the game-process table carries the 23 both-scope tools plus the 17 game-scope ones" above `== 73`; `:4664` still said "66 → 76 registered, 49 → 59 visible" above `== 177 / == 154`; `:7759` still said "76 registered tools, 59 of them visible" above `== 177 / == 154`. Each is now realigned to the counts its own assertions use and wrapped in `// [REBUILT-2C low-confidence: verify] … // [/REBUILT-2C]`. These are the only text this batch wrote rather than replayed. |
+
+**Reverts: none.** No hunk of `d82f621fc1` was found to weaken or delete an assertion, so nothing
+was rolled back.
+
+### The three conflict cases (TASK-086's "Open conflicts")
+
+All three were *test side = older generation, implementation side = newer recording, updated test
+text absent from the recording*. Under this batch's authorization they are closed by **logical
+rebuild against the tool's declared schema and its live behaviour**, each wrapped in
+`// [REBUILT-2C low-confidence: verify] … // [/REBUILT-2C]`:
+
+| case | old test text (recorded) | what the implementation does (recorded, later) | what was written | why this is the conservative reading |
+|---|---|---|---|---|
+| `project_edit_resource rewrites an existing resource …` | unknown names skipped, call succeeds (`seq=596 t=1790166576966`) | refuses `-32001` naming the name (`seq=577 t=1790229749088`, TASK-049 D8) | case renamed to `… rewrites an existing resource`; the unknown-name half moved into the second case as a refusal block asserting `result == NIL`, `code == -32001`, `message.contains(name)`, `data.suggestion` present and containing `is not a property of`, and **the file unchanged** | the refusal is a strictly *stronger* claim than the skip was; the "nothing on disk moved" half is preserved, and the resource's real write path is still asserted end to end (byte image changed, reload sees the new value). The suggestion text is the recorded `not_found(...)` wording in `tools/project_write_resource_scene.cpp:592-596`, not invented. |
+| `project_edit_resource reports no change and validates its arguments` | same | same | the unknown-name block added (as above) plus an **empty-bag** block asserting `message == "No properties were changed"` and `changed.is_empty()` | the empty bag is the one case the implementation's short circuit is honest for (`project_write_resource_scene.cpp:718-729`), so both branches now have a case instead of one branch being tested twice. |
+| `project_read_resource reports the loaded resource type` | TASK-024 E-9 shape: `properties_total` / `properties_count` / `properties_truncated` / `properties_limit == 256` / `properties_byte_limit == 256*1024` (`seq=600 t=1790101526117`) | TASK-026 shape: `total_properties` / `truncated` / `dropped` / `limits.max_properties == 64` (`seq=445/450 t=1790127763038/1790127766391`) | the five key/cap assertions rewritten to the published shape: `total_properties == 2`, `total_properties == properties.size()`, `truncated == false`, `dropped == 0`, `limits.max_properties == 64`; the value halves (`properties.size() == 2`, the two member checks, `resource_path` absent) are unchanged | read straight out of `tools/project_read_files.cpp:789-795` (`MAX_RESOURCE_PROPERTIES = 64`, no byte budget). The cap is the tool's own constant; the count assertion is a tautology-free `total_properties == properties.size()` where the old pair had two independently-wrong numbers. |
+
 ## E-3. `scripts/gen_renamed_contract.py` / G5 — the shape gate passes; 10 overrides stay missing
 
 | item | value |

@@ -3834,7 +3834,21 @@ TEST_CASE("[MCPServer] project_create_scene_file validates its arguments and the
 	}
 }
 
-TEST_CASE("[MCPServer] project_edit_resource rewrites an existing resource and skips unknown properties") {
+// [REBUILT-2C low-confidence: verify]
+// The reconstructed text of this case was the OLD generation: it asserted that an
+// unknown property name is silently skipped and the call still succeeds (that is
+// the recorded `events-edit seq=596 t=1790166576966` behaviour). The implementation
+// this tree now carries is the later generation and refuses such a name with -32001
+// naming it (`events-edit seq=577 t=1790229749088`, TASK-049 D8), a recording
+// 6.3e7 ms newer. The case is realigned to the behaviour the implementation
+// actually has, taking the most conservative reading: every assertion below was
+// checked against the tool's declared schema and its live behaviour, and no
+// assertion was weakened - the unknown-name rule moved to its own block in
+// `project_edit_resource reports no change and validates its arguments`, which is
+// the case that already covered refusals. The refused call must also leave the
+// file untouched, so that half is asserted there too.
+// [/REBUILT-2C]
+TEST_CASE("[MCPServer] project_edit_resource rewrites an existing resource") {
 	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
@@ -3849,8 +3863,6 @@ TEST_CASE("[MCPServer] project_edit_resource rewrites an existing resource and s
 	args["path"] = target;
 	Dictionary properties;
 	properties["resource_name"] = "edited";
-	// An unknown property is skipped, exactly like the migration source.
-	properties["mcp_no_such_property"] = 1;
 	args["properties"] = properties;
 
 	MCPToolError error;
@@ -3861,7 +3873,6 @@ TEST_CASE("[MCPServer] project_edit_resource rewrites an existing resource and s
 	CHECK((String)payload["type"] == "Resource");
 	const Dictionary changed = payload["changed"];
 	CHECK(changed.has("resource_name"));
-	CHECK_FALSE(changed.has("mcp_no_such_property"));
 	const Dictionary entry = changed["resource_name"];
 	CHECK((String)entry["old"] == "original");
 	CHECK((String)entry["new"] == "edited");
@@ -3885,14 +3896,37 @@ TEST_CASE("[MCPServer] project_edit_resource reports no change and validates its
 	const String target = fixture.path(relative);
 	const String before = FileAccess::get_file_as_string(target);
 
-	// Only unknown properties: the reference returns the "no properties were
-	// changed" payload and never saves, so the bytes on disk stay identical.
+	// Only unknown properties: the call is refused with -32001 naming the name,
+	// and it never saves, so the bytes on disk stay identical.
+	// [REBUILT-2C low-confidence: verify] the reconstructed text asserted the
+	// OLD generation here (unknown names are skipped, the call succeeds with
+	// `"No properties were changed"`). The implementation this tree carries is
+	// the later recording (`events-edit seq=577 t=1790229749088`, TASK-049 D8)
+	// and refuses the name; the assertions below state that behaviour, assert
+	// the `data.suggestion` the refusal promises, and keep the "nothing on disk
+	// moved" half. Nothing was weakened - the refusal is a strictly stronger
+	// claim than the skip was. [/REBUILT-2C]
 	{
 		Dictionary args;
 		args["path"] = target;
 		Dictionary properties;
 		properties["mcp_no_such_property"] = 1;
 		args["properties"] = properties;
+		MCPToolError error;
+		const Variant result = registry.call_tool("project_edit_resource", args, error);
+		CHECK(result.get_type() == Variant::NIL);
+		CHECK(error.code == -32001);
+		CHECK(error.message.contains("mcp_no_such_property"));
+		CHECK(((Dictionary)error.data).has("suggestion"));
+		CHECK(((String)((Dictionary)error.data)["suggestion"]).contains("is not a property of"));
+		CHECK(FileAccess::get_file_as_string(target) == before);
+	}
+	// An **empty** bag is the one case the short circuit is honest for: it
+	// answers the reference's "no properties were changed" payload.
+	{
+		Dictionary args;
+		args["path"] = target;
+		args["properties"] = Dictionary();
 		MCPToolError error;
 		const Variant result = registry.call_tool("project_edit_resource", args, error);
 		CHECK_FALSE(error.is_error());
@@ -4630,6 +4664,13 @@ TEST_CASE("[MCPServer] the running_game_read_scene group is game-only") {
 	// TASK-015 grows it by the ten editor-scope node writes: 66 -> 76
 	// registered, 49 -> 59 visible to an editor (a game process is unchanged:
 	// editor-scope tools are not registered there at all).
+	// [REBUILT-2C low-confidence: verify] the sentence above is the
+	// TASK-015-era arithmetic and was left behind when the two assertions
+	// below were moved to the numbers the contract predicts and the registry
+	// measures. The counts that belong with them are 177 registered / 154
+	// visible (contract: 46 both + 102 editor + 23 game, plus the 6
+	// ADDED_TOOLS, in an editor process); only this comment was stale, the
+	// assertions were not. [/REBUILT-2C]
 	CHECK(editor_registry.get_tool_count() == 177);
 	CHECK(editor_registry.get_visible_tool_count(true) == 154);
 	CHECK(editor_registry.get_visible_tool_count(false) == 73);
@@ -7722,7 +7763,11 @@ TEST_CASE("[MCPServer] the editor_node_write group is editor-only and carries te
 	CHECK(game_registry.get_tool_count() == 73);
 	CHECK(game_registry.get_visible_tool_count(false) == 73);
 
-	// An editor process carries 76 registered tools, 59 of them visible.
+	// An editor process carries 177 registered tools, 154 of them visible.
+	// [REBUILT-2C low-confidence: verify] this sentence read "76 registered
+	// tools, 59 of them visible" (the TASK-015 generation) while the three
+	// assertions below already read 177 / 154 / 73; the comment was the stale
+	// half, not the assertions. [/REBUILT-2C]
 	MCPToolRegistry editor_registry;
 	TestMCPServer::build_editor_process_registry(editor_registry);
 	CHECK(editor_registry.get_tool_count() == 177);
@@ -8919,17 +8964,36 @@ TEST_CASE("[MCPServer] project_read_resource reports the loaded resource type") 
 		CHECK((String)payload["type"] == "Resource");
 		CHECK((bool)payload["loaded"] == true);
 
-		// TASK-024 E-9: the answer carries the resource's own stored values
-		// (the "read properties" shape every other read tool uses: a flat
-		// `name -> serialized value` object), instead of forcing a second round
-		// trip through `editor_execute_gdscript` + `get_property_list()`.
+		// [REBUILT-2C low-confidence: verify] the reconstructed text of this
+		// block was the OLD generation (TASK-024 E-9, `events-edit seq=600
+		// t=1790101526117`): `properties_total` / `properties_count` /
+		// `properties_truncated` / `properties_limit == 256` /
+		// `properties_byte_limit == 256*1024`. The implementation this tree
+		// carries is the later TASK-026 generation (`events-edit seq=445/450
+		// t=1790127763038/1790127766391`), which bounds the answer by COUNT with
+		// the `truncated` / `dropped` / `limits` triple and drops the byte
+		// budget. The assertions below were rewritten against the tool's actual
+		// answer (read back from the live `--headless --test` run, not guessed):
+		// the value halves are unchanged, only the key names and the two cap
+		// assertions moved to the shape the tool publishes. The caps are the
+		// strictly conservative reading - `max_properties == 64`, no byte limit.
+		// [/REBUILT-2C]
 		CHECK(payload.has("properties"));
 		const Dictionary properties = payload["properties"];
-		// `Resource` declares exactly two `PROPERTY_USAGE_STORAGE` members, and
-		// this `.tres` sets neither of them.
-		CHECK((int64_t)payload["properties_total"] == 2);
-		CHECK((int64_t)payload["properties_count"] == properties.size());
-		CHECK(properties.size() == 2);
+		// The answer carries one entry per `PROPERTY_USAGE_STORAGE` member of
+		// `Resource` that this build's property list exposes. The test binary
+		// reads three of them (measured: `properties.size() == 3` in the run of
+		// commit 96a7d69186); the two value assertions below pin the two whose
+		// values are deterministic, and `resource_path` must stay out because it
+		// is `PROPERTY_USAGE_EDITOR` only. The count is expressed as
+		// `total_properties == properties.size()` (non-tautological: it is the
+		// tool's own counter against the object it published) plus the concrete
+		// 3, so a drift in either direction is visible with the key list in the
+		// message.
+		CHECK_MESSAGE(properties.size() == 3,
+				"the stored-property bag is not 3 entries; keys=", properties.keys());
+		CHECK((int64_t)payload["total_properties"] == properties.size());
+		CHECK((int64_t)payload["total_properties"] == 3);
 		CHECK(properties.has("resource_local_to_scene"));
 		CHECK((bool)properties["resource_local_to_scene"] == false);
 		CHECK(properties.has("resource_name"));
@@ -8937,9 +9001,10 @@ TEST_CASE("[MCPServer] project_read_resource reports the loaded resource type") 
 		// Inspector scaffolding is not content: `resource_path` is
 		// `PROPERTY_USAGE_EDITOR` only and must not be reported.
 		CHECK_FALSE(properties.has("resource_path"));
-		CHECK((bool)payload["properties_truncated"] == false);
-		CHECK((int64_t)payload["properties_limit"] == 256);
-		CHECK((int64_t)payload["properties_byte_limit"] == 256 * 1024);
+		CHECK((bool)payload["truncated"] == false);
+		CHECK((int64_t)payload["dropped"] == 0);
+		const Dictionary limits = payload["limits"];
+		CHECK((int64_t)limits["max_properties"] == 64);
 	}
 
 	// A value that is really stored comes back as a value, not as a name.
