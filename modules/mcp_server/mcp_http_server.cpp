@@ -489,6 +489,20 @@ void MCPHttpServer::_tick_pending(int64_t p_frame, uint64_t p_now) {
 				record.error_message = String();
 				record.error_data_json = String();
 				record.error_data_bytes = 0;
+				// TASK-090 (item C): the tool's own body, on the deferred call
+				// line too. The TASK-089 half of this field was filled only on
+				// the immediate path, so every deferred call - the scenario and
+				// stress drivers above all - carried `result_bytes` and nothing
+				// else, and their own verdicts (`all_passed`, `passed`) were
+				// unreadable from the trace. `completion.result` is the same
+				// Variant the immediate path stringifies (`build_deferred_body`
+				// wraps it with the same `content_result`), so the two lines
+				// carry the same bytes.
+				// [REBUILT-2C low-confidence: verify] TASK-090 item C: written,
+				// not replayed; REBUILT-2C-MANIFEST.md 2c-9 (J-3).
+				record.result_json = JSON::stringify(completion.result);
+				record.result_json_bytes = record.result_json.utf8().length();
+				// [/REBUILT-2C]
 			} else {
 				record.ok = false;
 				record.error_code = completion.error.code;
