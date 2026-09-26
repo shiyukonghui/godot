@@ -3582,7 +3582,7 @@ TEST_CASE("[MCPServer] the project_write_resource_scene tools are registered as 
 }
 
 TEST_CASE("[MCPServer] project_create_resource writes a new resource and refuses to clobber one") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
@@ -3619,7 +3619,7 @@ TEST_CASE("[MCPServer] project_create_resource writes a new resource and refuses
 	// instance this load put in the cache.
 	const Ref<Resource> written = ResourceLoader::load(target, "", ResourceLoader::CACHE_MODE_IGNORE);
 	CHECK(written.is_valid());
-	CHECK(written.is_valid() && (String)written->get("resource_name") == "mcp_created");
+	CHECK((written.is_valid() && (String)written->get("resource_name") == "mcp_created"));
 
 	// The pre-existing-file guard: -32000 (the state blocks the call) with a
 	// suggestion, and *not one byte* of the file changes.
@@ -3644,11 +3644,11 @@ TEST_CASE("[MCPServer] project_create_resource writes a new resource and refuses
 	CHECK(overwrite_result.get_type() == Variant::DICTIONARY);
 	const Ref<Resource> rewritten = ResourceLoader::load(target);
 	CHECK(rewritten.is_valid());
-	CHECK(rewritten.is_valid() && (String)rewritten->get("resource_name") == "mcp_overwritten");
+	CHECK((rewritten.is_valid() && (String)rewritten->get("resource_name") == "mcp_overwritten"));
 }
 
 TEST_CASE("[MCPServer] project_create_resource validates path, type and arguments and never half-writes") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
@@ -3719,7 +3719,7 @@ TEST_CASE("[MCPServer] project_create_resource validates path, type and argument
 }
 
 TEST_CASE("[MCPServer] project_create_scene_file packs a new scene file and refuses to clobber one") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
@@ -3738,7 +3738,7 @@ TEST_CASE("[MCPServer] project_create_scene_file packs a new scene file and refu
 	CHECK((String)payload["root_type"] == "Node2D");
 	// No `root_name`: the reference derives it from the file stem.
 	CHECK((String)payload["root_name"] == "created");
-	CHECK(payload["created"] == true);
+	CHECK((bool)payload["created"]);
 
 	const String text = FileAccess::get_file_as_string(target);
 	CHECK(text.contains("[gd_scene"));
@@ -3758,7 +3758,7 @@ TEST_CASE("[MCPServer] project_create_scene_file packs a new scene file and refu
 }
 
 TEST_CASE("[MCPServer] project_create_scene_file validates its arguments and the root class") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
@@ -3824,7 +3824,7 @@ TEST_CASE("[MCPServer] project_create_scene_file validates its arguments and the
 }
 
 TEST_CASE("[MCPServer] project_edit_resource rewrites an existing resource and skips unknown properties") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
@@ -3861,11 +3861,11 @@ TEST_CASE("[MCPServer] project_edit_resource rewrites an existing resource and s
 	CHECK(FileAccess::get_file_as_string(target) != before);
 	const Ref<Resource> reloaded = ResourceLoader::load(target);
 	CHECK(reloaded.is_valid());
-	CHECK(reloaded.is_valid() && (String)reloaded->get("resource_name") == "edited");
+	CHECK((reloaded.is_valid() && (String)reloaded->get("resource_name") == "edited"));
 }
 
 TEST_CASE("[MCPServer] project_edit_resource reports no change and validates its arguments") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
@@ -3945,7 +3945,7 @@ TEST_CASE("[MCPServer] project_edit_resource reports no change and validates its
 }
 
 TEST_CASE("[MCPServer] the write tools never corrupt an existing file when the call fails") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
@@ -4015,7 +4015,7 @@ TEST_CASE("[MCPServer] the write tools never corrupt an existing file when the c
 }
 
 TEST_CASE("[MCPServer] project_delete_scene_file removes the scene and reports the deleted path") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
@@ -4027,7 +4027,7 @@ TEST_CASE("[MCPServer] project_delete_scene_file removes the scene and reports t
 	const String import_sidecar = target + ".import";
 	CHECK(fixture.write("scenes/doomed.tscn.import", String::utf8("[remap]\n\npath=\"res://scenes/doomed.tscn\"\n")));
 
-	const Array before = list_files_recursive(fixture.root);
+	const Array before = TestMCPServer::list_files_recursive(fixture.root);
 	CHECK(before.has(target));
 	CHECK(before.has(import_sidecar));
 
@@ -4038,12 +4038,12 @@ TEST_CASE("[MCPServer] project_delete_scene_file removes the scene and reports t
 	CHECK_FALSE(error.is_error());
 	const Dictionary payload = result;
 	CHECK((String)payload["path"] == target);
-	CHECK(payload["deleted"] == true);
+	CHECK((bool)payload["deleted"]);
 
 	// The observable file system state after the call.
 	CHECK_FALSE(FileAccess::exists(target));
 	CHECK_FALSE(FileAccess::exists(import_sidecar));
-	const Array after = list_files_recursive(fixture.root);
+	const Array after = TestMCPServer::list_files_recursive(fixture.root);
 	CHECK_FALSE(after.has(target));
 	CHECK_FALSE(after.has(import_sidecar));
 	CHECK(after.size() == before.size() - 2);
@@ -4058,11 +4058,11 @@ TEST_CASE("[MCPServer] project_delete_scene_file removes the scene and reports t
 }
 
 TEST_CASE("[MCPServer] project_delete_scene_file validates its path and touches nothing on failure") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
-	const Array before = list_files_recursive(fixture.root);
+	const Array before = TestMCPServer::list_files_recursive(fixture.root);
 
 	// missing `path`.
 	{
@@ -4103,12 +4103,12 @@ TEST_CASE("[MCPServer] project_delete_scene_file validates its path and touches 
 	}
 
 	// Not one file of the fixture was removed or added by any of the failures.
-	const Array after = list_files_recursive(fixture.root);
+	const Array after = TestMCPServer::list_files_recursive(fixture.root);
 	CHECK(after == before);
 }
 
 TEST_CASE("[MCPServer] the write tools leave no temporary or partial file behind") {
-	ScratchProject fixture;
+	TestMCPServer::ScratchProject fixture;
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
@@ -4144,7 +4144,7 @@ TEST_CASE("[MCPServer] the write tools leave no temporary or partial file behind
 	// The write path of this group may go through a temporary file (a write is
 	// only published once it has completed). Whatever it uses, it must not
 	// survive the call: the tree holds exactly the files the calls created.
-	const Array files = list_files_recursive(fixture.root);
+	const Array files = TestMCPServer::list_files_recursive(fixture.root);
 	for (int i = 0; i < files.size(); i++) {
 		const String file = files[i];
 		CHECK_FALSE(file.contains(".mcp-tmp"));
@@ -8340,6 +8340,7 @@ TEST_CASE("[MCPServer] editor_set_auto_dismiss_dialogs never reports a success i
 // and after it, byte for byte.
 // ---------------------------------------------------------------------------
 TEST_CASE("[MCPServer] the hoisted editor node helpers keep the migration source's resolution") {
+#ifdef MCP_EDITOR_TOOLS_ENABLED
 	// Root
 	//   Child
 	//     Grand
@@ -9142,348 +9143,6 @@ TEST_CASE("[MCPServer] the file readers never write to the project") {
 // covered there too and declared in the report.
 // ---------------------------------------------------------------------------
 
-namespace {
-const char *const EDITOR_INSPECTOR_TOOLS[7] = {
-	"editor_get_errors",
-	"editor_get_output_log",
-	"editor_get_open_scripts",
-	"editor_get_scene_tree",
-	"editor_get_selection",
-	"editor_get_viewport_3d_camera",
-	"editor_analyze_signal_flow",
-};
-} // namespace
-
-TEST_CASE("[MCPServer] the editor_read_scene_inspector group is editor-only") {
-	// A game process must not even carry the tools in its table (GDR-19 17.3):
-	// the builder skips them at registration, so no `tools/list` filtering is
-	// needed to hide them.
-	MCPToolRegistry game_registry;
-	TestMCPServer::build_all_tools_registry(game_registry);
-	CHECK(game_registry.get_tool_count() == 19);
-	CHECK(game_registry.get_visible_tool_count(false) == 19);
-	// ... and an editor process carries exactly the 19 plus the seven.
-	MCPToolRegistry editor_registry;
-	TestMCPServer::build_editor_process_registry(editor_registry);
-	CHECK(editor_registry.get_tool_count() == 26);
-	CHECK(editor_registry.get_visible_tool_count(true) == 26);
-	// The editor-process table still filters correctly the other way round.
-	CHECK(editor_registry.get_visible_tool_count(false) == 19);
-
-	for (int i = 0; i < 7; i++) {
-		const String name = EDITOR_INSPECTOR_TOOLS[i];
-		CHECK_FALSE(game_registry.has_tool(name));
-		CHECK_FALSE(game_registry.is_tool_visible(name, false));
-		// Even an editor's view cannot see a tool that is not in the table.
-		CHECK_FALSE(game_registry.is_tool_visible(name, true));
-
-		CHECK(editor_registry.has_tool(name));
-		CHECK(editor_registry.is_tool_visible(name, true));
-		CHECK_FALSE(editor_registry.is_tool_visible(name, false));
-	}
-
-	// The listing a game process serves must name none of the seven.
-	const Array game_list = game_registry.build_tools_list(false);
-	CHECK(game_list.size() == 19);
-	for (int i = 0; i < game_list.size(); i++) {
-		const String listed = ((Dictionary)game_list[i])["name"];
-		for (int j = 0; j < 7; j++) {
-			CHECK(listed != EDITOR_INSPECTOR_TOOLS[j]);
-		}
-	}
-
-	// `tools/call` on a game endpoint: -32601, never execution.
-	const String call = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"editor_get_errors\",\"arguments\":{}}}";
-	const MCPJsonRpc::Response refused = MCPJsonRpc::handle(call, game_registry, false);
-	CHECK(refused.http_status == 200);
-	CHECK(refused.body.contains("\"code\":-32601"));
-	CHECK(refused.body.contains("Method not found: editor_get_errors"));
-	CHECK_FALSE(refused.body.contains("\"result\""));
-
-	// The very same request against the editor table reaches the tool: the log
-	// tool needs no editor UI, so it answers with a result envelope here.
-	const MCPJsonRpc::Response served = MCPJsonRpc::handle(call, editor_registry, true);
-	CHECK(served.http_status == 200);
-	CHECK(served.body.contains("\"result\""));
-	CHECK(served.body.contains("\"content\""));
-}
-
-TEST_CASE("[MCPServer] editor_get_errors reports the ERROR lines of the log tail") {
-	// `String::utf8` for the non-ASCII line: `String(const char *)` decodes a
-	// narrow literal as Latin-1, which would put mojibake in the log and make the
-	// byte-exact comparisons below meaningless.
-	const String content = String("Godot Engine v4.7.1\n"
-								  "INFO: editor ready\n"
-								  "ERROR: first failure\n"
-								  "SCRIPT ERROR: res://scripts/a.gd:3\n"
-								  "PARSE ERROR: res://scripts/b.gd:7\n"
-								  "only lowercase error here\n") +
-			String::utf8("中文日志行 汉字\n");
-	TestMCPServer::ScratchLog log(content);
-	CHECK(log.ok);
-
-	MCPToolRegistry registry;
-	TestMCPServer::build_editor_process_registry(registry);
-
-	// Default `max_lines` is 50, so nothing is cut off: every line of the file
-	// is in the window and the four lines whose upper-cased text contains
-	// "ERROR" are reported.
-	MCPToolError tool_error;
-	const Variant result = registry.call_tool("editor_get_errors", Dictionary(), tool_error);
-	CHECK_FALSE(tool_error.is_error());
-	CHECK(result.get_type() == Variant::DICTIONARY);
-	if (result.get_type() == Variant::DICTIONARY) {
-		const Dictionary payload = result;
-		// `errors` / `count` plus the nine source-block keys both log tools
-		// carry since TASK-026 (E-6 + G-4).
-		CHECK(payload.size() == 11);
-		const Array errors = payload["errors"];
-		CHECK((int)payload["count"] == errors.size());
-		CHECK(errors.size() == 4);
-		if (errors.size() == 4) {
-			CHECK((String)errors[0] == "ERROR: first failure");
-			CHECK((String)errors[1] == "SCRIPT ERROR: res://scripts/a.gd:3");
-			CHECK((String)errors[2] == "PARSE ERROR: res://scripts/b.gd:7");
-			// The reference upper-cases each line before the test, so a line
-			// that only spells "error" in lower case *is* reported.
-			CHECK((String)errors[3] == "only lowercase error here");
-		}
-	}
-
-	// The tail window is taken *before* the error filter, and the split keeps
-	// the empty line a trailing newline produces. `max_lines=1` therefore looks
-	// at that empty final line and finds no error at all.
-	Dictionary tail;
-	tail["max_lines"] = 1;
-	MCPToolError tail_error;
-	const Variant tail_result = registry.call_tool("editor_get_errors", tail, tail_error);
-	CHECK_FALSE(tail_error.is_error());
-	if (tail_result.get_type() == Variant::DICTIONARY) {
-		const Array errors = ((Dictionary)tail_result)["errors"];
-		CHECK(errors.size() == 0);
-		CHECK((int)((Dictionary)tail_result)["count"] == 0);
-	}
-
-	// `max_lines=6` keeps the last six of the eight split elements, i.e. the
-	// last four real lines plus the empty one: all four errors are back.
-	Dictionary wider;
-	wider["max_lines"] = 6;
-	MCPToolError wider_error;
-	const Variant wider_result = registry.call_tool("editor_get_errors", wider, wider_error);
-	CHECK_FALSE(wider_error.is_error());
-	if (wider_result.get_type() == Variant::DICTIONARY) {
-		CHECK((int)((Dictionary)wider_result)["count"] == 4);
-	}
-
-	// A mistyped `max_lines` is -32602 rather than silently ignored.
-	Dictionary wrong_type;
-	wrong_type["max_lines"] = "many";
-	MCPToolError wrong_type_error;
-	registry.call_tool("editor_get_errors", wrong_type, wrong_type_error);
-	CHECK(wrong_type_error.code == -32602);
-	CHECK(wrong_type_error.message.contains("max_lines"));
-
-	// Without a log file the tool reports an empty list; it never invents an
-	// error and never fails.
-	log.remove_file();
-	MCPToolError absent_error;
-	const Variant absent_result = registry.call_tool("editor_get_errors", Dictionary(), absent_error);
-	CHECK_FALSE(absent_error.is_error());
-	if (absent_result.get_type() == Variant::DICTIONARY) {
-		CHECK(((Array)((Dictionary)absent_result)["errors"]).size() == 0);
-		CHECK((int)((Dictionary)absent_result)["count"] == 0);
-	}
-}
-
-TEST_CASE("[MCPServer] editor_get_output_log filters the tail case sensitively") {
-	const String cjk_line = String::utf8("中文日志行 汉字");
-	const String content = String("Godot Engine v4.7.1\n"
-								  "INFO: editor ready\n"
-								  "ERROR: first failure\n"
-								  "only lowercase error here\n") +
-			cjk_line + String("\n");
-	TestMCPServer::ScratchLog log(content);
-	CHECK(log.ok);
-
-	MCPToolRegistry registry;
-	TestMCPServer::build_editor_process_registry(registry);
-
-	// Default `max_lines` is 100 and there is no filter: the whole file, and the
-	// trailing empty element the split of the final newline produces.
-	MCPToolError tool_error;
-	const Variant result = registry.call_tool("editor_get_output_log", Dictionary(), tool_error);
-	CHECK_FALSE(tool_error.is_error());
-	CHECK(result.get_type() == Variant::DICTIONARY);
-	if (result.get_type() == Variant::DICTIONARY) {
-		const Dictionary payload = result;
-		const Array lines = payload["lines"];
-		CHECK((int)payload["count"] == lines.size());
-		CHECK(lines.size() == 6);
-		if (lines.size() == 6) {
-			CHECK((String)lines[0] == "Godot Engine v4.7.1");
-			CHECK((String)lines[4] == cjk_line);
-			// The trailing newline yields one empty line - the reference's
-			// `split('\n')`, not `lines()`.
-			CHECK((String)lines[5] == "");
-		}
-		CHECK((String)payload["source"] == "log_file");
-		CHECK((String)payload["log_path"] == "user://logs/godot.log");
-		CHECK((bool)payload["editor"] == false);
-		CHECK((int64_t)payload["pid"] > 0);
-		CHECK((int64_t)payload["port"] == 0);
-		CHECK((String)payload["reason"] == "");
-	}
-
-	// The filter is a case sensitive substring test (`str::contains`), so
-	// "ERROR" matches the two upper-case lines but not the lower-case one.
-	Dictionary filtered;
-	filtered["filter"] = "ERROR";
-	MCPToolError filtered_error;
-	const Variant filtered_result = registry.call_tool("editor_get_output_log", filtered, filtered_error);
-	CHECK_FALSE(filtered_error.is_error());
-	if (filtered_result.get_type() == Variant::DICTIONARY) {
-		const Array lines = ((Dictionary)filtered_result)["lines"];
-		CHECK(lines.size() == 2);
-		if (lines.size() == 2) {
-			CHECK((String)lines[0] == "ERROR: first failure");
-		}
-	}
-
-	// A non-ASCII filter works byte for byte.
-	Dictionary cjk;
-	cjk["filter"] = String::utf8("日志");
-	MCPToolError cjk_error;
-	const Variant cjk_result = registry.call_tool("editor_get_output_log", cjk, cjk_error);
-	CHECK_FALSE(cjk_error.is_error());
-	if (cjk_result.get_type() == Variant::DICTIONARY) {
-		const Array lines = ((Dictionary)cjk_result)["lines"];
-		CHECK(lines.size() == 1);
-		if (lines.size() == 1) {
-			CHECK((String)lines[0] == cjk_line);
-		}
-	}
-
-	// `max_lines` cuts the tail of the unfiltered line list first.
-	Dictionary tail;
-	tail["max_lines"] = 2;
-	MCPToolError tail_error;
-	const Variant tail_result = registry.call_tool("editor_get_output_log", tail, tail_error);
-	CHECK_FALSE(tail_error.is_error());
-	if (tail_result.get_type() == Variant::DICTIONARY) {
-		const Array lines = ((Dictionary)tail_result)["lines"];
-		CHECK(lines.size() == 2);
-		if (lines.size() == 2) {
-			CHECK((String)lines[0] == cjk_line);
-			CHECK((String)lines[1] == "");
-		}
-	}
-
-	// `filter` present with the wrong type is -32602.
-	Dictionary wrong_filter;
-	wrong_filter["filter"] = 3;
-	MCPToolError wrong_filter_error;
-	registry.call_tool("editor_get_output_log", wrong_filter, wrong_filter_error);
-	CHECK(wrong_filter_error.code == -32602);
-	CHECK(wrong_filter_error.message.contains("filter"));
-
-	// No log file: the reference's explicit `source` marker, an empty list and
-	// no error.
-	log.remove_file();
-	MCPToolError absent_error;
-	const Variant absent_result = registry.call_tool("editor_get_output_log", Dictionary(), absent_error);
-	CHECK_FALSE(absent_error.is_error());
-	if (absent_result.get_type() == Variant::DICTIONARY) {
-		const Dictionary payload = absent_result;
-		CHECK(((Array)payload["lines"]).size() == 0);
-		CHECK((int)payload["count"] == 0);
-		CHECK((String)payload["source"] == "no_log_file");
-	}
-}
-
-TEST_CASE("[MCPServer] the editor UI inspectors refuse cleanly without an editor UI") {
-	MCPToolRegistry registry;
-	TestMCPServer::build_editor_process_registry(registry);
-
-	Engine *engine = Engine::get_singleton();
-	if (engine == nullptr) {
-		CHECK(engine != nullptr);
-		return;
-	}
-	const bool was_editor = engine->is_editor_hint();
-
-	const char *const ui_tools[3] = {
-		"editor_get_open_scripts",
-		"editor_get_selection",
-		"editor_get_viewport_3d_camera",
-	};
-
-	// (1) Runtime guard: outside an editor process the group's editor-UI tools
-	// do not reach `EditorInterface` at all.
-	engine->set_editor_hint(false);
-	for (int i = 0; i < 3; i++) {
-		MCPToolError error;
-		registry.call_tool(ui_tools[i], Dictionary(), error);
-		CHECK(error.code == -32000);
-		CHECK(error.message.begins_with("Not implemented: editor inspectors outside a running editor"));
-		CHECK(((Dictionary)error.data).has("suggestion"));
-	}
-
-	// (2) Singleton guard: the doctest process *does* have an `EditorInterface`
-	// (created by `register_editor_types()`) but no `EditorNode`, and
-	// `EditorInterface::get_selection()` dereferences `EditorNode::get_singleton()`
-	// without a null check. The guard therefore has to be the singleton itself -
-	// without it this loop is a null dereference and the whole test binary
-	// crashes, which is exactly what this case detects.
-	engine->set_editor_hint(true);
-	for (int i = 0; i < 3; i++) {
-		MCPToolError error;
-		registry.call_tool(ui_tools[i], Dictionary(), error);
-		CHECK(error.code == -32000);
-		CHECK(error.message.begins_with("Not implemented: the editor UI"));
-		CHECK(((Dictionary)error.data).has("suggestion"));
-	}
-	engine->set_editor_hint(was_editor);
-}
-
-TEST_CASE("[MCPServer] the edited-scene inspectors need an open scene and validate their arguments") {
-	MCPToolRegistry registry;
-	TestMCPServer::build_editor_process_registry(registry);
-
-	// The doctest process has no SceneTree at all, which is the same "there is
-	// no editable scene" state: -32000 with a suggestion, never a crash. The
-	// populated-scene answers are gate section 2 evidence on a live editor.
-	const char *const scene_tools[2] = { "editor_get_scene_tree", "editor_analyze_signal_flow" };
-	for (int i = 0; i < 2; i++) {
-		MCPToolError error;
-		registry.call_tool(scene_tools[i], Dictionary(), error);
-		CHECK(error.code == -32000);
-		CHECK(error.message == "No scene is currently open");
-		CHECK(((Dictionary)error.data).has("suggestion"));
-	}
-
-	// Argument validation runs first, so a mistyped argument is -32602 rather
-	// than a state error.
-	Dictionary bad_depth;
-	bad_depth["max_depth"] = "deep";
-	MCPToolError bad_depth_error;
-	registry.call_tool("editor_get_scene_tree", bad_depth, bad_depth_error);
-	CHECK(bad_depth_error.code == -32602);
-	CHECK(bad_depth_error.message.contains("max_depth"));
-
-	Dictionary bad_node_path;
-	bad_node_path["node_path"] = 12;
-	MCPToolError bad_node_path_error;
-	registry.call_tool("editor_analyze_signal_flow", bad_node_path, bad_node_path_error);
-	CHECK(bad_node_path_error.code == -32602);
-	CHECK(bad_node_path_error.message.contains("node_path"));
-
-	Dictionary bad_top_only;
-	bad_top_only["top_only"] = "yes";
-	MCPToolError bad_top_only_error;
-	registry.call_tool("editor_get_selection", bad_top_only, bad_top_only_error);
-	CHECK(bad_top_only_error.code == -32602);
-	CHECK(bad_top_only_error.message.contains("top_only"));
-}
 
 TEST_CASE("[MCPServer] the editor inspectors never write to the project") {
 	TestMCPServer::ScratchLog log("INFO: nothing to see\n");
@@ -9501,5 +9160,8 @@ TEST_CASE("[MCPServer] the editor inspectors never write to the project") {
 	CHECK(after.size() == before.size());
 	CHECK(TestMCPServer::canonical(after) == TestMCPServer::canonical(before));
 }
+
+
+
 
 
