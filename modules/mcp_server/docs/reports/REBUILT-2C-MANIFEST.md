@@ -77,3 +77,88 @@ python recount84.py <stderr.txt>          # error count + per-file grouping
 * Two accidental `>` redirects happened in scratch commands inside `work\task084\` before the
   launcher existed (`dump_batch.txt`, `blk267.txt`); both scratch files were removed and the
   deviation is recorded in the report.
+
+---
+
+# REBUILT-2C MANIFEST — 2c-4 (`H:\rebuild\godot`, branch `feature/mcp-server-module-rebuild`)
+
+* Task: TASK-085 (2c-4) — 191 error lines → a green compile and the first runnable exe.
+* Start HEAD: `a26cf4fd83`; reached `081f95e65f`.
+* Method as 2c-3: **recorded text replayed at its recorded position**; every written fragment is
+  marked `// [REBUILT-2C low-confidence: verify]` in code and `REBUILT` below.
+* Tooling: `work\task085\` (`evfetch.py`, `replay2.py`, `rebuild.py`, `fix_*.py`, `find_sym.py`).
+
+## Result (measured with the same counter, `recount84.py`)
+
+| build | error lines | files | outcome |
+|---|---:|---:|---|
+| TASK-084 `build ③` (`tests=no -j8 -k`) | 191 | 10 | red |
+| **TASK-085 r7** (`tests=no -j8 -k`) | **0** | **0** | compiles; 5 undefined symbols at link |
+| **TASK-085 r12** (`tests=no -j8 -k`) | **0** | **0** | **exit 0 — `bin/godot.windows.editor.x86_64.exe` (179 007 488 B)** |
+| `tests=yes -j8 -k` (first) | 80 | 1 | `tests/test_mcp_server.h` only |
+| **`tests=yes -j8 -k` (last)** | **0** | **0** | **exit 0 — exe 193 225 216 B** |
+
+## Ruling (B) — duplicate generations, later one kept
+
+| file | generation A (discarded) | generation B (kept) | criterion |
+|---|---|---|---|
+| `tools/tool_helpers.cpp` | 171–193 `VECTOR4`/`VECTOR4I` gen-0 and 390–515 `PACKED_*` gen-2 | the `VECTOR4I`/`QUATERNION` cases moved after line 271 | later **edit order** (`events-edit seq=853`, evidence rev2487 t=1790147836781 lines 184–213) and consistent with the current `switch` |
+| `tools/running_game_node_write.cpp` | the earlier `_node_path_for_result` | the later `_node_path_for_result` | later edit order; consistent with the current declaration/schema/registration |
+| `tests/test_mcp_server.h` | 9133–9487 — the five `editor_read_scene_inspector` TEST_CASEs at 19 game-scope / 26 editor-process tools | 2941–3583 — the same five at 48 / 76 tools | the kept copy's counts are what the current registration produces; the discarded copy's are the pre-TASK-009/010/011/012 counts |
+
+Discarded-generation summary (content, not bytes): `tool_helpers.cpp` A = a first `VECTOR4`/
+`VECTOR4I` dictionary-generation pair and a second PACKED-array generation, both superseded by the
+single generation that now stands at 254–320. `running_game_node_write.cpp` A = an
+`_node_path_for_result` that took `(Node *, const String &)`. `test_mcp_server.h` A = the
+pre-GDR-19 table sizes above.
+
+## Ruling (C) — written, marked, registered
+
+| file | lines | what was written | why it could not be replayed |
+|---|---|---|---|
+| `tools/project_write_resource_scene.cpp` | the `is_label == nullptr` branch of `_write_resource_properties` | 13 lines closing the branch with `-32602` / `-32001` refusals | the tree opens `MCPToolError::invalid_params(vformat(` and then jumps into the older revision's tail; the refusal **sentences** are recorded verbatim (rev775/rev768 windows), the two calls around them are the shape the file's own comment prescribes |
+| `tools/project_write_resource_scene.cpp` | `MCPTools::write_resource_properties` | a 10-line adapter over the private `_write_resource_properties` | the header (line 92) exports the name, `_tool_edit_resource` calls it, and the tree only has the private copy — the body is untouched |
+| `tools/tool_helpers.cpp` | `schema_with_integer_defaults` closing | `return schema;` + `}` | the rev3233 window stops at `schema["properties"] = properties;`; the return type and the helper's own comment admit no other reading |
+| `mcp_jsonrpc.cpp` | `dispatch` | `MCPTrace::Record trace; trace.traceable = p_trace;` + 8 `_tag(..., trace)` wraps | the header declares `dispatch(..., bool p_trace)`; the only recorded definition (rev388 line 311) takes four parameters and predates the trace. The body, `_immediate`, `_tag`, `_effective_timeout`, `_dispatch_tools_call` and `handle` are all recorded text. |
+| `mcp_jsonrpc.cpp` | `_dispatch_tools_call` 272–284 | the 13-line gap rebuilt ("Missing tool name" + the arguments guard) | rev453's window has a 13-line hole; the wording is the tree's own recorded `_handle_tools_call` and rev453 line 285 pins the second message |
+
+## Restored verbatim (no marker needed)
+
+| file | span restored | recorded source |
+|---|---|---|
+| `tool_registry.cpp` | whole file (914 lines, 0 breaks) | strict replay of `events-write` + `events-edit` in time order |
+| `tools/project_write_resource_scene.cpp` | `_tool_create_scene_file` 393–468 | rev697 t=1790165880935 lines 379–459 |
+| `tools/project_write_resource_scene.cpp` | `_tool_delete_scene_file` | rev775 t=1790229066466 lines 446–490 |
+| `tools/project_write_resource_scene.cpp` | `_property_table`, `resource_bag_name_is_addressable` | replay (recorded write + edits) |
+| `tools/editor_write_scene_editor.cpp` | the `_tool_set_viewport_3d_camera` body | rev1088 t=1790180050322 719–749 + rev1046 t=1790093622477 721–760, anchor-aligned |
+| `tools/running_game_frame_observation.cpp` | whole file + regenerated schema | replay + `gen_b2_game_schema.py --group running_game_frame_observation --in-place` |
+| `tools/running_game_node_write.cpp` | whole file | `rebuild --base read` (rev774 complete) |
+| `tools/running_game_test_execution.cpp` | whole file + regenerated schema | replay + the recorded `scene_path` refusal block + `gen_b2_game_schema.py --in-place` |
+| `tools/project_validate_scripts.cpp` | `_is_script_extension` body, one registration | replay |
+| `tools/editor_node_write.cpp` | 6 call sites | hoisted spellings (`MCPTools::edited_scene_root`, `MCPTools::find_node`, `relative_path`) |
+| `mcp_jsonrpc.cpp` | `build_result_raw`, `build_error_raw` | rev388 t=1790170254765 lines 199–206 |
+| `tests/test_mcp_server.h` | `#ifdef MCP_EDITOR_TOOLS_ENABLED` before the orphan `#endif`; 10 `TestMCPServer::ScratchProject` + 5 `TestMCPServer::list_files_recursive` qualifications; 2 `(bool)` casts; 3 parenthesised `CHECK`s | the file's own dominant spellings and the recorded `CHECK((bool)payload["created"]);` |
+
+## Reproduce (2c-4)
+
+```
+python work\task085\replay2.py   <relpath>            # strict replay (result=="...has been updated")
+python work\task085\rebuild.py   <relpath> --base read|rev:N
+python work\task085\fix_pwrs4.py --apply              # project_write_resource_scene.cpp
+python work\task085\fix_link.py  --apply              # the two link gaps
+python work\task085\fix_jsonrpc3.py --apply           # dispatch + the deferred layer
+python work\task085\fix_jsonrpc2.py --apply           # the two envelope builders (AFTER jsonrpc3)
+python work\task085\fix_tests2.py --apply             # test header duplicates + qualifications
+python work\task085\fix_doctest2.py --apply           # doctest C2338
+python work\task085\scons_run.ps1 -Command '<scons>' -Tag <tag>
+python work\task085\run_godot.ps1 -ArgLine '<args>' -Tag <tag>
+```
+
+## Iron rules (2c-4)
+
+* Only `H:\rebuild\godot` and `C:\Users\wyl\AppData\Local\Temp\mcp-recovery\` were written.
+* `F:` was never written; the byte-identical `DECISIONS.md` hash check is in the report §7.
+* Every build and every Godot run is started from `cmd.exe` via `Start-Process
+  -RedirectStandardOutput/-RedirectStandardError`; **no shell redirection** is used.
+* Destructive operations ran only through the guarded `remove_legacy.py` (absolute path, sha256
+  pre-check, manifest printed first).
