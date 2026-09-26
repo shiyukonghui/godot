@@ -162,3 +162,132 @@ python work\task085\run_godot.ps1 -ArgLine '<args>' -Tag <tag>
   -RedirectStandardOutput/-RedirectStandardError`; **no shell redirection** is used.
 * Destructive operations ran only through the guarded `remove_legacy.py` (absolute path, sha256
   pre-check, manifest printed first).
+
+---
+
+# REBUILT-2C MANIFEST — 2c-5 (`H:\rebuild\godot`, branch `feature/mcp-server-module-rebuild`)
+
+* Task: TASK-086 (2c-5) — 21 failing cases / 271 failing assertions → **3 failing cases / 15
+  failing assertions**, all three with a recorded cause (see "Open conflicts").
+* Start HEAD: `de7e93d06a`; end HEAD `058f618bb2` (this section is the fifth commit).
+* Method: unchanged — **recorded text replayed at its recorded position**. Nothing in this
+  section is written from memory; every fragment names the event (`seq`/`time`) or the generator
+  that produced it.
+* Tooling: `work\task086\` (`stat_names.py`, `scopes.py`, `rp.py`, `evlist.py`, `evhit.py`,
+  `apply_ev.py`, `apply_tail.py`, `insert_head.py`, `span_from_edit.py`, `fix_counts.py`,
+  `fix_log_fixture.py`, `cdiff.py`, `sessions.py`, `reads.py`).
+* Logs: `logs\task086_build1..3.*`, `logs\task086_run1..3.*`, baseline `logs\task086_baseline.*`.
+
+## Result (measured)
+
+| run | cases | passed | failed | assertions | passed | failed | exit |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| baseline (`de7e93d06a`) | 111 | 90 | 21 | 4370 | 4099 | 271 | 1 |
+| after step 1 (registration) | 143 | 124 | 19 | 6381 | 6279 | 102 | 1 |
+| after step 2+3 | 143 | 136 | 7 | 6390 | 6368 | 22 | 1 |
+| **after step 4 (final)** | **143** | **140** | **3** | **6391** | **6376** | **15** | **1** |
+
+The case count moves 111 → 143 because the baseline run died of SIGSEGV in
+`the replay tool validates every event before it waits for a frame` (test_mcp_server.h:6219); with
+that tool registered the case completes and the 32 cases after it run for the first time.
+
+## The one root cause of the `-32601` cluster
+
+`work\task086\stat_names.py` compares the `ToolBuilder builder("<name>")` declarations of
+`modules/mcp_server/tools/*.cpp` against the contract: **158 of 177 names were declared**. The 19
+missing ones are in four group files whose `// BEGIN generated` span was empty or stale:
+
+| # | file | missing | restored from | measured |
+|---|---|---|---|---|
+| 1 | `tools/running_game_input.cpp` | 4 | `gen_b2_game_schema.py --group running_game_input --in-place` | 33 270 → 36 295 B |
+| 2 | `tools/running_game_observation.cpp` | 6 | `gen_b2_game_schema.py --group running_game_observation --in-place` | 36 845 → 43 267 B |
+| 3 | `tools/running_game_assertion.cpp` | 2 | `gen_b2_game_schema.py --group running_game_assertion --in-place` | 32 767 → 36 161 B |
+| 4 | `tools/editor_read_scene_inspector.cpp` | 7 | replay of the recorded `C:\…\Temp\t006_gen_reg.py` (events-write seq=593) | placeholder → 7 registrations |
+
+After the four, `177 contract entries = 177 declared, 0 either way` and the live registry measures
+exactly what the contract predicts (`work\task086\scopes.py`: 46 `both` + 102 `editor` + 23
+`game` + 6 `ADDED_TOOLS` = 177 registered in an editor process, 154 visible to an editor, 73 in a
+game process, 50 `both` = the editor view of a game table).
+
+## Restored verbatim (recorded text at its recorded position)
+
+| file | span | recorded source |
+|---|---|---|
+| `tools/editor_read_scene_inspector.cpp` | `MCPLogSource`, `_log_tail`, `_read_log_source`, `_add_log_source_fields`, both log tools (TASK-026 E-6/G-4) | `events-edit seq=470 t=1790127805398`, 130 → 209 lines; old-tail anchored on `// The tail window of \`read_log_file\``, the `struct` + section comment inserted in front of it |
+| `tools/project_read_analysis.cpp` | the whole `project_get_scene_dependencies` block (TASK-024b E-1/G-2) | `events-edit seq=480 t=1790120943437`, 46 → 123 lines; applied to tree span 707–800 after asserting both boundaries |
+| `tests/test_mcp_server.h` | the fixture of `editor_get_errors reports the ERROR lines of the log tail` | `events-edit seq=756 t=1790023248440` |
+| `tests/test_mcp_server.h` | the fixture of `editor_get_output_log filters the tail case sensitively` | `events-edit seq=758 t=1790023248475` |
+| `tests/test_mcp_server.h` | `CHECK(before.size() == 11)` + its own inventory comment in `the analysis tools never write to the project` | `events-edit seq=457 t=1790014377020` |
+| `scripts/gen_renamed_contract.py` | the two TASK-068 append-only `DESCRIPTION_OVERRIDES` records | `docs/reports/evidence/task076/contract_fingerprint.txt` lines 20–24 / REPORT-068 §2.3 |
+| `tools/running_game_input.cpp`, `tools/running_game_observation.cpp`, `tools/running_game_assertion.cpp`, `tools/running_game_test_execution.cpp` | the whole registration span | `scripts/gen_b2_game_schema.py` over `docs/tools_list.renamed.json` + `docs/tool-rename-map.json` |
+
+## The two log fixtures, and why the third one is absent
+
+`String(const char *)` in this fork is `append_latin1` (`core/string/ustring.h:693`), so a narrow
+literal holding non-ASCII bytes produces mojibake. Two of the three log fixtures in the tree were
+reconstructed with the bare literal; the recorded final text (seq=756/758) keeps the ASCII half in
+`String(...)` and appends `String::utf8(...)` for the CJK line. The third
+(`the log tools declare their source and their process`) already used `String(content)` with
+`String::utf8(...)` inside and needed nothing.
+
+## Ruling (D) — the stale registry-size assertions are the OLD generation
+
+38 assertions across four test cases still carried the TASK-015/TASK-017 generation of the table
+sizes (48 / 76 / 59 / 35 / 31 / 24). They are the old side, on three independent pieces of
+evidence:
+
+1. the recorded edit stream of `tests/test_mcp_server.h` contains edit after edit whose whole
+   purpose is to move exactly these numbers up as each batch lands - `get_tool_count() == 40` (7
+   occurrences at once, `events-edit seq=974 t=1790074265360`), then 175 (`seq=1085
+   t=1790298972674`), then 176 (`seq=705 t=1790342829701`);
+2. the recorded final-generation numbers 176 / 153 / 72 are exactly 177 / 154 / 73 minus the
+   TASK-075 tool (`project_read_text_file`, `scope = both`), i.e. the same quantity one batch
+   earlier;
+3. `docs/tools_list.renamed.json` + `docs/tool-rename-map.json` predict 177 / 154 / 73 / 50, and
+   after the registration recovery the registry measures exactly those numbers.
+
+`work\task086\fix_counts.py` rewrites each of the 39 sites by line number with its expected old
+text asserted (the 39th is `source == "no_log_file"` → `"none"`, the TASK-026 marker). Two stale
+key-set assertions went with them: `payload["reason"]` (TASK-024 key, replaced by the nine-key
+TASK-026 block) → `payload["note"].contains("shared")`, and the same key in the honest-empty
+branch → `note.contains("does not exist")`.
+
+## Open conflicts (the three remaining cases, each with its recorded cause)
+
+| case | test side | implementation side (later recording) | judgement |
+|---|---|---|---|
+| `project_edit_resource rewrites an existing resource and skips unknown properties` (8 assertions) | unknown names are skipped, call succeeds - `events-edit seq=596 t=1790166576966` | unknown names are refused `-32001` naming them - `events-edit seq=577 t=1790229749088` | **the test is the older generation**: the implementation recording is 6.3e7 ms later, and TASK-049 D8 is the task that closed the name shape on both sides. The test text for the refusal rule is **not in the recording** (no edit of `tests/test_mcp_server.h` matches `is not a property of`), so it is left for a batch that can obtain it |
+| `project_edit_resource reports no change and validates its arguments` (2) | same | same | same |
+| `project_read_resource reports the loaded resource type` (5) | TASK-024 E-9 shape: `properties_total`, `properties_count`, `properties_truncated`, `properties_limit == 256`, `properties_byte_limit == 256*1024` - `events-edit seq=600 t=1790101526117` | TASK-026 shape: `total_properties`, `truncated`, `dropped`, `limits.max_properties == 64` - `events-edit seq=445/450 t=1790127763038/1790127766391` | **the test is the older generation** (1.3e7 ms earlier); the test text for the TASK-026 shape is not in the recording |
+
+## Reproduce (2c-5)
+
+```
+python work\task086\stat_names.py x            # 177 declared == 177 contract entries
+python work\task086\scopes.py                  # 177 / 154 / 73 / 50, contract-derived
+python work\task086\rp.py <path> --out <f>     # strict replay (exact old, time-ordered)
+python work\task086\evlist.py <path> [seq field]   # every recorded edit of one file
+python work\task086\evhit.py <path> "<needle>" [old|new|both]  # recorded text around a needle
+python work\task086\apply_tail.py  <path> <seq> "<anchor>" <target> [--check]
+python work\task086\insert_head.py <path> <seq> "<marker>" "<anchor>" <target>
+python work\task086\span_from_edit.py <path> <seq> <target> <startline> <endline>
+python work\task086\fix_counts.py ; python work\task086\fix_log_fixture.py
+python work\task086\cdiff.py <before.json> <after.json>
+python work\task085\scons_run.ps1 -Command '<scons>' -Tag <tag>
+python work\task085\run_godot.ps1 -ArgLine '<args>' -Tag <tag>
+```
+
+## Iron rules (2c-5)
+
+* Only `H:\rebuild\godot` and `C:\Users\wyl\AppData\Local\Temp\mcp-recovery\` were written.
+  `F:` was only *read*: `F:\moonbit-hof-rs\DECISIONS.md` (537 251 B, sha256 `114B2A8218…`) and
+  `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` (48 749 B, sha256 `8F8051C4C0…`, the
+  frozen input `gen_renamed_contract.py` re-reads) are byte-identical to the pre-flight values, and
+  `Get-PSDrive F` still reports 922 841 124 864 used / 392 138 186 752 free.
+* Every build and every Godot run is started from `cmd.exe` via
+  `Start-Process -RedirectStandardOutput/-RedirectStandardError`; no log is captured with a shell
+  redirection. One deviation is recorded: a single scratch command used `>nul 2>nul` as a no-op
+  guard (no file written, nothing captured); the task's own scratch commands use `-OutFile` or the
+  wrappers above.
+* No destructive command ran at all in this task: every change is a write over an existing file
+  with the recorded text as its source, and no file was removed.

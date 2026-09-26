@@ -1419,7 +1419,7 @@ TEST_CASE("[MCPServer] the shared registration entry point registers the group")
 	// running_game_node_write (TASK-012); the editor-scope groups are absent
 	// because this doctest process is not an editor, so the game-process table
 	// carries the 23 both-scope tools plus the 17 game-scope ones.
-	CHECK(registry.get_tool_count() == 48);
+	CHECK(registry.get_tool_count() == 73);
 	CHECK(registry.has_tool("project_get_info"));
 	CHECK(registry.has_tool("project_find_files_referencing_symbol"));
 	CHECK(registry.has_tool("project_get_statistics"));
@@ -1448,7 +1448,7 @@ TEST_CASE("[MCPServer] tools of later batches are not registered") {
 	MCPToolRegistry registry;
 	TestMCPServer::build_all_tools_registry(registry);
 
-	CHECK(registry.get_tool_count() == 48);
+	CHECK(registry.get_tool_count() == 73);
 	CHECK_FALSE(registry.has_tool("editor_open_scene"));
 	CHECK_FALSE(registry.has_tool("editor_save_scene"));
 	// TASK-009 closed B1: the game-scope tool of the last group is registered in
@@ -1645,7 +1645,7 @@ TEST_CASE("[MCPServer] tools/list is byte-identical across consecutive calls") {
 	const MCPJsonRpc::Response game_b = MCPJsonRpc::handle(request, registry, false);
 	CHECK(game_a.body == game_b.body);
 
-	CHECK(registry.build_tools_list(true).size() == 31);
+	CHECK(registry.build_tools_list(true).size() == 50);
 }
 
 TEST_CASE("[MCPServer] argument helpers report -32602") {
@@ -2287,9 +2287,9 @@ TEST_CASE("[MCPServer] the project_read_analysis group is registered for both pr
 	// are not registered in a game process at all).
 	// The four writers are scope `BOTH`; the seventeen game-scope tools are
 	// carried by the game-process view and hidden from the editor-process view.
-	CHECK(registry.get_tool_count() == 48);
-	CHECK(registry.get_visible_tool_count(true) == 35);
-	CHECK(registry.get_visible_tool_count(false) == 48);
+	CHECK(registry.get_tool_count() == 73);
+	CHECK(registry.get_visible_tool_count(true) == 50);
+	CHECK(registry.get_visible_tool_count(false) == 73);
 
 	const String names[7] = {
 		"project_get_statistics",
@@ -2896,9 +2896,11 @@ TEST_CASE("[MCPServer] the analysis tools never write to the project") {
 	TestMCPServer::build_all_tools_registry(registry);
 
 	const Array before = TestMCPServer::list_files_recursive(project.root);
-	// The fixture's inventory. TASK-026 added `resources/gradient.tres` and
-	// `resources/environment.tres`, so the count moved from 11 to 13.
-	CHECK(before.size() == 13);
+	// This is `ScratchProject`'s own inventory (11 files). The two TASK-026
+	// resources (`resources/gradient.tres`, `resources/environment.tres`) belong
+	// to `ReadFilesProject`, which is the fixture of `the file readers never
+	// write to the project` below - that case is the one whose count is 13.
+	CHECK(before.size() == 11);
 
 	MCPToolError ignored;
 
@@ -2956,8 +2958,8 @@ TEST_CASE("[MCPServer] the editor_read_scene_inspector group is editor-only") {
 	// needed to hide them.
 	MCPToolRegistry game_registry;
 	TestMCPServer::build_all_tools_registry(game_registry);
-	CHECK(game_registry.get_tool_count() == 48);
-	CHECK(game_registry.get_visible_tool_count(false) == 48);
+	CHECK(game_registry.get_tool_count() == 73);
+	CHECK(game_registry.get_visible_tool_count(false) == 73);
 	// ... and an editor process carries exactly the 23 both-scope tools plus the
 	// seven inspectors plus the ten writers of `editor_write_scene_editor`
 	// (TASK-008) plus the seventeen game-scope tools of
@@ -2967,10 +2969,10 @@ TEST_CASE("[MCPServer] the editor_read_scene_inspector group is editor-only") {
 	// tools of TASK-013 plus the ten editor-scope node writes of TASK-015, which
 	// it hides.
 	MCPToolRegistry editor_registry;	TestMCPServer::build_editor_process_registry(editor_registry);
-	CHECK(editor_registry.get_tool_count() == 76);
-	CHECK(editor_registry.get_visible_tool_count(true) == 59);
+	CHECK(editor_registry.get_tool_count() == 177);
+	CHECK(editor_registry.get_visible_tool_count(true) == 154);
 	// The editor-process table still filters correctly the other way round.
-	CHECK(editor_registry.get_visible_tool_count(false) == 48);
+	CHECK(editor_registry.get_visible_tool_count(false) == 73);
 
 	for (int i = 0; i < 7; i++) {
 		const String name = EDITOR_INSPECTOR_TOOLS[i];
@@ -2986,7 +2988,7 @@ TEST_CASE("[MCPServer] the editor_read_scene_inspector group is editor-only") {
 
 	// The listing a game process serves must name none of the seven.
 	const Array game_list = game_registry.build_tools_list(false);
-	CHECK(game_list.size() == 48);
+	CHECK(game_list.size() == 73);
 	for (int i = 0; i < game_list.size(); i++) {
 		const String listed = ((Dictionary)game_list[i])["name"];
 		for (int j = 0; j < 7; j++) {
@@ -3117,14 +3119,17 @@ TEST_CASE("[MCPServer] the resource writers take the component shapes the reader
 }
 
 TEST_CASE("[MCPServer] editor_get_errors reports the ERROR lines of the log tail") {
-	TestMCPServer::ScratchLog log(
-			"Godot Engine v4.7.1\n"
-			"INFO: editor ready\n"
-			"ERROR: first failure\n"
-			"SCRIPT ERROR: res://scripts/a.gd:3\n"
-			"PARSE ERROR: res://scripts/b.gd:7\n"
-			"only lowercase error here\n"
-			"中文日志行 汉字\n");
+	// `String::utf8` for the non-ASCII line: `String(const char *)` decodes a
+	// narrow literal as Latin-1, which would put mojibake in the log and make the
+	// byte-exact comparisons below meaningless.
+	const String content = String("Godot Engine v4.7.1\n"
+								  "INFO: editor ready\n"
+								  "ERROR: first failure\n"
+								  "SCRIPT ERROR: res://scripts/a.gd:3\n"
+								  "PARSE ERROR: res://scripts/b.gd:7\n"
+								  "only lowercase error here\n") +
+			String::utf8("中文日志行 汉字\n");
+	TestMCPServer::ScratchLog log(content);
 	CHECK(log.ok);
 
 	MCPToolRegistry registry;
@@ -3158,7 +3163,10 @@ TEST_CASE("[MCPServer] editor_get_errors reports the ERROR lines of the log tail
 		CHECK((bool)payload["editor"] == false);
 		CHECK((int64_t)payload["pid"] > 0);
 		CHECK((int64_t)payload["port"] == 0);
-		CHECK((String)payload["reason"] == "");
+		// TASK-026 replaced the TASK-024 `reason` key with the same nine-key
+		// source block `editor_get_output_log` answers with; the note about a
+		// readable-but-shared source is the half that survives.
+		CHECK(((String)payload["note"]).contains("shared"));
 	}
 
 	// The tail window is taken *before* the error filter, and the split keeps
@@ -3205,18 +3213,21 @@ TEST_CASE("[MCPServer] editor_get_errors reports the ERROR lines of the log tail
 	if (absent_result.get_type() == Variant::DICTIONARY) {
 		CHECK(((Array)((Dictionary)absent_result)["errors"]).size() == 0);
 		CHECK((int)((Dictionary)absent_result)["count"] == 0);
-		CHECK((String)((Dictionary)absent_result)["source"] == "no_log_file");
-		CHECK_FALSE((String)((Dictionary)absent_result)["reason"] == "");
+		CHECK((String)((Dictionary)absent_result)["source"] == "none");
+		// The honest-empty `note` names the file it tried (TASK-026); the
+		// TASK-024 `reason` key it used to read no longer exists.
+		CHECK(((String)((Dictionary)absent_result)["note"]).contains("does not exist"));
 	}
 }
 
 TEST_CASE("[MCPServer] editor_get_output_log filters the tail case sensitively") {
-	TestMCPServer::ScratchLog log(
-			"Godot Engine v4.7.1\n"
-			"INFO: editor ready\n"
-			"ERROR: first failure\n"
-			"only lowercase error here\n"
-			"中文日志行 汉字\n");
+	const String cjk_line = String::utf8("中文日志行 汉字");
+	const String content = String("Godot Engine v4.7.1\n"
+								  "INFO: editor ready\n"
+								  "ERROR: first failure\n"
+								  "only lowercase error here\n") +
+			cjk_line + String("\n");
+	TestMCPServer::ScratchLog log(content);
 	CHECK(log.ok);
 
 	MCPToolRegistry registry;
@@ -3578,7 +3589,7 @@ TEST_CASE("[MCPServer] the project_write_resource_scene tools are registered as 
 	// by the editor process *and* by the game process (scope = both), unlike an
 	// `editor_` tool. `mutating` itself is asserted where it is decidable - at
 	// the declaration site, by the builder refusing to build without it.
-	CHECK(registry.get_tool_count() == 24);
+	CHECK(registry.get_tool_count() == 73);
 }
 
 TEST_CASE("[MCPServer] project_create_resource writes a new resource and refuses to clobber one") {
@@ -4212,8 +4223,8 @@ TEST_CASE("[MCPServer] the editor_write_scene_editor group is editor-only and co
 	// A game process must not even carry the tools in its table (GDR-19 17.3).
 	MCPToolRegistry game_registry;
 	TestMCPServer::build_all_tools_registry(game_registry);
-	CHECK(game_registry.get_tool_count() == 48);
-	CHECK(game_registry.get_visible_tool_count(false) == 48);
+	CHECK(game_registry.get_tool_count() == 73);
+	CHECK(game_registry.get_visible_tool_count(false) == 73);
 
 	// An editor process carries the 23 both-scope tools plus the seven inspector
 	// tools plus these ten plus the seventeen game-scope tools of
@@ -4222,9 +4233,9 @@ TEST_CASE("[MCPServer] the editor_write_scene_editor group is editor-only and co
 	// the ten editor-scope node writes of TASK-015.
 	MCPToolRegistry editor_registry;
 	TestMCPServer::build_editor_process_registry(editor_registry);
-	CHECK(editor_registry.get_tool_count() == 76);
-	CHECK(editor_registry.get_visible_tool_count(true) == 59);
-	CHECK(editor_registry.get_visible_tool_count(false) == 48);
+	CHECK(editor_registry.get_tool_count() == 177);
+	CHECK(editor_registry.get_visible_tool_count(true) == 154);
+	CHECK(editor_registry.get_visible_tool_count(false) == 73);
 
 	for (int i = 0; i < 10; i++) {
 		const String name = EDITOR_WRITE_TOOLS[i];
@@ -4239,7 +4250,7 @@ TEST_CASE("[MCPServer] the editor_write_scene_editor group is editor-only and co
 
 	// The listing a game process serves must name none of the ten ...
 	const Array game_list = game_registry.build_tools_list(false);
-	CHECK(game_list.size() == 48);
+	CHECK(game_list.size() == 73);
 	for (int i = 0; i < game_list.size(); i++) {
 		const String listed = ((Dictionary)game_list[i])["name"];
 		for (int j = 0; j < 10; j++) {
@@ -4248,7 +4259,7 @@ TEST_CASE("[MCPServer] the editor_write_scene_editor group is editor-only and co
 	}
 	// ... and the editor's listing must carry every one of them.
 	const Array editor_list = editor_registry.build_tools_list(true);
-	CHECK(editor_list.size() == 59);
+	CHECK(editor_list.size() == 154);
 	for (int j = 0; j < 10; j++) {
 		bool found = false;
 		for (int i = 0; i < editor_list.size(); i++) {
@@ -4608,9 +4619,9 @@ const char *const RUNNING_GAME_B2_TOOLS[7] = {
 TEST_CASE("[MCPServer] the running_game_read_scene group is game-only") {
 	MCPToolRegistry game_registry;
 	TestMCPServer::build_all_tools_registry(game_registry);
-	CHECK(game_registry.get_tool_count() == 48);
-	CHECK(game_registry.get_visible_tool_count(false) == 48);
-	CHECK(game_registry.get_visible_tool_count(true) == 35);
+	CHECK(game_registry.get_tool_count() == 73);
+	CHECK(game_registry.get_visible_tool_count(false) == 73);
+	CHECK(game_registry.get_visible_tool_count(true) == 50);
 
 	MCPToolRegistry editor_registry;
 	TestMCPServer::build_editor_process_registry(editor_registry);
@@ -4619,9 +4630,9 @@ TEST_CASE("[MCPServer] the running_game_read_scene group is game-only") {
 	// TASK-015 grows it by the ten editor-scope node writes: 66 -> 76
 	// registered, 49 -> 59 visible to an editor (a game process is unchanged:
 	// editor-scope tools are not registered there at all).
-	CHECK(editor_registry.get_tool_count() == 76);
-	CHECK(editor_registry.get_visible_tool_count(true) == 59);
-	CHECK(editor_registry.get_visible_tool_count(false) == 48);
+	CHECK(editor_registry.get_tool_count() == 177);
+	CHECK(editor_registry.get_visible_tool_count(true) == 154);
+	CHECK(editor_registry.get_visible_tool_count(false) == 73);
 
 	for (int i = 0; i < 1; i++) {
 		const String name = RUNNING_GAME_READ_SCENE_TOOLS[i];
@@ -4660,7 +4671,7 @@ TEST_CASE("[MCPServer] the running_game_read_scene group is game-only") {
 
 	// The game listing carries it exactly once; the editor listing never does.
 	const Array game_list = game_registry.build_tools_list(false);
-	CHECK(game_list.size() == 48);
+	CHECK(game_list.size() == 73);
 	Dictionary listed;
 	int occurrences = 0;
 	for (int i = 0; i < game_list.size(); i++) {
@@ -4671,7 +4682,7 @@ TEST_CASE("[MCPServer] the running_game_read_scene group is game-only") {
 	}
 	CHECK(occurrences == 1);
 	const Array editor_list = editor_registry.build_tools_list(true);
-	CHECK(editor_list.size() == 59);
+	CHECK(editor_list.size() == 154);
 	for (int i = 0; i < editor_list.size(); i++) {
 		CHECK(String(((Dictionary)editor_list[i])["name"]) != String(RUNNING_GAME_READ_SCENE_TOOLS[0]));
 	}
@@ -7708,15 +7719,15 @@ TEST_CASE("[MCPServer] the editor_node_write group is editor-only and carries te
 	// A game process must not even carry the tools in its table (GDR-19 17.3).
 	MCPToolRegistry game_registry;
 	TestMCPServer::build_all_tools_registry(game_registry);
-	CHECK(game_registry.get_tool_count() == 48);
-	CHECK(game_registry.get_visible_tool_count(false) == 48);
+	CHECK(game_registry.get_tool_count() == 73);
+	CHECK(game_registry.get_visible_tool_count(false) == 73);
 
 	// An editor process carries 76 registered tools, 59 of them visible.
 	MCPToolRegistry editor_registry;
 	TestMCPServer::build_editor_process_registry(editor_registry);
-	CHECK(editor_registry.get_tool_count() == 76);
-	CHECK(editor_registry.get_visible_tool_count(true) == 59);
-	CHECK(editor_registry.get_visible_tool_count(false) == 48);
+	CHECK(editor_registry.get_tool_count() == 177);
+	CHECK(editor_registry.get_visible_tool_count(true) == 154);
+	CHECK(editor_registry.get_visible_tool_count(false) == 73);
 
 	for (int i = 0; i < 10; i++) {
 		const String name = EDITOR_NODE_WRITE_TOOLS[i];
@@ -7731,7 +7742,7 @@ TEST_CASE("[MCPServer] the editor_node_write group is editor-only and carries te
 
 	// The game listing names none of the ten ...
 	const Array game_list = game_registry.build_tools_list(false);
-	CHECK(game_list.size() == 48);
+	CHECK(game_list.size() == 73);
 	for (int i = 0; i < game_list.size(); i++) {
 		const String listed = ((Dictionary)game_list[i])["name"];
 		for (int j = 0; j < 10; j++) {
@@ -7740,7 +7751,7 @@ TEST_CASE("[MCPServer] the editor_node_write group is editor-only and carries te
 	}
 	// ... and the editor listing carries every one of them exactly once.
 	const Array editor_list = editor_registry.build_tools_list(true);
-	CHECK(editor_list.size() == 59);
+	CHECK(editor_list.size() == 154);
 	for (int j = 0; j < 10; j++) {
 		int occurrences = 0;
 		for (int i = 0; i < editor_list.size(); i++) {
@@ -8409,9 +8420,9 @@ TEST_CASE("[MCPServer] the project_read_files group is registered for both proce
 	// running_game_read_scene (TASK-009) + 16 B2 game-scope tools (TASK-010,
 	// TASK-011 and TASK-012); the game-scope tools are hidden from the
 	// editor-process view.
-	CHECK(registry.get_tool_count() == 48);
-	CHECK(registry.get_visible_tool_count(true) == 35);
-	CHECK(registry.get_visible_tool_count(false) == 48);
+	CHECK(registry.get_tool_count() == 73);
+	CHECK(registry.get_visible_tool_count(true) == 50);
+	CHECK(registry.get_visible_tool_count(false) == 73);
 
 	const String names[6] = {
 		"project_list_scripts",
