@@ -1,0 +1,594 @@
+[
+ {
+  "rel": "tool_registry.cpp",
+  "tree_lines": 593,
+  "bak_lines": 426,
+  "merged_lines": 737,
+  "inserted_lines": 144,
+  "notes": [
+   [
+    "insert",
+    1,
+    29,
+    29
+   ],
+   [
+    "insert",
+    176,
+    254,
+    79
+   ],
+   [
+    "insert",
+    359,
+    364,
+    6
+   ],
+   [
+    "insert",
+    397,
+    426,
+    30
+   ]
+  ],
+  "balance_tree": [
+   3,
+   0,
+   null
+  ],
+  "balance_merged": [
+   1,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tool_registry.cpp"
+ },
+ {
+  "rel": "tools\\editor_input_simulation.cpp",
+  "tree_lines": 1004,
+  "bak_lines": 1254,
+  "merged_lines": 1242,
+  "inserted_lines": 238,
+  "notes": [
+   [
+    "insert",
+    195,
+    199,
+    5
+   ],
+   [
+    "insert",
+    238,
+    254,
+    17
+   ],
+   [
+    "insert",
+    264,
+    264,
+    1
+   ],
+   [
+    "insert",
+    272,
+    274,
+    3
+   ],
+   [
+    "insert",
+    276,
+    276,
+    1
+   ],
+   [
+    "insert",
+    278,
+    278,
+    1
+   ],
+   [
+    "insert",
+    291,
+    292,
+    2
+   ],
+   [
+    "insert",
+    298,
+    353,
+    56
+   ],
+   [
+    "insert",
+    384,
+    388,
+    5
+   ],
+   [
+    "insert",
+    425,
+    429,
+    5
+   ],
+   [
+    "insert",
+    487,
+    493,
+    7
+   ],
+   [
+    "insert",
+    690,
+    789,
+    100
+   ],
+   [
+    "insert",
+    1150,
+    1169,
+    20
+   ],
+   [
+    "insert",
+    1240,
+    1254,
+    15
+   ]
+  ],
+  "balance_tree": [
+   2,
+   2,
+   null
+  ],
+  "balance_merged": [
+   0,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\editor_input_simulation.cpp"
+ },
+ {
+  "rel": "tools\\editor_node_batch_write.cpp",
+  "tree_lines": 737,
+  "bak_lines": 598,
+  "merged_lines": 757,
+  "inserted_lines": 20,
+  "notes": [
+   [
+    "insert",
+    242,
+    246,
+    5
+   ],
+   [
+    "insert",
+    282,
+    296,
+    15
+   ]
+  ],
+  "balance_tree": [
+   1,
+   0,
+   null
+  ],
+  "balance_merged": [
+   2,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\editor_node_batch_write.cpp"
+ },
+ {
+  "rel": "tools\\editor_node_setup.cpp",
+  "tree_lines": 578,
+  "bak_lines": 904,
+  "merged_lines": 907,
+  "inserted_lines": 329,
+  "notes": [
+   [
+    "insert",
+    100,
+    129,
+    30
+   ],
+   [
+    "insert",
+    154,
+    155,
+    2
+   ],
+   [
+    "insert",
+    172,
+    231,
+    60
+   ],
+   [
+    "insert",
+    310,
+    354,
+    45
+   ],
+   [
+    "insert",
+    415,
+    489,
+    75
+   ],
+   [
+    "insert",
+    540,
+    598,
+    59
+   ],
+   [
+    "insert",
+    719,
+    733,
+    15
+   ],
+   [
+    "insert",
+    796,
+    810,
+    15
+   ],
+   [
+    "insert",
+    812,
+    839,
+    28
+   ]
+  ],
+  "balance_tree": [
+   -1,
+   0,
+   null
+  ],
+  "balance_merged": [
+   0,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\editor_node_setup.cpp"
+ },
+ {
+  "rel": "tools\\editor_node_write.cpp",
+  "tree_lines": 705,
+  "bak_lines": 1157,
+  "merged_lines": 1157,
+  "inserted_lines": 452,
+  "notes": [
+   [
+    "insert",
+    210,
+    252,
+    43
+   ],
+   [
+    "insert",
+    303,
+    358,
+    56
+   ],
+   [
+    "insert",
+    489,
+    659,
+    171
+   ],
+   [
+    "insert",
+    790,
+    821,
+    32
+   ],
+   [
+    "insert",
+    942,
+    1007,
+    66
+   ],
+   [
+    "insert",
+    1063,
+    1117,
+    55
+   ],
+   [
+    "insert",
+    1129,
+    1157,
+    29
+   ]
+  ],
+  "balance_tree": [
+   6,
+   0,
+   null
+  ],
+  "balance_merged": [
+   0,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\editor_node_write.cpp"
+ },
+ {
+  "rel": "tools\\editor_write_scene_editor.cpp",
+  "tree_lines": 724,
+  "bak_lines": 1099,
+  "merged_lines": 1059,
+  "inserted_lines": 335,
+  "notes": [
+   [
+    "insert",
+    1,
+    29,
+    29
+   ],
+   [
+    "insert",
+    80,
+    89,
+    10
+   ],
+   [
+    "insert",
+    209,
+    238,
+    30
+   ],
+   [
+    "insert",
+    424,
+    512,
+    89
+   ],
+   [
+    "insert",
+    553,
+    599,
+    47
+   ],
+   [
+    "insert",
+    960,
+    1030,
+    71
+   ],
+   [
+    "insert",
+    1041,
+    1099,
+    59
+   ]
+  ],
+  "balance_tree": [
+   5,
+   0,
+   null
+  ],
+  "balance_merged": [
+   3,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\editor_write_scene_editor.cpp"
+ },
+ {
+  "rel": "tools\\running_game_script_execution.cpp",
+  "tree_lines": 247,
+  "bak_lines": 234,
+  "merged_lines": 319,
+  "inserted_lines": 72,
+  "notes": [
+   [
+    "insert",
+    1,
+    29,
+    29
+   ],
+   [
+    "insert",
+    70,
+    112,
+    43
+   ]
+  ],
+  "balance_tree": [
+   -1,
+   0,
+   null
+  ],
+  "balance_merged": [
+   -1,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\running_game_script_execution.cpp"
+ },
+ {
+  "rel": "tools\\running_game_test_execution.cpp",
+  "tree_lines": 698,
+  "bak_lines": 939,
+  "merged_lines": 882,
+  "inserted_lines": 184,
+  "notes": [
+   [
+    "insert",
+    419,
+    424,
+    6
+   ],
+   [
+    "insert",
+    475,
+    546,
+    72
+   ],
+   [
+    "insert",
+    558,
+    558,
+    1
+   ],
+   [
+    "insert",
+    655,
+    689,
+    35
+   ],
+   [
+    "insert",
+    770,
+    839,
+    70
+   ]
+  ],
+  "balance_tree": [
+   8,
+   0,
+   null
+  ],
+  "balance_merged": [
+   1,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\running_game_test_execution.cpp"
+ },
+ {
+  "rel": "tools\\editor_testing_read.cpp",
+  "tree_lines": 370,
+  "bak_lines": 515,
+  "merged_lines": 520,
+  "inserted_lines": 150,
+  "notes": [
+   [
+    "insert",
+    1,
+    29,
+    29
+   ],
+   [
+    "insert",
+    39,
+    39,
+    1
+   ],
+   [
+    "insert",
+    52,
+    79,
+    28
+   ],
+   [
+    "insert",
+    152,
+    159,
+    8
+   ],
+   [
+    "insert",
+    220,
+    297,
+    78
+   ],
+   [
+    "insert",
+    510,
+    515,
+    6
+   ]
+  ],
+  "balance_tree": [
+   0,
+   0,
+   null
+  ],
+  "balance_merged": [
+   -1,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\editor_testing_read.cpp"
+ },
+ {
+  "rel": "tools\\project_read_template.cpp",
+  "tree_lines": 785,
+  "bak_lines": 657,
+  "merged_lines": 799,
+  "inserted_lines": 14,
+  "notes": [
+   [
+    "insert",
+    33,
+    33,
+    1
+   ],
+   [
+    "insert",
+    55,
+    61,
+    7
+   ],
+   [
+    "insert",
+    90,
+    94,
+    5
+   ],
+   [
+    "insert",
+    97,
+    97,
+    1
+   ]
+  ],
+  "balance_tree": [
+   0,
+   0,
+   null
+  ],
+  "balance_merged": [
+   0,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\project_read_template.cpp"
+ },
+ {
+  "rel": "tools\\project_cross_scene_write.h",
+  "tree_lines": 150,
+  "bak_lines": 160,
+  "merged_lines": 183,
+  "inserted_lines": 33,
+  "notes": [
+   [
+    "insert",
+    37,
+    40,
+    4
+   ],
+   [
+    "insert",
+    80,
+    108,
+    29
+   ]
+  ],
+  "balance_tree": [
+   0,
+   0,
+   null
+  ],
+  "balance_merged": [
+   0,
+   0,
+   null
+  ],
+  "written": "H:\\rebuild\\godot\\modules\\mcp_server\\tools\\project_cross_scene_write.h"
+ }
+]

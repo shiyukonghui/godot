@@ -1,0 +1,18 @@
+[
+ {
+  "rel": "tools\\project_validate_scripts.cpp",
+  "cur": 384,
+  "new": 384,
+  "target": 374,
+  "base_rev": 368,
+  "notes": [
+   "complete read at revision 368 (target 374)",
+   "window rev372 (60 lines): replaced 81..200",
+   "window rev372 (190 lines): no-anchor",
+   "window rev372 (40 lines): replaced 216..251",
+   "window rev372 (330 lines): replaced 29..301",
+   "window rev374 (13 lines): replaced 82..85",
+   "window rev374 (90 lines): replaced 129..217"
+  ]
+ }
+]

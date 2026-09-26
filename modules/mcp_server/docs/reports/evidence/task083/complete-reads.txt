@@ -1,0 +1,123 @@
+mcp_capture.cpp                                            COMPLETE rev757   time=1790223277936 current=757 f=d3ea9bff-4737-43a1-850a-cc5ccf0d6947_session.v3.jsonl.jsonl
+mcp_capture.h                                              COMPLETE rev254   time=1790218727315 current=276 f=12115135-af2a-472e-9b72-18b409b0663b_session.v3.jsonl.jsonl
+mcp_deferred.cpp                                           no-complete-read maxrev=209   current=209
+mcp_deferred.h                                             COMPLETE rev231   time=1790243311476 current=231 f=2e24e5ca-11ce-42e8-9d69-674f4bc1f842_session.v3.jsonl.jsonl
+mcp_http_server.cpp                                        COMPLETE rev834   time=1790208693755 current=834 f=42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl
+mcp_http_server.h                                          COMPLETE rev279   time=1790208668801 current=279 f=42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl
+mcp_jsonrpc.cpp                                            COMPLETE rev388   time=1790170254765 current=323 f=d973ccf6-7e6b-4835-95a9-e6fef9981d63_session.v3.jsonl.jsonl
+mcp_jsonrpc.h                                              COMPLETE rev120   time=1790208666220 current=120 f=42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl
+mcp_server.cpp                                             COMPLETE rev539   time=1790208662695 current=670 f=42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl
+mcp_server.h                                               COMPLETE rev187   time=1790298076039 current=246 f=9d3e21df-4c96-4cae-ab9d-a9afbab3a3b3_session.v3.jsonl.jsonl
+mcp_trace.cpp                                              COMPLETE rev354   time=1790254406479 current=410 f=12fdd0ea-7d7b-4938-936a-8ba24f037fae_session.v3.jsonl.jsonl
+mcp_trace.h                                                COMPLETE rev210   time=1790254410518 current=251 f=12fdd0ea-7d7b-4938-936a-8ba24f037fae_session.v3.jsonl.jsonl
+register_types.cpp                                         COMPLETE rev85    time=1790132355935 current=85 f=4309e760-8ae3-45c8-9720-e86dec1dda2d_session.v3.jsonl.jsonl
+tool_registry.cpp                                          COMPLETE rev426   time=1790233431963 current=737 f=4c88c4fd-5a37-4191-be76-56e9d401cccd_session.v3.jsonl.jsonl
+tool_registry.h                                            COMPLETE rev185   time=1790243298336 current=185 f=2e24e5ca-11ce-42e8-9d69-674f4bc1f842_session.v3.jsonl.jsonl
+tools\android_shared.cpp                                   no-complete-read maxrev=451   current=451
+tools\android_shared.h                                     no-complete-read maxrev=156   current=156
+tools\animation_shared.h                                   no-complete-read maxrev=130   current=130
+tools\csharp_verdict.cpp                                   no-complete-read maxrev=301   current=301
+tools\editor_animation_read.cpp                            no-complete-read maxrev=485   current=486
+tools\editor_animation_tree_write.cpp                      COMPLETE rev1038  time=1790150498948 current=1245 f=b723dc27-38a6-47aa-8e73-64c6d4875284_session.v3.jsonl.jsonl
+tools\editor_animation_tree_write.h                        no-complete-read maxrev=115   current=131
+tools\editor_animation_write.cpp                           COMPLETE rev773   time=1790150255487 current=773 f=b723dc27-38a6-47aa-8e73-64c6d4875284_session.v3.jsonl.jsonl
+tools\editor_animation_write.h                             no-complete-read maxrev=87    current=87
+tools\editor_control_layout_write.cpp                      COMPLETE rev234   time=1790067187975 current=230 f=82084e15-ac83-4907-a2b4-52d71a2d8249_session.v3.jsonl.jsonl
+tools\editor_input_read.cpp                                COMPLETE rev141   time=1790183528184 current=141 f=17d80e21-5d06-4cb3-b6f9-9b43c390a709_session.v3.jsonl.jsonl
+tools\editor_input_simulation.cpp                          no-complete-read maxrev=1349  current=1242
+tools\editor_input_simulation.h                            no-complete-read maxrev=38    current=38
+tools\editor_navigation_read.cpp                           COMPLETE rev274   time=1790158383737 current=274 f=7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl
+tools\editor_navigation_read.h                             COMPLETE rev81    time=1790158324855 current=81 f=7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl
+tools\editor_navigation_write.cpp                          no-complete-read maxrev=582   current=582
+tools\editor_node_batch_write.cpp                          COMPLETE rev598   time=1790238897805 current=757 f=2ecf5c87-8489-4ffd-9f0b-96271b2616af_session.v3.jsonl.jsonl
+tools\editor_node_batch_write.h                            COMPLETE rev105   time=1790239025467 current=142 f=2ecf5c87-8489-4ffd-9f0b-96271b2616af_session.v3.jsonl.jsonl
+tools\editor_node_instantiate.cpp                          COMPLETE rev448   time=1790064207617 current=448 f=4a694b8e-5d18-4e6a-b971-d525df86cc75_session.v3.jsonl.jsonl
+tools\editor_node_instantiate.h                            COMPLETE rev98    time=1790064205511 current=98 f=4a694b8e-5d18-4e6a-b971-d525df86cc75_session.v3.jsonl.jsonl
+tools\editor_node_property_updates.cpp                     no-complete-read maxrev=543   current=543
+tools\editor_node_read.cpp                                 COMPLETE rev630   time=1790142011898 current=777 f=b1e29090-96a6-45ef-8bd5-b396e78e54c1_session.v3.jsonl.jsonl
+tools\editor_node_read.h                                   COMPLETE rev136   time=1790239025465 current=195 f=2ecf5c87-8489-4ffd-9f0b-96271b2616af_session.v3.jsonl.jsonl
+tools\editor_node_setup.cpp                                COMPLETE rev894   time=1790067199632 current=907 f=82084e15-ac83-4907-a2b4-52d71a2d8249_session.v3.jsonl.jsonl
+tools\editor_node_setup.h                                  no-complete-read maxrev=145   current=145
+tools\editor_node_write.cpp                                COMPLETE rev1120  time=1790064207617 current=1157 f=4a694b8e-5d18-4e6a-b971-d525df86cc75_session.v3.jsonl.jsonl
+tools\editor_node_write.h                                  COMPLETE rev132   time=1790180143151 current=146 f=b8e1b938-7cb9-4773-b30d-0fcd5413fab8_session.v3.jsonl.jsonl
+tools\editor_particle_write.cpp                            no-complete-read maxrev=666   current=666
+tools\editor_physics_write.cpp                             COMPLETE rev215   time=1790158751032 current=215 f=7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl
+tools\editor_playback.cpp                                  COMPLETE rev588   time=1790298071529 current=588 f=9d3e21df-4c96-4cae-ab9d-a9afbab3a3b3_session.v3.jsonl.jsonl
+tools\editor_playback.h                                    COMPLETE rev130   time=1790298069518 current=130 f=9d3e21df-4c96-4cae-ab9d-a9afbab3a3b3_session.v3.jsonl.jsonl
+tools\editor_read_scene_inspector.cpp                      COMPLETE rev684   time=1790024402971 current=629 f=00d5b07a-5961-4c49-9c4a-6b697b07d332_session.v3.jsonl.jsonl
+tools\editor_read_scene_inspector.h                        COMPLETE rev54    time=1790129758702 current=70 f=d8cf7eb3-c2b3-4bfd-bbe4-3bb4d1e058dc_session.v3.jsonl.jsonl
+tools\editor_scene_3d_write.cpp                            COMPLETE rev285   time=1790153980091 current=320 f=14aeb3d6-4d9f-4e30-a19e-699f3a76a82d_session.v3.jsonl.jsonl
+tools\editor_scene_3d_write.h                              COMPLETE rev74    time=1790154286772 current=76 f=14aeb3d6-4d9f-4e30-a19e-699f3a76a82d_session.v3.jsonl.jsonl
+tools\editor_script_write.cpp                              no-complete-read maxrev=366   current=366
+tools\editor_script_write.h                                no-complete-read maxrev=98    current=98
+tools\editor_set_node_script_batch.cpp                     COMPLETE rev493   time=1790349205958 current=493 f=d68a952b-52a4-4664-831c-cb27239214d2_session.v3.jsonl.jsonl
+tools\editor_set_node_script_batch.h                       COMPLETE rev79    time=1790341870440 current=113 f=d216393e-b554-44a2-9d1c-5b44abe91675_session.v3.jsonl.jsonl
+tools\editor_shader_write.cpp                              no-complete-read maxrev=374   current=381
+tools\editor_shader_write.h                                no-complete-read maxrev=75    current=81
+tools\editor_testing_read.cpp                              COMPLETE rev533   time=1790135558952 current=520 f=056058ea-bc32-47da-9bdd-c7963aeab8b9_session.v3.jsonl.jsonl
+tools\editor_theme_write.cpp                               COMPLETE rev197   time=1790158386573 current=197 f=7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl
+tools\editor_tilemap_write.cpp                             no-complete-read maxrev=543   current=543
+tools\editor_write_scene_editor.cpp                        no-complete-read maxrev=1184  current=1059
+tools\editor_write_scene_editor.h                          COMPLETE rev75    time=1790093795539 current=95 f=ed017297-2f7e-42d4-ac00-ab2021942eb5_session.v3.jsonl.jsonl
+tools\input_recorder.cpp                                   COMPLETE rev253   time=1790049831639 current=357 f=b4c5a5b7-7029-403d-9298-d88f5c10b01c_session.v3.jsonl.jsonl
+tools\input_recorder.h                                     COMPLETE rev161   time=1790049831638 current=217 f=b4c5a5b7-7029-403d-9298-d88f5c10b01c_session.v3.jsonl.jsonl
+tools\os_android_read.cpp                                  no-complete-read maxrev=136   current=136
+tools\os_android_write.cpp                                 no-complete-read maxrev=531   current=531
+tools\particle_shared.cpp                                  no-complete-read maxrev=626   current=626
+tools\particle_shared.h                                    COMPLETE rev130   time=1790154440095 current=130 f=14aeb3d6-4d9f-4e30-a19e-699f3a76a82d_session.v3.jsonl.jsonl
+tools\physics_shared.h                                     COMPLETE rev102   time=1790158756744 current=102 f=7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl
+tools\project.cpp                                          COMPLETE rev303   time=1790007877317 current=303 f=47a86338-e0a1-451d-b026-c88862ccaefe_session.v3.jsonl.jsonl
+tools\project.h                                            COMPLETE rev36    time=1790007934789 current=36 f=47a86338-e0a1-451d-b026-c88862ccaefe_session.v3.jsonl.jsonl
+tools\project_android_read.cpp                             no-complete-read maxrev=234   current=234
+tools\project_autoload_write.cpp                           no-complete-read maxrev=260   current=268
+tools\project_autoload_write.h                             COMPLETE rev87    time=1790280347627 current=100 f=b3ecb0f7-767a-4b50-9fc8-3368ecbd350f_session.v3.jsonl.jsonl
+tools\project_cross_scene_write.cpp                        COMPLETE rev618   time=1790139529867 current=892 f=7fdeddf2-7d26-4ac6-a4ee-a59a7db04739_session.v3.jsonl.jsonl
+tools\project_cross_scene_write.h                          COMPLETE rev107   time=1790139534327 current=183 f=7fdeddf2-7d26-4ac6-a4ee-a59a7db04739_session.v3.jsonl.jsonl
+tools\project_csharp_build.cpp                             COMPLETE rev739   time=1790260799497 current=775 f=66677225-c308-4f21-91c5-4de80620adf1_session.v3.jsonl.jsonl
+tools\project_csharp_build.h                               no-complete-read maxrev=186   current=198
+tools\project_read_analysis.cpp                            COMPLETE rev1224  time=1790016317594 current=1088 f=73d7c87e-fe22-471f-9bc3-7456b8fb6c8d_session.v3.jsonl.jsonl
+tools\project_read_analysis.h                              COMPLETE rev53    time=1790016327606 current=53 f=73d7c87e-fe22-471f-9bc3-7456b8fb6c8d_session.v3.jsonl.jsonl
+tools\project_read_files.cpp                               COMPLETE rev1074  time=1790341963562 current=1074 f=d216393e-b554-44a2-9d1c-5b44abe91675_session.v3.jsonl.jsonl
+tools\project_read_files.h                                 COMPLETE rev52    time=1790234252613 current=219 f=4c88c4fd-5a37-4191-be76-56e9d401cccd_session.v3.jsonl.jsonl
+tools\project_read_template.cpp                            COMPLETE rev785   time=1790016322244 current=799 f=73d7c87e-fe22-471f-9bc3-7456b8fb6c8d_session.v3.jsonl.jsonl
+tools\project_read_template.h                              COMPLETE rev49    time=1790013969196 current=49 f=1c7c8e74-284c-4506-b2df-9bdb550dfe8c_session.v3.jsonl.jsonl
+tools\project_resource_uid_read.cpp                        no-complete-read maxrev=225   current=225
+tools\project_script_write.cpp                             COMPLETE rev392   time=1790154095813 current=392 f=14aeb3d6-4d9f-4e30-a19e-699f3a76a82d_session.v3.jsonl.jsonl
+tools\project_setting_write.cpp                            no-complete-read maxrev=298   current=298
+tools\project_setting_write.h                              no-complete-read maxrev=83    current=83
+tools\project_shader_write.cpp                             COMPLETE rev279   time=1790243293385 current=279 f=2e24e5ca-11ce-42e8-9d69-674f4bc1f842_session.v3.jsonl.jsonl
+tools\project_shader_write.h                               no-complete-read maxrev=81    current=81
+tools\project_text_read.cpp                                COMPLETE rev342   time=1790349106238 current=342 f=d68a952b-52a4-4664-831c-cb27239214d2_session.v3.jsonl.jsonl
+tools\project_text_write.cpp                               COMPLETE rev254   time=1790341960190 current=254 f=d216393e-b554-44a2-9d1c-5b44abe91675_session.v3.jsonl.jsonl
+tools\project_theme_read.cpp                               no-complete-read maxrev=97    current=97
+tools\project_theme_write.cpp                              no-complete-read maxrev=773   current=803
+tools\project_validate_scripts.cpp                         COMPLETE rev368   time=1790262585914 current=343 f=ca4db400-406b-4e20-be60-48ebb54da497_session.v3.jsonl.jsonl
+tools\project_validate_scripts.h                           no-complete-read maxrev=87    current=89
+tools\project_write_resource_scene.cpp                     no-complete-read maxrev=852   current=735
+tools\project_write_resource_scene.h                       COMPLETE rev75    time=1790229145112 current=105 f=27938588-5f17-48d7-b5e4-af12a87d91f0_session.v3.jsonl.jsonl
+tools\registration.cpp                                     COMPLETE rev283   time=1790341972208 current=294 f=d216393e-b554-44a2-9d1c-5b44abe91675_session.v3.jsonl.jsonl
+tools\registration.h                                       COMPLETE rev40    time=1790022720565 current=40 f=93c13a67-5e2e-4338-9a2c-e06e57c71ae6_session.v3.jsonl.jsonl
+tools\running_game_assertion.cpp                           COMPLETE rev789   time=1790083484722 current=716 f=041ec786-7e58-4f96-b159-f9e1c6fb9f1d_session.v3.jsonl.jsonl
+tools\running_game_assertion.h                             no-complete-read maxrev=62    current=94
+tools\running_game_capture.cpp                             COMPLETE rev172   time=1790208687733 current=172 f=42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl
+tools\running_game_capture.h                               no-complete-read maxrev=54    current=54
+tools\running_game_frame_observation.cpp                   COMPLETE rev664   time=1790075846483 current=735 f=24792de5-dd96-4a62-9928-fd78a1dbb181_session.v3.jsonl.jsonl
+tools\running_game_frame_observation.h                     no-complete-read maxrev=49    current=66
+tools\running_game_input.cpp                               no-complete-read maxrev=837   current=766
+tools\running_game_input.h                                 no-complete-read maxrev=53    current=53
+tools\running_game_navigation_write.cpp                    no-complete-read maxrev=920   current=929
+tools\running_game_node_write.cpp                          COMPLETE rev774   time=1790131848325 current=1339 f=4309e760-8ae3-45c8-9720-e86dec1dda2d_session.v3.jsonl.jsonl
+tools\running_game_node_write.h                            COMPLETE rev216   time=1790158941192 current=216 f=7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl
+tools\running_game_observation.cpp                         COMPLETE rev914   time=1790038526703 current=823 f=80974cfd-36d5-401b-a1a1-1a3c91aa24ff_session.v3.jsonl.jsonl
+tools\running_game_observation.h                           COMPLETE rev52    time=1790180143151 current=85 f=b8e1b938-7cb9-4773-b30d-0fcd5413fab8_session.v3.jsonl.jsonl
+tools\running_game_read_scene.cpp                          COMPLETE rev383   time=1790035229051 current=397 f=3af799b9-52b5-4157-8308-76340a574bba_session.v3.jsonl.jsonl
+tools\running_game_script_execution.cpp                    COMPLETE rev312   time=1790073044031 current=319 f=2b6d41b6-2fdd-45bc-9468-91d0da9b0d2b_session.v3.jsonl.jsonl
+tools\running_game_test_execution.cpp                      no-complete-read maxrev=949   current=882
+tools\running_game_test_execution.h                        COMPLETE rev67    time=1790083555032 current=97 f=041ec786-7e58-4f96-b159-f9e1c6fb9f1d_session.v3.jsonl.jsonl
+tools\shader_shared.cpp                                    no-complete-read maxrev=341   current=341
+tools\shader_shared.h                                      no-complete-read maxrev=143   current=158
+tools\theme_shared.cpp                                     no-complete-read maxrev=280   current=280
+tools\tool_builder.cpp                                     COMPLETE rev376   time=1790233428817 current=376 f=4c88c4fd-5a37-4191-be76-56e9d401cccd_session.v3.jsonl.jsonl
+tools\tool_builder.h                                       COMPLETE rev167   time=1790248816211 current=167 f=8ffcba7d-c292-4bd9-b719-5260b93c9bc2_session.v3.jsonl.jsonl
+tools\tool_helpers.cpp                                     COMPLETE rev676   time=1790067187976 current=3593 f=82084e15-ac83-4907-a2b4-52d71a2d8249_session.v3.jsonl.jsonl
+tools\tool_helpers.h                                       COMPLETE rev753   time=1790089778526 current=1460 f=3860b40d-f61f-4034-a9be-6cebf72d7aa2_session.v3.jsonl.jsonl

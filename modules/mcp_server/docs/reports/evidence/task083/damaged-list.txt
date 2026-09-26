@@ -1,0 +1,45 @@
+docs\tools_list.renamed.json                                 miss=3327  cov=847    pct=20.3   conf=mid  tail=yes            BAK
+docs\tool-rename-map.json                                    miss=1698  cov=296    pct=14.8   conf=mid  tail=yes            BAK
+scripts\mcp023_narrowing_guardrail_evidence.ps1              miss=890   cov=230    pct=20.5   conf=low  tail=partial-only   BAK,TREE-MISSING
+docs\reports\REPORT-069-gate-integrity.md                    miss=618   cov=62     pct=9.1    conf=mid  tail=yes            
+scripts\gen_renamed_contract.py                              miss=577   cov=1732   pct=75.0   conf=low  tail=partial-only   BAK
+docs\scripts\template.md                                     miss=539   cov=72     pct=11.8   conf=low  tail=partial-only   BAK
+docs\reports\evidence\task074\observations\raw-responses2.txt miss=485   cov=230    pct=32.2   conf=mid  tail=yes            
+tools\editor_write_scene_editor.cpp                          miss=460   cov=724    pct=61.1   conf=low  tail=yes            BAK
+tools\editor_node_write.cpp                                  miss=459   cov=706    pct=60.6   conf=mid  tail=yes            BAK
+docs\reports\evidence\task074\observations\raw-responses.txt miss=450   cov=439    pct=49.4   conf=mid  tail=yes            
+docs\reports\evidence\task075\analysis\digest_after_task075.txt miss=444   cov=20     pct=4.3    conf=mid  tail=partial-only   
+docs\TOOL-NAMING.md                                          miss=440   cov=429    pct=49.4   conf=mid  tail=yes            BAK
+tools\project_read_template.cpp                              miss=381   cov=404    pct=51.5   conf=low  tail=yes            BAK
+tools\tool_helpers.h                                         miss=380   cov=1110   pct=74.5   conf=mid  tail=yes            BAK
+scripts\check_narrowing_points.py                            miss=365   cov=583    pct=61.5   conf=low  tail=yes            BAK,TREE-MISSING
+tools\editor_input_simulation.cpp                            miss=345   cov=1004   pct=74.4   conf=mid  tail=yes            BAK
+tools\editor_node_setup.cpp                                  miss=326   cov=578    pct=63.9   conf=mid  tail=partial-only   BAK
+tools\project_write_resource_scene.cpp                       miss=322   cov=530    pct=62.2   conf=low  tail=yes            BAK
+tool_registry.cpp                                            miss=321   cov=518    pct=61.7   conf=mid  tail=yes            BAK
+scripts\mcp053_added_tools_evidence.ps1                      miss=315   cov=610    pct=65.9   conf=mid  tail=yes            
+scripts\mcp019_b4_evidence.ps1                               miss=289   cov=453    pct=61.1   conf=low  tail=yes            BAK,TREE-MISSING
+tools\editor_node_read.cpp                                   miss=280   cov=501    pct=64.1   conf=low  tail=yes            BAK
+scripts\accept_m1.ps1                                        miss=272   cov=1083   pct=79.9   conf=mid  tail=partial-only   BAK
+tools\running_game_test_execution.cpp                        miss=250   cov=699    pct=73.7   conf=mid  tail=yes            BAK
+mcp_server.cpp                                               miss=238   cov=522    pct=68.7   conf=mid  tail=yes            BAK
+tools\running_game_read_scene.cpp                            miss=231   cov=164    pct=41.5   conf=mid  tail=yes            BAK
+docs\reports\BREAKOUT-OBSERVATIONS.md                        miss=231   cov=130    pct=36.0   conf=mid  tail=yes            
+docs\reports\REPORT-068-registered-items.md                  miss=222   cov=512    pct=69.8   conf=mid  tail=yes            
+tools\running_game_frame_observation.cpp                     miss=181   cov=554    pct=75.4   conf=mid  tail=yes            BAK
+tools\editor_testing_read.cpp                                miss=169   cov=370    pct=68.6   conf=mid  tail=yes            BAK
+docs\reports\evidence\task060\trace-recovered\scripts\mcp060_lib.ps1 miss=165   cov=175    pct=51.5   conf=mid  tail=yes            
+docs\reports\BREAKOUT-DEV-LOG.md                             miss=160   cov=130    pct=44.8   conf=mid  tail=yes            
+scripts\mcp022_unified_narrowing_gate_evidence.ps1           miss=127   cov=660    pct=83.9   conf=mid  tail=partial-only   BAK
+scripts\mcp027_object_shape_and_paths_evidence.ps1           miss=120   cov=566    pct=82.5   conf=mid  tail=partial-only   BAK
+tools\running_game_node_write.cpp                            miss=107   cov=1174   pct=91.6   conf=low  tail=yes            BAK
+scripts\mcp067_live.ps1                                      miss=101   cov=250    pct=71.2   conf=mid  tail=partial-only   
+tools\running_game_script_execution.cpp                      miss=85    cov=227    pct=72.8   conf=mid  tail=partial-only   BAK
+docs\reports\evidence\task075\gate6_narrowing.txt            miss=79    cov=27     pct=25.5   conf=mid  tail=partial-only   
+docs\REQUIREMENTS.md                                         miss=54    cov=30     pct=35.7   conf=mid  tail=partial-only   BAK
+docs\reports\evidence\task060\recovery\TASK-062-TOUCHED-FILES.md miss=39    cov=9      pct=18.8   conf=mid  tail=partial-only   
+tools\project_validate_scripts.cpp                           miss=31    cov=343    pct=91.7   conf=mid  tail=partial-only   
+tools\editor_node_batch_write.cpp                            miss=29    cov=737    pct=96.2   conf=mid  tail=partial-only   BAK
+docs\reports\REPORT-009-b1-closure-running-game-read-scene.md miss=27    cov=776    pct=96.6   conf=low  tail=partial-only   BAK,TREE-MISSING
+tools\project_read_files.h                                   miss=27    cov=184    pct=87.2   conf=mid  tail=partial-only   BAK
+tools\project_cross_scene_write.h                            miss=22    cov=134    pct=85.9   conf=mid  tail=yes            BAK

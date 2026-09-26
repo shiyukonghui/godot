@@ -1,0 +1,23 @@
+tools\project_write_resource_scene.cpp                       OPEN=6 CLOSE=2 state=None
+      unclosed '{' at line 479
+      unclosed '{' at line 482
+      unclosed '{' at line 499
+      stray    '}' at line 535
+      stray    '}' at line 537
+tools\editor_write_scene_editor.cpp                          OPEN=3 CLOSE=0 state=None
+      unclosed '{' at line 729
+      unclosed '{' at line 778
+      unclosed '{' at line 779
+tools\running_game_node_write.cpp                            OPEN=3 CLOSE=0 state=None
+      unclosed '{' at line 120
+      unclosed '{' at line 122
+      unclosed '{' at line 123
+tools\running_game_test_execution.cpp                        OPEN=2 CLOSE=1 state=None
+      unclosed '{' at line 876
+      unclosed '{' at line 881
+      stray    '}' at line 651
+tools\editor_node_batch_write.cpp                            OPEN=2 CLOSE=0 state=None
+      unclosed '{' at line 133
+      unclosed '{' at line 135
+tool_registry.cpp                                            OPEN=1 CLOSE=0 state=None
+      unclosed '{' at line 479

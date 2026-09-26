@@ -1,0 +1,555 @@
+[
+ {
+  "rel": "mcp_capture.cpp",
+  "rev": 757,
+  "time": 1790223277936,
+  "f": "d3ea9bff-4737-43a1-850a-cc5ccf0d6947_session.v3.jsonl.jsonl",
+  "seq": 117
+ },
+ {
+  "rel": "mcp_capture.h",
+  "rev": 254,
+  "time": 1790218727315,
+  "f": "12115135-af2a-472e-9b72-18b409b0663b_session.v3.jsonl.jsonl",
+  "seq": 64
+ },
+ {
+  "rel": "mcp_deferred.h",
+  "rev": 231,
+  "time": 1790243311476,
+  "f": "2e24e5ca-11ce-42e8-9d69-674f4bc1f842_session.v3.jsonl.jsonl",
+  "seq": 133
+ },
+ {
+  "rel": "mcp_http_server.cpp",
+  "rev": 834,
+  "time": 1790208693755,
+  "f": "42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl",
+  "seq": 112
+ },
+ {
+  "rel": "mcp_http_server.h",
+  "rev": 279,
+  "time": 1790208668801,
+  "f": "42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl",
+  "seq": 66
+ },
+ {
+  "rel": "mcp_jsonrpc.cpp",
+  "rev": 388,
+  "time": 1790170254765,
+  "f": "d973ccf6-7e6b-4835-95a9-e6fef9981d63_session.v3.jsonl.jsonl",
+  "seq": 49
+ },
+ {
+  "rel": "mcp_jsonrpc.h",
+  "rev": 120,
+  "time": 1790208666220,
+  "f": "42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl",
+  "seq": 59
+ },
+ {
+  "rel": "mcp_server.cpp",
+  "rev": 539,
+  "time": 1790208662695,
+  "f": "42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl",
+  "seq": 53
+ },
+ {
+  "rel": "mcp_server.h",
+  "rev": 187,
+  "time": 1790298076039,
+  "f": "9d3e21df-4c96-4cae-ab9d-a9afbab3a3b3_session.v3.jsonl.jsonl",
+  "seq": 133
+ },
+ {
+  "rel": "mcp_trace.cpp",
+  "rev": 354,
+  "time": 1790254406479,
+  "f": "12fdd0ea-7d7b-4938-936a-8ba24f037fae_session.v3.jsonl.jsonl",
+  "seq": 47
+ },
+ {
+  "rel": "mcp_trace.h",
+  "rev": 210,
+  "time": 1790254410518,
+  "f": "12fdd0ea-7d7b-4938-936a-8ba24f037fae_session.v3.jsonl.jsonl",
+  "seq": 55
+ },
+ {
+  "rel": "register_types.cpp",
+  "rev": 85,
+  "time": 1790132355935,
+  "f": "4309e760-8ae3-45c8-9720-e86dec1dda2d_session.v3.jsonl.jsonl",
+  "seq": 305
+ },
+ {
+  "rel": "tool_registry.cpp",
+  "rev": 426,
+  "time": 1790233431963,
+  "f": "4c88c4fd-5a37-4191-be76-56e9d401cccd_session.v3.jsonl.jsonl",
+  "seq": 44
+ },
+ {
+  "rel": "tool_registry.h",
+  "rev": 185,
+  "time": 1790243298336,
+  "f": "2e24e5ca-11ce-42e8-9d69-674f4bc1f842_session.v3.jsonl.jsonl",
+  "seq": 128
+ },
+ {
+  "rel": "tools\\editor_animation_tree_write.cpp",
+  "rev": 1038,
+  "time": 1790150498948,
+  "f": "b723dc27-38a6-47aa-8e73-64c6d4875284_session.v3.jsonl.jsonl",
+  "seq": 419
+ },
+ {
+  "rel": "tools\\editor_animation_write.cpp",
+  "rev": 773,
+  "time": 1790150255487,
+  "f": "b723dc27-38a6-47aa-8e73-64c6d4875284_session.v3.jsonl.jsonl",
+  "seq": 197
+ },
+ {
+  "rel": "tools\\editor_control_layout_write.cpp",
+  "rev": 234,
+  "time": 1790067187975,
+  "f": "82084e15-ac83-4907-a2b4-52d71a2d8249_session.v3.jsonl.jsonl",
+  "seq": 37
+ },
+ {
+  "rel": "tools\\editor_input_read.cpp",
+  "rev": 141,
+  "time": 1790183528184,
+  "f": "17d80e21-5d06-4cb3-b6f9-9b43c390a709_session.v3.jsonl.jsonl",
+  "seq": 60
+ },
+ {
+  "rel": "tools\\editor_navigation_read.cpp",
+  "rev": 274,
+  "time": 1790158383737,
+  "f": "7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl",
+  "seq": 129
+ },
+ {
+  "rel": "tools\\editor_navigation_read.h",
+  "rev": 81,
+  "time": 1790158324855,
+  "f": "7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl",
+  "seq": 36
+ },
+ {
+  "rel": "tools\\editor_node_batch_write.cpp",
+  "rev": 598,
+  "time": 1790238897805,
+  "f": "2ecf5c87-8489-4ffd-9f0b-96271b2616af_session.v3.jsonl.jsonl",
+  "seq": 98
+ },
+ {
+  "rel": "tools\\editor_node_batch_write.h",
+  "rev": 105,
+  "time": 1790239025467,
+  "f": "2ecf5c87-8489-4ffd-9f0b-96271b2616af_session.v3.jsonl.jsonl",
+  "seq": 217
+ },
+ {
+  "rel": "tools\\editor_node_instantiate.cpp",
+  "rev": 448,
+  "time": 1790064207617,
+  "f": "4a694b8e-5d18-4e6a-b971-d525df86cc75_session.v3.jsonl.jsonl",
+  "seq": 38
+ },
+ {
+  "rel": "tools\\editor_node_instantiate.h",
+  "rev": 98,
+  "time": 1790064205511,
+  "f": "4a694b8e-5d18-4e6a-b971-d525df86cc75_session.v3.jsonl.jsonl",
+  "seq": 31
+ },
+ {
+  "rel": "tools\\editor_node_read.cpp",
+  "rev": 630,
+  "time": 1790142011898,
+  "f": "b1e29090-96a6-45ef-8bd5-b396e78e54c1_session.v3.jsonl.jsonl",
+  "seq": 30
+ },
+ {
+  "rel": "tools\\editor_node_read.h",
+  "rev": 136,
+  "time": 1790239025465,
+  "f": "2ecf5c87-8489-4ffd-9f0b-96271b2616af_session.v3.jsonl.jsonl",
+  "seq": 215
+ },
+ {
+  "rel": "tools\\editor_node_setup.cpp",
+  "rev": 894,
+  "time": 1790067199632,
+  "f": "82084e15-ac83-4907-a2b4-52d71a2d8249_session.v3.jsonl.jsonl",
+  "seq": 52
+ },
+ {
+  "rel": "tools\\editor_node_write.cpp",
+  "rev": 1120,
+  "time": 1790064207617,
+  "f": "4a694b8e-5d18-4e6a-b971-d525df86cc75_session.v3.jsonl.jsonl",
+  "seq": 37
+ },
+ {
+  "rel": "tools\\editor_node_write.h",
+  "rev": 132,
+  "time": 1790180143151,
+  "f": "b8e1b938-7cb9-4773-b30d-0fcd5413fab8_session.v3.jsonl.jsonl",
+  "seq": 175
+ },
+ {
+  "rel": "tools\\editor_physics_write.cpp",
+  "rev": 215,
+  "time": 1790158751032,
+  "f": "7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl",
+  "seq": 471
+ },
+ {
+  "rel": "tools\\editor_playback.cpp",
+  "rev": 588,
+  "time": 1790298071529,
+  "f": "9d3e21df-4c96-4cae-ab9d-a9afbab3a3b3_session.v3.jsonl.jsonl",
+  "seq": 128
+ },
+ {
+  "rel": "tools\\editor_playback.h",
+  "rev": 130,
+  "time": 1790298069518,
+  "f": "9d3e21df-4c96-4cae-ab9d-a9afbab3a3b3_session.v3.jsonl.jsonl",
+  "seq": 123
+ },
+ {
+  "rel": "tools\\editor_read_scene_inspector.cpp",
+  "rev": 684,
+  "time": 1790024402971,
+  "f": "00d5b07a-5961-4c49-9c4a-6b697b07d332_session.v3.jsonl.jsonl",
+  "seq": 106
+ },
+ {
+  "rel": "tools\\editor_read_scene_inspector.h",
+  "rev": 54,
+  "time": 1790129758702,
+  "f": "d8cf7eb3-c2b3-4bfd-bbe4-3bb4d1e058dc_session.v3.jsonl.jsonl",
+  "seq": 306
+ },
+ {
+  "rel": "tools\\editor_scene_3d_write.cpp",
+  "rev": 285,
+  "time": 1790153980091,
+  "f": "14aeb3d6-4d9f-4e30-a19e-699f3a76a82d_session.v3.jsonl.jsonl",
+  "seq": 78
+ },
+ {
+  "rel": "tools\\editor_scene_3d_write.h",
+  "rev": 74,
+  "time": 1790154286772,
+  "f": "14aeb3d6-4d9f-4e30-a19e-699f3a76a82d_session.v3.jsonl.jsonl",
+  "seq": 306
+ },
+ {
+  "rel": "tools\\editor_set_node_script_batch.cpp",
+  "rev": 493,
+  "time": 1790349205958,
+  "f": "d68a952b-52a4-4664-831c-cb27239214d2_session.v3.jsonl.jsonl",
+  "seq": 164
+ },
+ {
+  "rel": "tools\\editor_set_node_script_batch.h",
+  "rev": 79,
+  "time": 1790341870440,
+  "f": "d216393e-b554-44a2-9d1c-5b44abe91675_session.v3.jsonl.jsonl",
+  "seq": 48
+ },
+ {
+  "rel": "tools\\editor_testing_read.cpp",
+  "rev": 533,
+  "time": 1790135558952,
+  "f": "056058ea-bc32-47da-9bdd-c7963aeab8b9_session.v3.jsonl.jsonl",
+  "seq": 61
+ },
+ {
+  "rel": "tools\\editor_theme_write.cpp",
+  "rev": 197,
+  "time": 1790158386573,
+  "f": "7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl",
+  "seq": 134
+ },
+ {
+  "rel": "tools\\editor_write_scene_editor.h",
+  "rev": 75,
+  "time": 1790093795539,
+  "f": "ed017297-2f7e-42d4-ac00-ab2021942eb5_session.v3.jsonl.jsonl",
+  "seq": 289
+ },
+ {
+  "rel": "tools\\input_recorder.cpp",
+  "rev": 253,
+  "time": 1790049831639,
+  "f": "b4c5a5b7-7029-403d-9298-d88f5c10b01c_session.v3.jsonl.jsonl",
+  "seq": 43
+ },
+ {
+  "rel": "tools\\input_recorder.h",
+  "rev": 161,
+  "time": 1790049831638,
+  "f": "b4c5a5b7-7029-403d-9298-d88f5c10b01c_session.v3.jsonl.jsonl",
+  "seq": 42
+ },
+ {
+  "rel": "tools\\particle_shared.h",
+  "rev": 130,
+  "time": 1790154440095,
+  "f": "14aeb3d6-4d9f-4e30-a19e-699f3a76a82d_session.v3.jsonl.jsonl",
+  "seq": 434
+ },
+ {
+  "rel": "tools\\physics_shared.h",
+  "rev": 102,
+  "time": 1790158756744,
+  "f": "7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl",
+  "seq": 478
+ },
+ {
+  "rel": "tools\\project.cpp",
+  "rev": 303,
+  "time": 1790007877317,
+  "f": "47a86338-e0a1-451d-b026-c88862ccaefe_session.v3.jsonl.jsonl",
+  "seq": 48
+ },
+ {
+  "rel": "tools\\project.h",
+  "rev": 36,
+  "time": 1790007934789,
+  "f": "47a86338-e0a1-451d-b026-c88862ccaefe_session.v3.jsonl.jsonl",
+  "seq": 151
+ },
+ {
+  "rel": "tools\\project_autoload_write.h",
+  "rev": 87,
+  "time": 1790280347627,
+  "f": "b3ecb0f7-767a-4b50-9fc8-3368ecbd350f_session.v3.jsonl.jsonl",
+  "seq": 272
+ },
+ {
+  "rel": "tools\\project_cross_scene_write.cpp",
+  "rev": 618,
+  "time": 1790139529867,
+  "f": "7fdeddf2-7d26-4ac6-a4ee-a59a7db04739_session.v3.jsonl.jsonl",
+  "seq": 37
+ },
+ {
+  "rel": "tools\\project_cross_scene_write.h",
+  "rev": 107,
+  "time": 1790139534327,
+  "f": "7fdeddf2-7d26-4ac6-a4ee-a59a7db04739_session.v3.jsonl.jsonl",
+  "seq": 42
+ },
+ {
+  "rel": "tools\\project_csharp_build.cpp",
+  "rev": 739,
+  "time": 1790260799497,
+  "f": "66677225-c308-4f21-91c5-4de80620adf1_session.v3.jsonl.jsonl",
+  "seq": 128
+ },
+ {
+  "rel": "tools\\project_read_analysis.cpp",
+  "rev": 1224,
+  "time": 1790016317594,
+  "f": "73d7c87e-fe22-471f-9bc3-7456b8fb6c8d_session.v3.jsonl.jsonl",
+  "seq": 56
+ },
+ {
+  "rel": "tools\\project_read_analysis.h",
+  "rev": 53,
+  "time": 1790016327606,
+  "f": "73d7c87e-fe22-471f-9bc3-7456b8fb6c8d_session.v3.jsonl.jsonl",
+  "seq": 66
+ },
+ {
+  "rel": "tools\\project_read_files.cpp",
+  "rev": 1074,
+  "time": 1790341963562,
+  "f": "d216393e-b554-44a2-9d1c-5b44abe91675_session.v3.jsonl.jsonl",
+  "seq": 174
+ },
+ {
+  "rel": "tools\\project_read_files.h",
+  "rev": 52,
+  "time": 1790234252613,
+  "f": "4c88c4fd-5a37-4191-be76-56e9d401cccd_session.v3.jsonl.jsonl",
+  "seq": 440
+ },
+ {
+  "rel": "tools\\project_read_template.cpp",
+  "rev": 785,
+  "time": 1790016322244,
+  "f": "73d7c87e-fe22-471f-9bc3-7456b8fb6c8d_session.v3.jsonl.jsonl",
+  "seq": 61
+ },
+ {
+  "rel": "tools\\project_read_template.h",
+  "rev": 49,
+  "time": 1790013969196,
+  "f": "1c7c8e74-284c-4506-b2df-9bdb550dfe8c_session.v3.jsonl.jsonl",
+  "seq": 42
+ },
+ {
+  "rel": "tools\\project_script_write.cpp",
+  "rev": 392,
+  "time": 1790154095813,
+  "f": "14aeb3d6-4d9f-4e30-a19e-699f3a76a82d_session.v3.jsonl.jsonl",
+  "seq": 184
+ },
+ {
+  "rel": "tools\\project_shader_write.cpp",
+  "rev": 279,
+  "time": 1790243293385,
+  "f": "2e24e5ca-11ce-42e8-9d69-674f4bc1f842_session.v3.jsonl.jsonl",
+  "seq": 118
+ },
+ {
+  "rel": "tools\\project_text_read.cpp",
+  "rev": 342,
+  "time": 1790349106238,
+  "f": "d68a952b-52a4-4664-831c-cb27239214d2_session.v3.jsonl.jsonl",
+  "seq": 45
+ },
+ {
+  "rel": "tools\\project_text_write.cpp",
+  "rev": 254,
+  "time": 1790341960190,
+  "f": "d216393e-b554-44a2-9d1c-5b44abe91675_session.v3.jsonl.jsonl",
+  "seq": 169
+ },
+ {
+  "rel": "tools\\project_validate_scripts.cpp",
+  "rev": 368,
+  "time": 1790262585914,
+  "f": "ca4db400-406b-4e20-be60-48ebb54da497_session.v3.jsonl.jsonl",
+  "seq": 173
+ },
+ {
+  "rel": "tools\\project_write_resource_scene.h",
+  "rev": 75,
+  "time": 1790229145112,
+  "f": "27938588-5f17-48d7-b5e4-af12a87d91f0_session.v3.jsonl.jsonl",
+  "seq": 176
+ },
+ {
+  "rel": "tools\\registration.cpp",
+  "rev": 283,
+  "time": 1790341972208,
+  "f": "d216393e-b554-44a2-9d1c-5b44abe91675_session.v3.jsonl.jsonl",
+  "seq": 179
+ },
+ {
+  "rel": "tools\\registration.h",
+  "rev": 40,
+  "time": 1790022720565,
+  "f": "93c13a67-5e2e-4338-9a2c-e06e57c71ae6_session.v3.jsonl.jsonl",
+  "seq": 455
+ },
+ {
+  "rel": "tools\\running_game_assertion.cpp",
+  "rev": 789,
+  "time": 1790083484722,
+  "f": "041ec786-7e58-4f96-b159-f9e1c6fb9f1d_session.v3.jsonl.jsonl",
+  "seq": 106
+ },
+ {
+  "rel": "tools\\running_game_capture.cpp",
+  "rev": 172,
+  "time": 1790208687733,
+  "f": "42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl",
+  "seq": 95
+ },
+ {
+  "rel": "tools\\running_game_frame_observation.cpp",
+  "rev": 664,
+  "time": 1790075846483,
+  "f": "24792de5-dd96-4a62-9928-fd78a1dbb181_session.v3.jsonl.jsonl",
+  "seq": 84
+ },
+ {
+  "rel": "tools\\running_game_node_write.cpp",
+  "rev": 774,
+  "time": 1790131848325,
+  "f": "4309e760-8ae3-45c8-9720-e86dec1dda2d_session.v3.jsonl.jsonl",
+  "seq": 50
+ },
+ {
+  "rel": "tools\\running_game_node_write.h",
+  "rev": 216,
+  "time": 1790158941192,
+  "f": "7436153e-5902-4fc2-8f9e-37e74a308c55_session.v3.jsonl.jsonl",
+  "seq": 642
+ },
+ {
+  "rel": "tools\\running_game_observation.cpp",
+  "rev": 914,
+  "time": 1790038526703,
+  "f": "80974cfd-36d5-401b-a1a1-1a3c91aa24ff_session.v3.jsonl.jsonl",
+  "seq": 121
+ },
+ {
+  "rel": "tools\\running_game_observation.h",
+  "rev": 52,
+  "time": 1790180143151,
+  "f": "b8e1b938-7cb9-4773-b30d-0fcd5413fab8_session.v3.jsonl.jsonl",
+  "seq": 174
+ },
+ {
+  "rel": "tools\\running_game_read_scene.cpp",
+  "rev": 383,
+  "time": 1790035229051,
+  "f": "3af799b9-52b5-4157-8308-76340a574bba_session.v3.jsonl.jsonl",
+  "seq": 36
+ },
+ {
+  "rel": "tools\\running_game_script_execution.cpp",
+  "rev": 312,
+  "time": 1790073044031,
+  "f": "2b6d41b6-2fdd-45bc-9468-91d0da9b0d2b_session.v3.jsonl.jsonl",
+  "seq": 166
+ },
+ {
+  "rel": "tools\\running_game_test_execution.h",
+  "rev": 67,
+  "time": 1790083555032,
+  "f": "041ec786-7e58-4f96-b159-f9e1c6fb9f1d_session.v3.jsonl.jsonl",
+  "seq": 134
+ },
+ {
+  "rel": "tools\\tool_builder.cpp",
+  "rev": 376,
+  "time": 1790233428817,
+  "f": "4c88c4fd-5a37-4191-be76-56e9d401cccd_session.v3.jsonl.jsonl",
+  "seq": 31
+ },
+ {
+  "rel": "tools\\tool_builder.h",
+  "rev": 167,
+  "time": 1790248816211,
+  "f": "8ffcba7d-c292-4bd9-b719-5260b93c9bc2_session.v3.jsonl.jsonl",
+  "seq": 62
+ },
+ {
+  "rel": "tools\\tool_helpers.cpp",
+  "rev": 676,
+  "time": 1790067187976,
+  "f": "82084e15-ac83-4907-a2b4-52d71a2d8249_session.v3.jsonl.jsonl",
+  "seq": 38
+ },
+ {
+  "rel": "tools\\tool_helpers.h",
+  "rev": 753,
+  "time": 1790089778526,
+  "f": "3860b40d-f61f-4034-a9be-6cebf72d7aa2_session.v3.jsonl.jsonl",
+  "seq": 37
+ }
+]

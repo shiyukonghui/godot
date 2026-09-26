@@ -1,0 +1,6 @@
+tool_registry.cpp                                target=839   uncaptured=130   big-ranges=[[500, 589], [800, 839]]
+tools\project_write_resource_scene.cpp           target=852   uncaptured=143   big-ranges=[[1, 28], [740, 852]]
+tools\editor_write_scene_editor.cpp              target=1184  uncaptured=192   big-ranges=[[424, 494], [535, 559], [1089, 1184]]
+tools\running_game_node_write.cpp                target=1281  uncaptured=31    big-ranges=[[900, 929]]
+tools\running_game_test_execution.cpp            target=949   uncaptured=30    big-ranges=[[655, 674], [940, 949]]
+tools\editor_node_batch_write.cpp                target=766   uncaptured=0     big-ranges=[]

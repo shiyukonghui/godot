@@ -1,0 +1,308 @@
+[
+ {
+  "rel": "mcp_server.cpp",
+  "read_rows": 57,
+  "write_rows": 2,
+  "edit_rows": 35,
+  "revisions": [
+   {
+    "totalLines": 378,
+    "windows": 3,
+    "offsets": [
+     1,
+     160,
+     255
+    ],
+    "covered": 378,
+    "missing": 0,
+    "missing_ranges": [],
+    "latest_time": 1789998476879,
+    "transcripts": [
+     "42a0289b-c62d-481f-a1f4-ce2b6416b325_session.v3.jsonl.jsonl",
+     "d080b9e6-a194-4c93-9185-150d3d600644_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 403,
+    "windows": 5,
+    "offsets": [
+     1,
+     240,
+     290,
+     303,
+     305
+    ],
+    "covered": 403,
+    "missing": 0,
+    "missing_ranges": [],
+    "latest_time": 1790007931973,
+    "transcripts": [
+     "328678c1-3a1c-4e77-bfd3-a6d1d314daf0_session.v3.jsonl.jsonl",
+     "47a86338-e0a1-451d-b026-c88862ccaefe_session.v3.jsonl.jsonl",
+     "4968609f-86ea-47da-acfd-d8803be49986_session.v3.jsonl.jsonl",
+     "78058364-2395-453d-a3cc-60fffc69c65b_session.v3.jsonl.jsonl",
+     "a631cc6f-b217-4cf3-a2b8-0176c6cbb3eb_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 405,
+    "windows": 16,
+    "offsets": [
+     1,
+     1,
+     1,
+     30,
+     229,
+     253,
+     258,
+     262,
+     268,
+     270,
+     280,
+     340,
+     340,
+     342,
+     348,
+     384
+    ],
+    "covered": 405,
+    "missing": 0,
+    "missing_ranges": [],
+    "latest_time": 1790035304601,
+    "transcripts": [
+     "09082f3c-bac7-46b6-bf87-13486907b8ac_session.v3.jsonl.jsonl",
+     "178c2774-bf6c-43b0-bc75-d9b53faafe5d_session.v3.jsonl.jsonl",
+     "29da25d1-4933-4e23-877f-bc5f30c00465_session.v3.jsonl.jsonl",
+     "3af799b9-52b5-4157-8308-76340a574bba_session.v3.jsonl.jsonl",
+     "79e73eed-5ff4-46ca-b68e-ac8500461030_session.v3.jsonl.jsonl",
+     "7d7322c4-fd8c-44ad-a410-90d452143cbc_session.v3.jsonl.jsonl",
+     "93c13a67-5e2e-4338-9a2c-e06e57c71ae6_session.v3.jsonl.jsonl",
+     "9af10538-fa7f-4558-a2b3-f2aa1457af04_session.v3.jsonl.jsonl",
+     "d1ef025b-30f0-4cbe-8a67-0f21c9fcbcd2_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 413,
+    "windows": 1,
+    "offsets": [
+     1
+    ],
+    "covered": 413,
+    "missing": 0,
+    "missing_ranges": [],
+    "latest_time": 1790038501769,
+    "transcripts": [
+     "80974cfd-36d5-401b-a1a1-1a3c91aa24ff_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 459,
+    "windows": 3,
+    "offsets": [
+     1,
+     1,
+     355
+    ],
+    "covered": 459,
+    "missing": 0,
+    "missing_ranges": [],
+    "latest_time": 1790053509974,
+    "transcripts": [
+     "04291a0e-965f-47cb-9bfc-c6c6fc466821_session.v3.jsonl.jsonl",
+     "b4c5a5b7-7029-403d-9298-d88f5c10b01c_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 471,
+    "windows": 1,
+    "offsets": [
+     112
+    ],
+    "covered": 14,
+    "missing": 457,
+    "missing_ranges": [
+     [
+      1,
+      111
+     ],
+     [
+      126,
+      471
+     ]
+    ],
+    "latest_time": 1790053766483,
+    "transcripts": [
+     "04291a0e-965f-47cb-9bfc-c6c6fc466821_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 484,
+    "windows": 10,
+    "offsets": [
+     1,
+     1,
+     1,
+     1,
+     60,
+     100,
+     190,
+     284,
+     300,
+     330
+    ],
+    "covered": 484,
+    "missing": 0,
+    "missing_ranges": [],
+    "latest_time": 1790170258096,
+    "transcripts": [
+     "24792de5-dd96-4a62-9928-fd78a1dbb181_session.v3.jsonl.jsonl",
+     "4309e760-8ae3-45c8-9720-e86dec1dda2d_session.v3.jsonl.jsonl",
+     "58706021-0c77-4759-b658-bd3349f44245_session.v3.jsonl.jsonl",
+     "b1e29090-96a6-45ef-8bd5-b396e78e54c1_session.v3.jsonl.jsonl",
+     "d9517317-d91e-438e-885a-e0bfaf5ba9c6_session.v3.jsonl.jsonl",
+     "d973ccf6-7e6b-4835-95a9-e6fef9981d63_session.v3.jsonl.jsonl",
+     "f31a63c8-a801-4cb9-a73c-a9c02b4d5c02_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 539,
+    "windows": 4,
+    "offsets": [
+     1,
+     1,
+     45,
+     525
+    ],
+    "covered": 539,
+    "missing": 0,
+    "missing_ranges": [],
+    "latest_time": 1790208662695,
+    "transcripts": [
+     "42f3657b-6d20-4a9f-a761-209c684690a6_session.v3.jsonl.jsonl",
+     "4aa2cde8-9522-4510-bc60-987060f0deb3_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 640,
+    "windows": 10,
+    "offsets": [
+     45,
+     60,
+     125,
+     225,
+     255,
+     470,
+     495,
+     540,
+     545,
+     585
+    ],
+    "covered": 466,
+    "missing": 174,
+    "missing_ranges": [
+     [
+      1,
+      44
+     ],
+     [
+      120,
+      124
+     ],
+     [
+      345,
+      469
+     ]
+    ],
+    "latest_time": 1790254418023,
+    "transcripts": [
+     "12115135-af2a-472e-9b72-18b409b0663b_session.v3.jsonl.jsonl",
+     "12fdd0ea-7d7b-4938-936a-8ba24f037fae_session.v3.jsonl.jsonl",
+     "2ecf5c87-8489-4ffd-9f0b-96271b2616af_session.v3.jsonl.jsonl",
+     "cedbb516-8d82-4fc2-b8ff-5497229e1d20_session.v3.jsonl.jsonl",
+     "d3ea9bff-4737-43a1-850a-cc5ccf0d6947_session.v3.jsonl.jsonl",
+     "f85a1fcb-a8be-4bb8-8b54-3dc7b076302b_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 653,
+    "windows": 2,
+    "offsets": [
+     430,
+     430
+    ],
+    "covered": 224,
+    "missing": 429,
+    "missing_ranges": [
+     [
+      1,
+      429
+     ]
+    ],
+    "latest_time": 1790298034944,
+    "transcripts": [
+     "9d3e21df-4c96-4cae-ab9d-a9afbab3a3b3_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 726,
+    "windows": 1,
+    "offsets": [
+     128
+    ],
+    "covered": 60,
+    "missing": 666,
+    "missing_ranges": [
+     [
+      1,
+      127
+     ],
+     [
+      188,
+      726
+     ]
+    ],
+    "latest_time": 1790298930842,
+    "transcripts": [
+     "9d3e21df-4c96-4cae-ab9d-a9afbab3a3b3_session.v3.jsonl.jsonl"
+    ]
+   },
+   {
+    "totalLines": 760,
+    "windows": 1,
+    "offsets": [
+     60
+    ],
+    "covered": 120,
+    "missing": 640,
+    "missing_ranges": [
+     [
+      1,
+      59
+     ],
+     [
+      180,
+      760
+     ]
+    ],
+    "latest_time": 1790323761172,
+    "transcripts": [
+     "1e6c9141-dd08-4a95-a6b4-9776ccd81198_session.v3.jsonl.jsonl"
+    ]
+   }
+  ]
+ },
+ {
+  "rel": "tools/editor_node_read.cpp",
+  "read_rows": 0,
+  "write_rows": 0,
+  "edit_rows": 0,
+  "revisions": []
+ },
+ {
+  "rel": "tools/running_game_read_scene.cpp",
+  "read_rows": 0,
+  "write_rows": 0,
+  "edit_rows": 0,
+  "revisions": []
+ }
+]

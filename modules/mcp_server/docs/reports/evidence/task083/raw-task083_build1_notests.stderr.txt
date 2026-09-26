@@ -1,0 +1,55 @@
+WARNING: The ANGLE rendering driver requires dependencies to be installed.
+You can install them by running `python misc\scripts\install_angle.py`.
+See the documentation for more information:
+	https://docs.godotengine.org/en/latest/engine_details/development/compiling/compiling_for_windows.html#compiling-with-angle-support
+Alternatively, disable this driver by compiling with `angle=no` explicitly.
+modules\mcp_server\tool_registry.cpp(490): error C2065: “marker”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(491): error C2065: “marker”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(491): error C2737: “start”: 必须初始化 const 对象
+modules\mcp_server\tool_registry.cpp(492): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(492): error C2737: “close”: 必须初始化 const 对象
+modules\mcp_server\tool_registry.cpp(494): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(500): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(500): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(500): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(502): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(503): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(503): error C2737: “c”: 必须初始化 const 对象
+modules\mcp_server\tool_registry.cpp(511): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(517): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(518): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(518): error C2737: “close”: 必须初始化 const 对象
+modules\mcp_server\tool_registry.cpp(520): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(530): error C2267: “_declared_leading_word”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(530): error C2601: “_declared_leading_word”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(545): error C2267: “_invalid_params_suggestion”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(545): error C2601: “_invalid_params_suggestion”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(591): error C2267: “_add_invalid_params_suggestion”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(591): error C2601: “_add_invalid_params_suggestion”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(605): error C2267: “_unknown_tool_suggestion_data”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(605): error C2601: “_unknown_tool_suggestion_data”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(639): error C2267: “_reject_unknown_arguments”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(639): error C2601: “_reject_unknown_arguments”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(690): error C2601: “MCPToolRegistry::call_tool”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(716): error C2601: “MCPToolRegistry::is_deferred_tool”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(721): error C2601: “MCPToolRegistry::call_deferred_tool”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(479): fatal error C1075: “{”: 未找到匹配令牌
+scons: *** [bin\obj\modules\mcp_server\tool_registry.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\editor_animation_tree_write.cpp(1015): error C2660: “MCPTools::add_state_machine_state_on”: 函数不接受 7 个参数
+modules\mcp_server\tools\editor_animation_tree_write.cpp(374): note: 参见“MCPTools::add_state_machine_state_on”的声明
+modules\mcp_server\tools\editor_animation_tree_write.cpp(1015): note: 尝试匹配参数列表“(AnimationTree *, String, String, String, double, double, MCPToolError)”时
+modules\mcp_server\tools\editor_animation_tree_write.cpp(1048): error C2660: “MCPTools::add_state_machine_transition_on”: 函数不接受 7 个参数
+modules\mcp_server\tools\editor_animation_tree_write.cpp(461): note: 参见“MCPTools::add_state_machine_transition_on”的声明
+modules\mcp_server\tools\editor_animation_tree_write.cpp(1048): note: 尝试匹配参数列表“(AnimationTree *, String, String, String, String, String, MCPToolError)”时
+modules\mcp_server\tools\editor_animation_tree_write.cpp(1131): error C2660: “MCPTools::set_blend_tree_node_on”: 函数不接受 8 个参数
+modules\mcp_server\tools\editor_animation_tree_write.cpp(700): note: 参见“MCPTools::set_blend_tree_node_on”的声明
+modules\mcp_server\tools\editor_animation_tree_write.cpp(1131): note: 尝试匹配参数列表“(AnimationTree *, String, String, String, String, double, double, MCPToolError)”时
+scons: *** [bin\obj\modules\mcp_server\tools\editor_animation_tree_write.windows.editor.x86_64.obj] Error 2

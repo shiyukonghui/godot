@@ -1,0 +1,55 @@
+TASK-083 build summary (all numbers produced by
+C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task083\recount.py, one counter for
+both tasks, so the comparison is apples to apples).
+
+Counter: a line matching  ^<path>(<line>): [fatal ]error|warning <CODE>
+"error-lines" below is the number of such lines; "files" is the number of distinct
+owning files.
+
+TASK-082 build 3   scons platform=windows target=editor tests=no -j8 -k
+                   error-lines=1357  files=43
+                   (TASK-082's own report counted 1,575 error lines / 48 files with a
+                    wider pattern that also matched MSVC's "note:" lines; the 1357
+                    figure is this task's re-count of the same log)
+TASK-082 build 2   scons platform=windows target=editor tests=no -j8
+                   error-lines=112   files=2
+
+TASK-083 build 1   cmd /c scons platform=windows target=editor tests=no -j8
+                   exit=2  wall=927.1 s
+                   error-lines=34    files=2
+                   (NOT a full inventory: without -k SCons stops at the first batch)
+                   tool_registry.cpp 31, tools/editor_animation_tree_write.cpp 3
+
+TASK-083 build 2   cmd /c scons platform=windows target=editor tests=no -j8 -k
+                   exit=2  wall=954.2 s
+                   error-lines=448   files=21
+                   delta vs TASK-082 build 3: -909 lines (-67.0%), -22 files (-51.2%)
+
+TASK-083 build 3   NOT RUN.  tests=yes re-reports the same module errors while
+                   costing another full build; the module does not compile without
+                   tests, so the test header cannot be exercised yet.  BIN/ IS EMPTY,
+                   therefore --version and --test-case="[MCPServer]*" have NO measured
+                   output.
+
+Top files in TASK-083 build 2 (error lines):
+  tools/tool_helpers.h                 87
+  tools/running_game_frame_observation.cpp  47
+  tools/running_game_test_execution.cpp     42
+  tools/tool_helpers.cpp                    34
+  tools/editor_node_batch_write.cpp         32
+  tools/tool_builder.h                      32
+  tool_registry.cpp                         31
+  tools/project_cross_scene_write.h         24
+  tools/running_game_node_write.h           22
+  tools/editor_write_scene_editor.cpp       17
+  tools/editor_script_write.cpp             16
+  tools/project_write_resource_scene.cpp    15
+  tools/running_game_node_write.cpp         15
+  tools/editor_input_simulation.cpp         12
+  tools/editor_node_write.cpp                7
+  tools/project.cpp                          4
+  tools/editor_read_scene_inspector.cpp      3
+  tools/project_validate_scripts.cpp         3
+  tools/editor_node_setup.h                  2
+  tools/editor_node_setup.cpp                2
+  tools/editor_control_layout_write.cpp      1

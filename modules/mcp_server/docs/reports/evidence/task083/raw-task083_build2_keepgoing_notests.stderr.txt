@@ -1,0 +1,550 @@
+WARNING: The ANGLE rendering driver requires dependencies to be installed.
+You can install them by running `python misc\scripts\install_angle.py`.
+See the documentation for more information:
+	https://docs.godotengine.org/en/latest/engine_details/development/compiling/compiling_for_windows.html#compiling-with-angle-support
+Alternatively, disable this driver by compiling with `angle=no` explicitly.
+modules\mcp_server\tools\editor_input_simulation.cpp(375): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(375): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(416): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(416): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(478): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(898): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(899): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(922): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(923): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(924): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(925): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tools\editor_input_simulation.cpp(952): error C3861: “_number_fits_event”: 找不到标识符
+modules\mcp_server\tool_registry.cpp(490): error C2065: “marker”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(491): error C2065: “marker”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(491): error C2737: “start”: 必须初始化 const 对象
+modules\mcp_server\tool_registry.cpp(492): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(492): error C2737: “close”: 必须初始化 const 对象
+modules\mcp_server\tool_registry.cpp(494): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(500): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(500): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(500): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(502): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(503): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(503): error C2737: “c”: 必须初始化 const 对象
+modules\mcp_server\tool_registry.cpp(511): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(517): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(518): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(518): error C2737: “close”: 必须初始化 const 对象
+modules\mcp_server\tool_registry.cpp(520): error C2065: “p_message”: 未声明的标识符
+modules\mcp_server\tool_registry.cpp(530): error C2267: “_declared_leading_word”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(530): error C2601: “_declared_leading_word”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(545): error C2267: “_invalid_params_suggestion”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(545): error C2601: “_invalid_params_suggestion”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(591): error C2267: “_add_invalid_params_suggestion”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(591): error C2601: “_add_invalid_params_suggestion”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(605): error C2267: “_unknown_tool_suggestion_data”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(605): error C2601: “_unknown_tool_suggestion_data”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(639): error C2267: “_reject_unknown_arguments”: 具有块范围的静态函数非法
+modules\mcp_server\tool_registry.cpp(639): error C2601: “_reject_unknown_arguments”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(690): error C2601: “MCPToolRegistry::call_tool”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(716): error C2601: “MCPToolRegistry::is_deferred_tool”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(721): error C2601: “MCPToolRegistry::call_deferred_tool”: 本地函数定义是非法的
+modules\mcp_server\tool_registry.cpp(479): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(479): fatal error C1075: “{”: 未找到匹配令牌
+scons: *** [bin\obj\modules\mcp_server\tools\editor_input_simulation.windows.editor.x86_64.obj] Error 2
+scons: *** [bin\obj\modules\mcp_server\tool_registry.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\editor_control_layout_write.cpp(123): error C3861: “_relative_path”: 找不到标识符
+scons: *** [bin\obj\modules\mcp_server\tools\editor_control_layout_write.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\editor_node_batch_write.cpp(162): error C2267: “_later_element_requesting”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_node_batch_write.cpp(162): error C2601: “_later_element_requesting”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_node_batch_write.cpp(133): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_node_batch_write.cpp(193): error C2267: “_batch_error_entry”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_node_batch_write.cpp(193): error C2601: “_batch_error_entry”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_node_batch_write.cpp(133): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_node_batch_write.cpp(207): error C2267: “_rollback_envelope”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_node_batch_write.cpp(207): error C2601: “_rollback_envelope”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_node_batch_write.cpp(133): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_node_batch_write.cpp(224): error C2267: “_attach_batch_envelope”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_node_batch_write.cpp(224): error C2601: “_attach_batch_envelope”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_node_batch_write.cpp(133): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_node_batch_write.cpp(238): error C2267: “_transaction_fail”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_node_batch_write.cpp(238): error C2601: “_transaction_fail”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_node_batch_write.cpp(133): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_node_batch_write.cpp(281): error C2870: “MCPTools”: 命名空间定义必须出现在文件范围内或紧接着出现在另一命名空间定义内
+modules\mcp_server\tools\editor_node_batch_write.cpp(283): error C2267: “_collect_by_type”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_node_batch_write.cpp(283): error C2601: “MCPTools::_collect_by_type”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_node_batch_write.cpp(281): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_node_batch_write.cpp(183): error C3861: “_pending_path_for”: 找不到标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(184): error C3861: “_pending_path_matches”: 找不到标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(310): error C2065: “BATCH_ROLLBACK_SUGGESTION”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(318): error C2065: “BATCH_ROLLBACK_SUGGESTION”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(323): error C2065: “BATCH_ROLLBACK_SUGGESTION”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(331): error C2065: “BATCH_ROLLBACK_SUGGESTION”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(344): error C2065: “BATCH_ROLLBACK_SUGGESTION”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(350): error C2065: “result”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(350): error C2065: “created”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(351): error C2065: “result”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(352): error C2065: “result”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(356): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+modules\mcp_server\tools\editor_node_batch_write.cpp(356): error C2065: “properties_value”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(369): error C2065: “p_root”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(369): error C2065: “parent_path”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(369): error C2065: “pending”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(369): error C2065: “p_resolve_within_batch”: 未声明的标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(369): error C3861: “_resolve_batch_parent”: 找不到标识符
+modules\mcp_server\tools\editor_node_batch_write.cpp(371): fatal error C1903: 无法从以前的错误中恢复；正在停止编译
+scons: *** [bin\obj\modules\mcp_server\tools\editor_node_batch_write.windows.editor.x86_64.obj] Error 2
+H:\rebuild\godot\modules\mcp_server\tools\editor_node_setup.h(36): warning C4099: “Color”: 类型名称以前使用“struct”现在使用的是“class”
+.\core/math/color.h(38): note: 参见“Color”的声明
+modules\mcp_server\tools\editor_node_setup.cpp(796): error C3861: “_schema_from_json”: 找不到标识符
+modules\mcp_server\tools\editor_node_setup.cpp(797): error C2065: “r_registry”: 未声明的标识符
+scons: *** [bin\obj\modules\mcp_server\tools\editor_node_setup.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\editor_node_write.cpp(383): error C3861: “_optional_dictionary”: 找不到标识符
+modules\mcp_server\tools\editor_node_write.cpp(390): error C3861: “_edited_scene_root”: 找不到标识符
+modules\mcp_server\tools\editor_node_write.cpp(395): error C3861: “_find_node”: 找不到标识符
+modules\mcp_server\tools\editor_node_write.cpp(418): error C3861: “_relative_path”: 找不到标识符
+modules\mcp_server\tools\editor_node_write.cpp(448): error C3861: “_edited_scene_root”: 找不到标识符
+modules\mcp_server\tools\editor_node_write.cpp(453): error C3861: “_find_node”: 找不到标识符
+modules\mcp_server\tools\editor_node_write.cpp(464): error C3861: “_relative_path”: 找不到标识符
+scons: *** [bin\obj\modules\mcp_server\tools\editor_node_write.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\editor_script_write.cpp(142): error C2661: “MCPTools::build_execute_gdscript_source”: 没有重载函数接受 4 个参数
+modules\mcp_server\tools\editor_script_write.cpp(142): note: 尝试匹配参数列表“(const String, bool, String, int *)”时
+modules\mcp_server\tools\editor_script_write.cpp(150): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+modules\mcp_server\tools\editor_script_write.cpp(150): error C2146: 语法错误: 缺少“;”(在标识符“reload”的前面)
+modules\mcp_server\tools\editor_script_write.cpp(150): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(150): error C3861: “reload_gdscript_capturing”: 找不到标识符
+modules\mcp_server\tools\editor_script_write.cpp(151): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(152): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(152): error C3861: “gdscript_reload_failure_text”: 找不到标识符
+modules\mcp_server\tools\editor_script_write.cpp(153): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(158): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(158): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(159): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(160): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(161): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(163): error C2065: “reload”: 未声明的标识符
+modules\mcp_server\tools\editor_script_write.cpp(164): error C2065: “reload”: 未声明的标识符
+scons: *** [bin\obj\modules\mcp_server\tools\editor_script_write.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\editor_read_scene_inspector.cpp(225): error C3861: “_require_editor_ui”: 找不到标识符
+modules\mcp_server\tools\editor_read_scene_inspector.cpp(322): error C3861: “_require_editor_ui”: 找不到标识符
+modules\mcp_server\tools\editor_read_scene_inspector.cpp(382): error C3861: “_require_editor_ui”: 找不到标识符
+scons: *** [bin\obj\modules\mcp_server\tools\editor_read_scene_inspector.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\editor_write_scene_editor.cpp(749): error C2039: "get_singleton": 不是 "ClassDB" 的成员
+.\core/object/class_db.h(97): note: 参见“ClassDB”的声明
+modules\mcp_server\tools\editor_write_scene_editor.cpp(749): error C3861: “get_singleton”: 找不到标识符
+modules\mcp_server\tools\editor_write_scene_editor.cpp(760): error C3861: “_require_editor_ui”: 找不到标识符
+modules\mcp_server\tools\editor_write_scene_editor.cpp(764): error C3861: “_edited_scene_root”: 找不到标识符
+modules\mcp_server\tools\editor_write_scene_editor.cpp(769): error C2065: “node_path”: 未声明的标识符
+modules\mcp_server\tools\editor_write_scene_editor.cpp(769): error C3861: “_find_node”: 找不到标识符
+modules\mcp_server\tools\editor_write_scene_editor.cpp(771): error C2065: “node_path”: 未声明的标识符
+modules\mcp_server\tools\editor_write_scene_editor.cpp(812): error C2267: “_tool_capture_screenshot”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_write_scene_editor.cpp(812): error C2601: “_tool_capture_screenshot”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_write_scene_editor.cpp(779): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(912): error C2267: “_find_rich_text_label”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_write_scene_editor.cpp(912): error C2601: “_find_rich_text_label”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_write_scene_editor.cpp(779): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(932): error C2267: “_tool_remove_output_log”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_write_scene_editor.cpp(932): error C2601: “_tool_remove_output_log”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_write_scene_editor.cpp(779): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(980): error C2267: “_schema_from_json”: 具有块范围的静态函数非法
+modules\mcp_server\tools\editor_write_scene_editor.cpp(980): error C2601: “_schema_from_json”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_write_scene_editor.cpp(779): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(989): error C2601: “register_editor_write_scene_editor_tools”: 本地函数定义是非法的
+modules\mcp_server\tools\editor_write_scene_editor.cpp(779): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(1060): fatal error C1070: 文件“H:\rebuild\godot\modules\mcp_server\tools\editor_write_scene_editor.cpp”中的 #if/#endif 对不匹配
+scons: *** [bin\obj\modules\mcp_server\tools\editor_write_scene_editor.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\project.cpp(273): error C2440: “=”: 无法从“Variant (__cdecl *)(const Dictionary &,String &)”转换为“Variant (__cdecl *)(const Dictionary &,MCPToolError &)”
+modules\mcp_server\tools\project.cpp(273): note: 此转换需要 reinterpret_cast、C 样式强制转换或带圆括号函数样式强制转换
+modules\mcp_server\tools\project.cpp(274): error C2248: “MCPToolRegistry::register_tool”: 无法访问 private 成员(在“MCPToolRegistry”类中声明)
+H:\rebuild\godot\modules\mcp_server\tools\../tool_registry.h(141): note: 参见“MCPToolRegistry::register_tool”的声明
+H:\rebuild\godot\modules\mcp_server\tools\../tool_registry.h(125): note: 参见“MCPToolRegistry”的声明
+modules\mcp_server\tools\project.cpp(301): error C2440: “=”: 无法从“Variant (__cdecl *)(const Dictionary &,String &)”转换为“Variant (__cdecl *)(const Dictionary &,MCPToolError &)”
+modules\mcp_server\tools\project.cpp(301): note: 此转换需要 reinterpret_cast、C 样式强制转换或带圆括号函数样式强制转换
+modules\mcp_server\tools\project.cpp(302): error C2248: “MCPToolRegistry::register_tool”: 无法访问 private 成员(在“MCPToolRegistry”类中声明)
+H:\rebuild\godot\modules\mcp_server\tools\../tool_registry.h(141): note: 参见“MCPToolRegistry::register_tool”的声明
+H:\rebuild\godot\modules\mcp_server\tools\../tool_registry.h(125): note: 参见“MCPToolRegistry”的声明
+scons: *** [bin\obj\modules\mcp_server\tools\project.windows.editor.x86_64.obj] Error 2
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2065: “Node”: 未声明的标识符
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2059: 语法错误:“>”
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2144: 语法错误:“unknown-type”的前面应有“)”
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2144: 语法错误:“unknown-type”的前面应有“;”
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2530: “MCPTools::p_nodes”: 必须初始化引用
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2143: 语法错误: 缺少“;”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): warning C4228: 使用了非标准扩展: 忽略声明符列表中逗号后面的限定符
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2530: “MCPTools::p_property”: 必须初始化引用
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2143: 语法错误: 缺少“;”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): warning C4228: 使用了非标准扩展: 忽略声明符列表中逗号后面的限定符
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): error C2530: “MCPTools::p_raw_value”: 必须初始化引用
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(119): error C2143: 语法错误: 缺少“;”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(119): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(119): error C2059: 语法错误:“)”
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(119): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(119): error C2530: “MCPTools::r_error”: 必须初始化引用
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(138): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(138): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(144): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(144): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(59): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(59): error C2086: “int MCPTools::Variant”: 重定义
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::Variant”的声明
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(59): error C2146: 语法错误: 缺少“;”(在标识符“vector_from_dictionary”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(81): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(81): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(81): error C2146: 语法错误: 缺少“;”(在标识符“vector_component_hint”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(121): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(121): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(141): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(141): error C2086: “int MCPTools::Variant”: 重定义
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::Variant”的声明
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(141): error C2146: 语法错误: 缺少“;”(在标识符“write_node_property”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(156): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(156): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(186): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(186): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(190): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(190): error C2086: “int MCPTools::Variant”: 重定义
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::Variant”的声明
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(190): error C2146: 语法错误: 缺少“;”(在标识符“read_node_property_path”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(195): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(195): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(201): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\running_game_node_write.h(201): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(71): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(71): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(73): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(73): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(74): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(74): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(78): error C2061: 语法错误: 标识符“Variant”
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(82): error C2061: 语法错误: 标识符“MCPToolError”
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(87): error C2061: 语法错误: 标识符“String”
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(123): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(123): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(132): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(132): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(133): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(133): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(134): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(134): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(135): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(135): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(136): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(136): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(143): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(143): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(158): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(158): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(160): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(160): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(162): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(162): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(165): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(165): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_builder.h(165): error C2146: 语法错误: 缺少“;”(在标识符“file_extension”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(83): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(83): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(83): error C2146: 语法错误: 缺少“;”(在标识符“join_path”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(90): error C2923: "Vector": "MCPTools::String" 不是参数 "T" 的有效 模板 类型参数
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(90): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(90): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(90): error C2955: “Vector”: 使用 类 模板 需要 模板 参数列表
+.\core/templates/vector.h(60): note: 参见“Vector”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(112): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(112): error C2086: “int MCPTools::Variant”: 重定义
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::Variant”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(112): error C2146: 语法错误: 缺少“;”(在标识符“serialize_variant”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(118): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(118): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(154): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(154): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(154): error C2146: 语法错误: 缺少“;”(在标识符“temporary_sibling_path”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(160): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(160): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(172): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(172): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(180): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(180): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(202): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(202): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(202): error C2146: 语法错误: 缺少“;”(在标识符“project_settings_file_path”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(216): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(216): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(273): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(273): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(273): error C2146: 语法错误: 缺少“;”(在标识符“project_setting_section”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(282): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(282): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(283): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(283): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(324): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(324): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(324): error C2146: 语法错误: 缺少“;”(在标识符“input_action_setting_key”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(329): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(329): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(342): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(342): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(382): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(382): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(389): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(389): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(404): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(404): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(408): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(408): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(429): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(429): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(500): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(500): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(540): error C2059: 语法错误:“const”
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(564): error C2923: "Vector": "MCPTools::String" 不是参数 "T" 的有效 模板 类型参数
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(564): error C2955: “Vector”: 使用 类 模板 需要 模板 参数列表
+.\core/templates/vector.h(60): note: 参见“Vector”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(608): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(608): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(608): error C2146: 语法错误: 缺少“;”(在标识符“relative_path”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(630): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(630): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(665): error C2061: 语法错误: 标识符“MCPToolError”
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(680): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(680): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(699): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(699): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(699): error C2146: 语法错误: 缺少“;”(在标识符“node_path_guidance”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(736): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(736): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(742): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(742): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(761): error C2061: 语法错误: 标识符“MCPToolError”
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(779): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(779): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(843): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(843): error C2086: “int MCPTools::Variant”: 重定义
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::Variant”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(843): error C2146: 语法错误: 缺少“;”(在标识符“property_value_from_json”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(950): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(950): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(1022): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(1022): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(1036): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(1036): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(1036): error C2146: 语法错误: 缺少“;”(在标识符“object_property_class_hint”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(1047): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(1047): error C2371: “MCPTools::String”: 重定义；不同的基类型
+H:\rebuild\godot\modules\mcp_server\tools\project_cross_scene_write.h(118): note: 参见“MCPTools::String”的声明
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(1047): error C2146: 语法错误: 缺少“;”(在标识符“wire_node_path”的前面)
+H:\rebuild\godot\modules\mcp_server\tools\tool_helpers.h(1047): fatal error C1003: 错误计数超过 100；正在停止编译
+scons: *** [bin\obj\modules\mcp_server\tools\project_cross_scene_write.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\project_validate_scripts.cpp(84): error C2065: “json”: 未声明的标识符
+modules\mcp_server\tools\project_validate_scripts.cpp(92): error C3861: “_schema_from_json”: 找不到标识符
+modules\mcp_server\tools\project_validate_scripts.cpp(93): error C2065: “_tool_validate_scripts”: 未声明的标识符
+scons: *** [bin\obj\modules\mcp_server\tools\project_validate_scripts.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\project_write_resource_scene.cpp(375): error C3861: “_require_properties”: 找不到标识符
+modules\mcp_server\tools\project_write_resource_scene.cpp(480): error C3861: “_property_table”: 找不到标识符
+modules\mcp_server\tools\project_write_resource_scene.cpp(508): error C2143: 语法错误: 缺少“)”(在“const”的前面)
+modules\mcp_server\tools\project_write_resource_scene.cpp(507): error C2672: “vformat”: 未找到匹配的重载函数
+.\core/variant/variant.h(916): note: 可能是“String vformat(const String &,const VarArgs...)”
+modules\mcp_server\tools\project_write_resource_scene.cpp(507): note: “String vformat(const String &,const VarArgs...)”: 应输入 2 个参数，却提供了 0 个
+modules\mcp_server\tools\project_write_resource_scene.cpp(508): error C2143: 语法错误: 缺少“;”(在“const”的前面)
+modules\mcp_server\tools\project_write_resource_scene.cpp(564): error C2267: “_require_properties”: 具有块范围的静态函数非法
+modules\mcp_server\tools\project_write_resource_scene.cpp(564): error C2601: “_require_properties”: 本地函数定义是非法的
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(579): error C2267: “_tool_edit_resource”: 具有块范围的静态函数非法
+modules\mcp_server\tools\project_write_resource_scene.cpp(579): error C2601: “_tool_edit_resource”: 本地函数定义是非法的
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(661): error C2267: “_fold_integral_numbers”: 具有块范围的静态函数非法
+modules\mcp_server\tools\project_write_resource_scene.cpp(661): error C2601: “_fold_integral_numbers”: 本地函数定义是非法的
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(695): error C2267: “_schema_from_json”: 具有块范围的静态函数非法
+modules\mcp_server\tools\project_write_resource_scene.cpp(695): error C2601: “_schema_from_json”: 本地函数定义是非法的
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(704): error C2601: “register_project_write_resource_scene_tools”: 本地函数定义是非法的
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): fatal error C1075: “{”: 未找到匹配令牌
+scons: *** [bin\obj\modules\mcp_server\tools\project_write_resource_scene.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\running_game_frame_observation.cpp(204): error C2065: “node_id”: 未声明的标识符
+modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2059: 语法错误:“if”
+modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2143: 语法错误: 缺少“;”(在“{”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2447: “{”: 缺少函数标题(是否是老式的形式表?)
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2057: 应输入常量表达式
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2040: “sample”:“int []”与“Dictionary”的间接寻址级别不同
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2065: “collected”: 未声明的标识符
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 语法错误:“for”
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: 语法错误: 缺少“)”(在“;”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: 语法错误: 缺少“;”(在“<”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 语法错误:“<”
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: 语法错误: 缺少“;”(在“++”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2086: “int i”: 重定义
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): note: 参见“i”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 语法错误:“++”
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 语法错误:“)”
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: 语法错误: 缺少“;”(在“{”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2447: “{”: 缺少函数标题(是否是老式的形式表?)
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2061: 语法错误: 标识符“NodePropertySamplesTask”
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2672: “_post_initialize”: 未找到匹配的重载函数
+.\core/os/memory.h(142): note: 可能是“memnew_result<T,void>::class_name _post_initialize(T *)”
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2143: 语法错误: 缺少“;”(在“)”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2059: 语法错误:“)”
+modules\mcp_server\tools\running_game_frame_observation.cpp(478): error C2059: 语法错误:“if”
+modules\mcp_server\tools\running_game_frame_observation.cpp(478): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(483): error C2059: 语法错误:“if”
+modules\mcp_server\tools\running_game_frame_observation.cpp(483): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(487): error C2059: 语法错误:“if”
+modules\mcp_server\tools\running_game_frame_observation.cpp(487): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(492): error C2059: 语法错误:“if”
+modules\mcp_server\tools\running_game_frame_observation.cpp(492): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2059: 语法错误:“return”
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2059: 语法错误:“)”
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2238: 意外的标记位于“;”之前
+modules\mcp_server\tools\running_game_frame_observation.cpp(529): error C2236: 意外的标记“class”。是否忘记了“;”?
+modules\mcp_server\tools\running_game_frame_observation.cpp(529): error C2011: “CaptureFramesTask”:“class”类型重定义
+modules\mcp_server\tools\running_game_frame_observation.cpp(470): note: 参见“CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(475): error C2059: 语法错误:“if”
+modules\mcp_server\tools\running_game_frame_observation.cpp(473): error C2614: “CaptureFramesTask”: 非法的成员初始化:“count”不是基或成员
+modules\mcp_server\tools\running_game_frame_observation.cpp(474): error C2614: “CaptureFramesTask”: 非法的成员初始化:“frame_interval”不是基或成员
+modules\mcp_server\tools\running_game_frame_observation.cpp(476): error C2534: “CaptureFramesTask”: 构造函数无法返回值
+modules\mcp_server\tools\running_game_frame_observation.cpp(470): note: 参见“CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(476): error C2562: “CaptureFramesTask::CaptureFramesTask”:“void”函数返回值
+modules\mcp_server\tools\running_game_frame_observation.cpp(472): note: 参见“CaptureFramesTask::CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(615): error C2027: 使用了未定义类型“CaptureFramesTask”
+modules\mcp_server\tools\running_game_frame_observation.cpp(470): note: 参见“CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(615): error C3861: “framebuffer_error”: 找不到标识符
+modules\mcp_server\tools\running_game_frame_observation.cpp(619): error C2027: 使用了未定义类型“CaptureFramesTask”
+modules\mcp_server\tools\running_game_frame_observation.cpp(470): note: 参见“CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(619): error C2672: “_post_initialize”: 未找到匹配的重载函数
+.\core/os/memory.h(142): note: 可能是“memnew_result<T,void>::class_name _post_initialize(T *)”
+scons: *** [bin\obj\modules\mcp_server\tools\running_game_frame_observation.windows.editor.x86_64.obj] Error 2
+H:\rebuild\godot\modules\mcp_server\tools\editor_node_setup.h(36): warning C4099: “Color”: 类型名称以前使用“struct”现在使用的是“class”
+.\core/math/color.h(38): note: 参见“Color”的声明
+modules\mcp_server\tools\running_game_node_write.cpp(119): error C2601: “vector_from_dictionary”: 本地函数定义是非法的
+modules\mcp_server\tools\running_game_node_write.cpp(118): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\running_game_node_write.cpp(646): error C2084: 函数“String MCPTools::MCPTools::_node_path_for_result(const Object *)”已有主体
+modules\mcp_server\tools\running_game_node_write.cpp(612): note: 参见“MCPTools::MCPTools::_node_path_for_result”的前一个定义
+modules\mcp_server\tools\running_game_node_write.cpp(977): error C2264: “MCPTools::MCPTools::_node_path_for_result”: 函数定义或声明中有错误；未调用函数
+modules\mcp_server\tools\running_game_node_write.cpp(1002): error C2084: 函数“Variant MCPTools::MCPTools::write_node_property(Object *,const String &,const Variant &,MCPToolError &)”已有主体
+modules\mcp_server\tools\running_game_node_write.cpp(616): note: 参见“MCPTools::MCPTools::write_node_property”的前一个定义
+modules\mcp_server\tools\running_game_node_write.cpp(1039): error C2264: “MCPTools::MCPTools::_node_path_for_result”: 函数定义或声明中有错误；未调用函数
+modules\mcp_server\tools\running_game_node_write.cpp(1101): error C2264: “MCPTools::MCPTools::_node_path_for_result”: 函数定义或声明中有错误；未调用函数
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: “base_object”: 未声明的标识符
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: “base_object”: 未声明的标识符
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: “p_segments”: 未声明的标识符
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: “p_segments”: 未声明的标识符
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C7732: expected an expression before ']'
+modules\mcp_server\tools\running_game_node_write.cpp(1137): error C2059: 语法错误:“return”
+modules\mcp_server\tools\running_game_node_write.cpp(1147): error C3861: “_prepare_sub_property_value”: 找不到标识符
+modules\mcp_server\tools\running_game_node_write.cpp(1160): error C3861: “_node_path_for_result”: 找不到标识符
+modules\mcp_server\tools\running_game_node_write.cpp(1160): error C2672: “vformat”: 未找到匹配的重载函数
+.\core/variant/variant.h(916): note: 可能是“String vformat(const String &,const VarArgs...)”
+modules\mcp_server\tools\running_game_node_write.cpp(1160): note: 未能使函数模板“String vformat(const String &,const VarArgs...)”专用化
+modules\mcp_server\tools\running_game_node_write.cpp(1160): note: 用下列模板参数:
+modules\mcp_server\tools\running_game_node_write.cpp(1160): note: “VarArgs={String, unknown-type}”
+scons: *** [bin\obj\modules\mcp_server\tools\running_game_node_write.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\running_game_test_execution.cpp(424): error C2059: 语法错误:“else”
+modules\mcp_server\tools\running_game_test_execution.cpp(424): error C2143: 语法错误: 缺少“;”(在“{”的前面)
+modules\mcp_server\tools\running_game_test_execution.cpp(414): error C2614: “TestScenarioTask”: 非法的成员初始化:“steps”不是基或成员
+modules\mcp_server\tools\running_game_test_execution.cpp(414): error C2614: “TestScenarioTask”: 非法的成员初始化:“start_ms”不是基或成员
+modules\mcp_server\tools\running_game_test_execution.cpp(414): error C2614: “TestScenarioTask”: 非法的成员初始化:“timeout_ms”不是基或成员
+modules\mcp_server\tools\running_game_test_execution.cpp(418): error C2065: “next”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(418): error C2065: “steps”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(419): error C2065: “entry”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(420): error C2065: “entry”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(420): error C2065: “found”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(421): error C2065: “wait_deadline_ms”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(424): error C2447: “{”: 缺少函数标题(是否是老式的形式表?)
+modules\mcp_server\tools\running_game_test_execution.cpp(589): error C2270: “build_result”: 非成员函数上不允许修饰符
+modules\mcp_server\tools\running_game_test_execution.cpp(591): error C2065: “steps”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(592): error C2065: “results”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(593): error C2065: “pass_count”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(594): error C2065: “fail_count”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(595): error C2065: “error_count”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(599): error C2065: “fail_count”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(599): error C2065: “error_count”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(599): error C2065: “pass_count”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(600): error C2065: “start_ms”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(601): error C2065: “results”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(615): error C2059: 语法错误:“}”
+modules\mcp_server\tools\running_game_test_execution.cpp(615): error C2143: 语法错误: 缺少“;”(在“}”的前面)
+modules\mcp_server\tools\running_game_test_execution.cpp(655): error C2065: “p_now_ms”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C2065: “actions”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C2065: “iterations”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C2065: “actions”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C7732: expected an expression before ']'
+modules\mcp_server\tools\running_game_test_execution.cpp(662): error C2065: “input”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(663): error C2065: “input”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(664): error C2065: “events_sent”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(665): error C2065: “total_iteration_ms”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(666): error C2065: “iterations”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(668): error C2065: “iterations”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(668): error C2065: “count”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(669): error C2065: “p_now_ms”: 未声明的标识符
+modules\mcp_server\tools\running_game_test_execution.cpp(757): error C2267: “_tool_run_stress_test”: 具有块范围的静态函数非法
+modules\mcp_server\tools\running_game_test_execution.cpp(757): error C2601: “_tool_run_stress_test”: 本地函数定义是非法的
+modules\mcp_server\tools\running_game_test_execution.cpp(668): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\running_game_test_execution.cpp(820): error C2601: “register_running_game_test_execution_tools”: 本地函数定义是非法的
+modules\mcp_server\tools\running_game_test_execution.cpp(668): note: 此行有一个“{”没有匹配项
+modules\mcp_server\tools\running_game_test_execution.cpp(668): fatal error C1075: “{”: 未找到匹配令牌
+scons: *** [bin\obj\modules\mcp_server\tools\running_game_test_execution.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\tool_helpers.cpp(254): error C2196: case 值“12”已使用
+modules\mcp_server\tools\tool_helpers.cpp(263): error C2196: case 值“13”已使用
+modules\mcp_server\tools\tool_helpers.cpp(415): error C2196: case 值“29”已使用
+modules\mcp_server\tools\tool_helpers.cpp(423): error C2196: case 值“30”已使用
+modules\mcp_server\tools\tool_helpers.cpp(431): error C2196: case 值“31”已使用
+modules\mcp_server\tools\tool_helpers.cpp(439): error C2196: case 值“32”已使用
+modules\mcp_server\tools\tool_helpers.cpp(447): error C2196: case 值“33”已使用
+modules\mcp_server\tools\tool_helpers.cpp(455): error C2196: case 值“34”已使用
+modules\mcp_server\tools\tool_helpers.cpp(463): error C2196: case 值“35”已使用
+modules\mcp_server\tools\tool_helpers.cpp(475): error C2196: case 值“36”已使用
+modules\mcp_server\tools\tool_helpers.cpp(488): error C2196: case 值“38”已使用
+modules\mcp_server\tools\tool_helpers.cpp(502): error C2196: case 值“37”已使用
+modules\mcp_server\tools\tool_helpers.cpp(2842): error C3646: “report”: 未知重写说明符
+modules\mcp_server\tools\tool_helpers.cpp(2842): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+modules\mcp_server\tools\tool_helpers.cpp(2863): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成员
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参见“MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2864): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成员
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参见“MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2865): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成员
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参见“MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2866): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成员
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参见“MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2868): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成员
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参见“MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2870): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成员
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参见“MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2872): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成员
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参见“MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2879): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+modules\mcp_server\tools\tool_helpers.cpp(2879): error C2146: 语法错误: 缺少“;”(在标识符“reload_gdscript_capturing”的前面)
+modules\mcp_server\tools\tool_helpers.cpp(2879): error C2143: 语法错误: 缺少“;”(在“{”的前面)
+modules\mcp_server\tools\tool_helpers.cpp(2879): error C2447: “{”: 缺少函数标题(是否是老式的形式表?)
+modules\mcp_server\tools\tool_helpers.cpp(2919): error C4430: 缺少类型说明符 - 假定为 int。注意: C++ 不支持默认 int
+modules\mcp_server\tools\tool_helpers.cpp(2919): error C2143: 语法错误: 缺少“,”(在“&”的前面)
+modules\mcp_server\tools\tool_helpers.cpp(2925): error C2065: “p_report”: 未声明的标识符
+modules\mcp_server\tools\tool_helpers.cpp(2927): error C2065: “p_report”: 未声明的标识符
+modules\mcp_server\tools\tool_helpers.cpp(2931): error C2065: “p_report”: 未声明的标识符
+modules\mcp_server\tools\tool_helpers.cpp(2933): error C2065: “p_report”: 未声明的标识符
+modules\mcp_server\tools\tool_helpers.cpp(2933): error C2065: “p_report”: 未声明的标识符
+modules\mcp_server\tools\tool_helpers.cpp(2942): error C2065: “p_report”: 未声明的标识符
+modules\mcp_server\tools\tool_helpers.cpp(2942): error C2065: “p_report”: 未声明的标识符
+scons: *** [bin\obj\modules\mcp_server\tools\tool_helpers.windows.editor.x86_64.obj] Error 2
