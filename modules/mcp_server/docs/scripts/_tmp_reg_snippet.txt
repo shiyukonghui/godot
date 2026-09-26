@@ -1,0 +1,69 @@
+	{
+		ToolBuilder builder("editor_add_node", String::utf8(R"desc(向场景添加新节点)desc"));
+		builder.channel("editor").verb("add").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"name":{"type":"string"},"parent_path":{"default":".","type":"string"},"properties":{"default":{},"type":"object"},"type":{"type":"string"}},"required":["type"],"type":"object"})schema"));
+		builder.handler(_tool_add_node).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_delete_node", String::utf8(R"desc(删除节点)desc"));
+		builder.channel("editor").verb("delete").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"type":"string"}},"required":["path"],"type":"object"})schema"));
+		builder.handler(_tool_delete_node).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_duplicate_node", String::utf8(R"desc(复制指定节点及其子节点)desc"));
+		builder.channel("editor").verb("duplicate").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"new_name":{"description":"新节点名称 (可选)","type":"string"},"path":{"description":"源节点路径","type":"string"}},"required":["path"],"type":"object"})schema"));
+		builder.handler(_tool_duplicate_node).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_rename_node", String::utf8(R"desc(重命名节点)desc"));
+		builder.channel("editor").verb("rename").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"name":{"type":"string"},"path":{"type":"string"}},"required":["path","name"],"type":"object"})schema"));
+		builder.handler(_tool_rename_node).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_reparent_node", String::utf8(R"desc(将节点移动到新的父节点下)desc"));
+		builder.channel("editor").verb("reparent").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"new_name":{"description":"移动后的新名称 (可选)","type":"string"},"new_parent":{"description":"目标父节点路径","type":"string"},"path":{"description":"要移动的节点路径","type":"string"}},"required":["path","new_parent"],"type":"object"})schema"));
+		builder.handler(_tool_reparent_node).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_set_node_property", String::utf8(R"desc(修改属性)desc"));
+		builder.channel("editor").verb("set").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"type":"string"},"property":{"type":"string"},"value":{}},"required":["path","property","value"],"type":"object"})schema"));
+		builder.handler(_tool_set_node_property).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_set_node_groups", String::utf8(R"desc(设置节点的分组)desc"));
+		builder.channel("editor").verb("set").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"groups":{"description":"目标分组列表","items":{"type":"string"},"type":"array"},"node_path":{"description":"节点路径","type":"string"}},"required":["node_path","groups"],"type":"object"})schema"));
+		builder.handler(_tool_set_node_groups).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_connect_signal", String::utf8(R"desc(连接节点的信号到目标方法)desc"));
+		builder.channel("editor").verb("connect").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"method":{"description":"目标方法名","type":"string"},"signal":{"description":"信号名称","type":"string"},"source_path":{"description":"源节点路径","type":"string"},"target_path":{"description":"目标节点路径","type":"string"}},"required":["source_path","signal","method"],"type":"object"})schema"));
+		builder.handler(_tool_connect_signal).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_disconnect_signal", String::utf8(R"desc(断开节点的信号连接)desc"));
+		builder.channel("editor").verb("disconnect").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"method":{"description":"目标方法名","type":"string"},"signal":{"description":"信号名称","type":"string"},"source_path":{"description":"源节点路径","type":"string"},"target_path":{"description":"目标节点路径","type":"string"}},"required":["source_path","signal","method"],"type":"object"})schema"));
+		builder.handler(_tool_disconnect_signal).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_set_auto_dismiss_dialogs", String::utf8(R"desc(设置编辑器自动关闭对话框行为)desc"));
+		builder.channel("editor").verb("set").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"enabled":{"description":"是否启用自动关闭","type":"boolean"}},"required":["enabled"],"type":"object"})schema"));
+		builder.handler(_tool_set_auto_dismiss_dialogs).register_into(r_registry);
+	}

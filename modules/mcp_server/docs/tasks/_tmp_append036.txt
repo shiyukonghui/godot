@@ -1,0 +1,837 @@
+// ---------------------------------------------------------------------------
+// TASK-036 (B5 batch 4): the closing batch of B5 - the two navigation writes
+// (one of them the third `fix_implementation_first` tool), the single game-scope
+// movement write, the two theme groups, the two export reads, the Android preset
+// read and the two os-channel Android tools.
+//
+// `Main::test_setup()` never starts an editor and never runs a game, so this
+// process has no edited scene root, no `SceneTree` and no Android SDK. What *is*
+// decidable here:
+//
+//   * the whole process-scope contract (which tools a game process carries, which
+//     ones only an editor does, and that a deferred tool refuses the one-frame
+//     `call_tool` path);
+//   * the whole argument contract, which runs before any editor/game API is
+//     touched;
+//   * the **theme writers against a real `Theme`**: `Theme` is a plain
+//     `Resource`, so the whole write -> read-back -> save -> reload loop of
+//     `theme_shared`/`project_theme_write` runs for real, including the GDR-22
+//     section 20.6 `ignored` case (a non-positive font size is stored but the
+//     engine's own reader hides it) and the `-32602` of an out-of-slot colour
+//     component;
+//   * the deterministic halves of the Android/export code: the
+//     `export_presets.cfg` parser (on a file written under `user://`), the
+//     `adb devices -l` parser and the capability report of a process that has no
+//     `EditorSettings`;
+//   * the navigation/movement helpers that decide *before* anything navigation
+//     owned is constructed. `NavigationRegion2D/3D`, `NavigationMesh` and the
+//     agents **cannot** be built in this process: constructing them passes under
+//     `--test-case="[MCPServer]*"` but SIGSEGVs under a full `--test` run (the
+//     engine-global-state fault REPORT-016 measured for `GridMap`), which is why
+//     every navigation *success* path is proven on the wire in REPORT-036
+//     section 6 and this block pins the refusals and the mask/geometry helpers.
+// ---------------------------------------------------------------------------
+namespace Task036 {
+
+namespace {
+
+const char *const EDITOR_NAVIGATION_WRITE_TOOLS[2] = {
+	"editor_bake_navigation_mesh",
+	"editor_set_navigation_layers",
+};
+const char *const RUNNING_GAME_NAVIGATION_TOOLS[1] = {
+	"running_game_move_player_to_target",
+};
+// The eleven `scope = both` tools of this batch, in the manifest's group order.
+const char *const BOTH_SCOPE_TOOLS[11] = {
+	"project_create_theme",
+	"project_set_theme_color",
+	"project_set_theme_constant",
+	"project_set_theme_font_size",
+	"project_set_theme_stylebox",
+	"project_get_theme_info",
+	"project_get_export_info",
+	"project_list_export_presets",
+	"project_get_android_preset_info",
+	"os_list_android_devices",
+	"os_deploy_to_android_device",
+};
+// The three tools of this batch that answer through the deferred channel.
+const char *const DEFERRED_TOOLS[3] = {
+	"editor_bake_navigation_mesh",
+	"os_deploy_to_android_device",
+	"running_game_move_player_to_target",
+};
+
+} // namespace
+
+TEST_CASE("[MCPServer] TASK-036 the closing B5 groups carry fourteen tools with the right scope") {
+	MCPToolRegistry game_registry;
+	TestMCPServer::build_all_tools_registry(game_registry);
+	CHECK(game_registry.get_tool_count() == 69);
+	CHECK(game_registry.get_visible_tool_count(false) == 69);
+	CHECK(game_registry.get_visible_tool_count(true) == 46);
+
+	MCPToolRegistry editor_registry;
+	TestMCPServer::build_editor_process_registry(editor_registry);
+	// B5 is closed: the editor-process table carries the whole 171-tool contract.
+	CHECK(editor_registry.get_tool_count() == 171);
+	CHECK(editor_registry.get_visible_tool_count(true) == 148);
+	CHECK(editor_registry.get_visible_tool_count(false) == 46);
+
+	for (int i = 0; i < 2; i++) {
+		const String name = EDITOR_NAVIGATION_WRITE_TOOLS[i];
+		CHECK_FALSE(game_registry.has_tool(name));
+		CHECK_FALSE(game_registry.is_tool_visible(name, true));
+		CHECK(editor_registry.has_tool(name));
+		CHECK(editor_registry.is_tool_visible(name, true));
+		CHECK_FALSE(editor_registry.is_tool_visible(name, false));
+	}
+	{
+		const String name = RUNNING_GAME_NAVIGATION_TOOLS[0];
+		CHECK(game_registry.has_tool(name));
+		CHECK(game_registry.is_tool_visible(name, false));
+		CHECK_FALSE(game_registry.is_tool_visible(name, true));
+		CHECK(editor_registry.has_tool(name));
+		CHECK_FALSE(editor_registry.is_tool_visible(name, true));
+		CHECK(editor_registry.is_tool_visible(name, false));
+	}
+	for (int i = 0; i < 11; i++) {
+		const String name = BOTH_SCOPE_TOOLS[i];
+		CHECK(game_registry.has_tool(name));
+		CHECK(game_registry.is_tool_visible(name, false));
+		CHECK(game_registry.is_tool_visible(name, true));
+		CHECK(editor_registry.has_tool(name));
+		CHECK(editor_registry.is_tool_visible(name, true));
+		CHECK(editor_registry.is_tool_visible(name, false));
+	}
+
+	// `editor_get_navigation_info` belongs to the manifest's
+	// `editor_navigation_read` group (ported by TASK-034); it is re-asserted here
+	// only so the batch's wire-level claim "the editor tools are absent from the
+	// game endpoint" covers the whole navigation family.
+	CHECK_FALSE(game_registry.has_tool("editor_get_navigation_info"));
+	CHECK(editor_registry.is_tool_visible("editor_get_navigation_info", true));
+
+	const Array editor_list = editor_registry.build_tools_list(true);
+	CHECK(editor_list.size() == 148);
+	for (int j = 0; j < 14; j++) {
+		const String wanted = j < 2
+				? String(EDITOR_NAVIGATION_WRITE_TOOLS[j])
+				: (j < 3 ? String(RUNNING_GAME_NAVIGATION_TOOLS[0]) : String(BOTH_SCOPE_TOOLS[j - 3]));
+		int occurrences = 0;
+		for (int i = 0; i < editor_list.size(); i++) {
+			const Variant entry = editor_list[i];
+			if (entry.get_type() != Variant::DICTIONARY) {
+				continue;
+			}
+			if (String(((Dictionary)entry)["name"]) == wanted) {
+				occurrences++;
+			}
+		}
+		CHECK(occurrences == 1);
+	}
+
+	// The deferred declarations are what makes the async tools async (GDR-20):
+	// the declaration is a fact of the table, not a convention.
+	for (int i = 0; i < 3; i++) {
+		CHECK(editor_registry.is_deferred_tool(DEFERRED_TOOLS[i]));
+		CHECK_FALSE(editor_registry.is_deferred_tool("editor_set_navigation_layers"));
+	}
+
+	// An editor endpoint does not serve the game-scope tool (`-32601`, GDR-21);
+	// the one-frame `call_tool` path refuses the deferred tools (`-32603`).
+	MCPJsonRpc::Response response = MCPJsonRpc::handle(
+			"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"running_game_move_player_to_target\","
+			"\"arguments\":{\"target\":{\"x\":1,\"y\":2}}}}",
+			editor_registry, true);
+	CHECK(response.body.contains("-32601"));
+}
+
+TEST_CASE("[MCPServer] TASK-036 the batch's argument contract runs before any editor or game API") {
+	MCPToolRegistry registry;
+	TestMCPServer::build_editor_process_registry(registry);
+
+	const auto expect_error = [&registry](const String &p_tool, const Dictionary &p_args, int p_code, const String &p_fragment) {
+		MCPToolError error;
+		const Variant result = registry.call_tool(p_tool, p_args, error);
+		CHECK(result.get_type() == Variant::NIL);
+		CHECK(error.code == p_code);
+		CHECK(error.message.contains(p_fragment));
+		if (error.code == -32000) {
+			// Every -32000 of this module carries a suggestion (GDR-14).
+			const Variant data = error.data;
+			CHECK(data.get_type() == Variant::DICTIONARY);
+			if (data.get_type() == Variant::DICTIONARY) {
+				CHECK(String(((Dictionary)data)["suggestion"]).length() > 0);
+			}
+		}
+	};
+
+	// (1) editor_set_navigation_layers: two required members and a 32-bit mask.
+	{
+		Dictionary args;
+		expect_error("editor_set_navigation_layers", args, -32602, "Missing required parameter: node_path");
+		args["node_path"] = 7;
+		expect_error("editor_set_navigation_layers", args, -32602, "must be a string");
+		args["node_path"] = ".";
+		expect_error("editor_set_navigation_layers", args, -32602, "Missing required parameter: layers");
+		args["layers"] = "x";
+		expect_error("editor_set_navigation_layers", args, -32602, "must be an integer");
+		// The width check: a negative mask and one past 2^32-1 are refused before
+		// anything is written (there is no `ValueSlot` for a `uint32_t`).
+		args["layers"] = -1;
+		expect_error("editor_set_navigation_layers", args, -32602, "0..4294967295");
+		args["layers"] = 4294967296LL;
+		expect_error("editor_set_navigation_layers", args, -32602, "0..4294967295");
+		// With a legal mask the editor guard answers: this doctest is not an
+		// editor, and the refusal names the tool's own scope.
+		args["layers"] = 4294967295LL;
+		expect_error("editor_set_navigation_layers", args, -32000, "editor navigation writes outside a running editor");
+	}
+
+	// (2) project_create_theme: the path guard.
+	{
+		Dictionary args;
+		expect_error("project_create_theme", args, -32602, "Missing required parameter: path");
+		args["path"] = 7;
+		expect_error("project_create_theme", args, -32602, "must be a string");
+		args["path"] = "res://";
+		expect_error("project_create_theme", args, -32602, "must name a file");
+		args["path"] = "res://task036-probe.txt";
+		expect_error("project_create_theme", args, -32602, ".tres");
+	}
+
+	// (3) the four theme writers: required members, a missing theme and the
+	// style box's colour/width contract.
+	{
+		Dictionary args;
+		expect_error("project_set_theme_color", args, -32602, "Missing required parameter: theme_path");
+		args["theme_path"] = "res://task036-no-such-theme.tres";
+		expect_error("project_set_theme_color", args, -32602, "Missing required parameter: color_name");
+		args["color_name"] = "font_color";
+		expect_error("project_set_theme_color", args, -32602, "Missing required parameter: color");
+		args["color"] = Dictionary();
+		expect_error("project_set_theme_color", args, -32001, "task036-no-such-theme.tres");
+
+		Dictionary constant;
+		expect_error("project_set_theme_constant", constant, -32602, "Missing required parameter: theme_path");
+		constant["theme_path"] = "res://task036-no-such-theme.tres";
+		constant["constant_name"] = "separation";
+		expect_error("project_set_theme_constant", constant, -32602, "Missing required parameter: value");
+		constant["value"] = 4;
+		expect_error("project_set_theme_constant", constant, -32001, "task036-no-such-theme.tres");
+
+		Dictionary font_size;
+		expect_error("project_set_theme_font_size", font_size, -32602, "Missing required parameter: theme_path");
+		font_size["theme_path"] = "res://task036-no-such-theme.tres";
+		font_size["font_size_name"] = "font_size";
+		expect_error("project_set_theme_font_size", font_size, -32602, "Missing required parameter: size");
+		font_size["size"] = 16;
+		expect_error("project_set_theme_font_size", font_size, -32001, "task036-no-such-theme.tres");
+
+		Dictionary stylebox;
+		expect_error("project_set_theme_stylebox", stylebox, -32602, "Missing required parameter: theme_path");
+		stylebox["theme_path"] = "res://task036-no-such-theme.tres";
+		stylebox["stylebox_name"] = "panel";
+		stylebox["bg_color"] = "";
+		expect_error("project_set_theme_stylebox", stylebox, -32602, "'bg_color' must not be empty");
+		stylebox["bg_color"] = "banana";
+		expect_error("project_set_theme_stylebox", stylebox, -32602, "'bg_color'");
+		stylebox.erase("bg_color");
+		stylebox["border_width"] = 1.5;
+		expect_error("project_set_theme_stylebox", stylebox, -32602, "must be an integer");
+		stylebox.erase("border_width");
+		expect_error("project_set_theme_stylebox", stylebox, -32001, "task036-no-such-theme.tres");
+	}
+
+	// (4) project_get_theme_info.
+	{
+		Dictionary args;
+		expect_error("project_get_theme_info", args, -32602, "Missing required parameter: theme_path");
+		args["theme_path"] = "res://task036-no-such-theme.tres";
+		expect_error("project_get_theme_info", args, -32001, "task036-no-such-theme.tres");
+	}
+
+	// (5) the export reads have no arguments at all, so an undeclared member is
+	// their -32602 witness (TASK-032 D4).
+	{
+		Dictionary args;
+		args["preset_name"] = "Android";
+		expect_error("project_get_export_info", args, -32602, "preset_name");
+		expect_error("project_list_export_presets", args, -32602, "preset_name");
+	}
+
+	// (6) project_get_android_preset_info: no preset file in this project is the
+	// state refusal, and it names where the presets would live.
+	{
+		Dictionary args;
+		expect_error("project_get_android_preset_info", args, -32000, "export_presets.cfg");
+		args["preset_name"] = 7;
+		expect_error("project_get_android_preset_info", args, -32602, "must be a string");
+	}
+
+	// (7) os_list_android_devices declares no arguments either.
+	{
+		Dictionary args;
+		args["device_id"] = "x";
+		expect_error("os_list_android_devices", args, -32602, "device_id");
+	}
+
+	// (8) the three deferred tools refuse the one-frame path instead of ticking
+	// once (GDR-20).
+	for (int i = 0; i < 3; i++) {
+		Dictionary args;
+		expect_error(DEFERRED_TOOLS[i], args, -32603, "deferred channel");
+	}
+}
+
+TEST_CASE("[MCPServer] TASK-036 the theme writers store what they were asked and read it back") {
+	const String save_path = "user://task036-theme.tres";
+	Ref<Theme> theme;
+	theme.instantiate();
+	MCPToolError error;
+
+	// A colour from the contract's object spelling.
+	Dictionary color_object;
+	color_object["r"] = 0.25;
+	color_object["g"] = 0.5;
+	color_object["b"] = 0.75;
+	color_object["a"] = 1.0;
+	const Dictionary color_result = MCPTools::theme_set_color(theme, save_path, "Button", "font_color", color_object, error);
+	CHECK_FALSE(error.is_error());
+	CHECK(String(color_result["theme_path"]) == save_path);
+	CHECK(String(color_result["node_type"]) == "Button");
+	CHECK(String(color_result["color_name"]) == "font_color");
+	CHECK((bool)color_result["saved"]);
+	CHECK(((Array)color_result["properties_set"]).has("font_color"));
+	CHECK(((Dictionary)color_result["ignored"]).is_empty());
+	CHECK(theme->has_color("font_color", "Button"));
+	CHECK(theme->get_color("font_color", "Button").is_equal_approx(Color(0.25, 0.5, 0.75, 1.0)));
+	const Dictionary color_changed = color_result["changed"];
+	CHECK(color_changed.has("font_color"));
+	CHECK(((Dictionary)color_changed["font_color"])["new"].get_type() == Variant::DICTIONARY);
+
+	// The engine's own name rule is what validates the item (public static
+	// predicates, used directly).
+	CHECK(MCPTools::theme_set_color(theme, save_path, "Button", "bad name", color_object, error).is_empty());
+	CHECK(error.code == -32602);
+	CHECK(error.message.contains("is_valid_item_name"));
+
+	// A component that cannot fill the `float` slot is refused by the component
+	// gate, not stored as `inf` (GDR-24).
+	Dictionary huge;
+	huge["r"] = 1e300;
+	huge["g"] = 0.0;
+	huge["b"] = 0.0;
+	CHECK(MCPTools::theme_set_color(theme, save_path, "Button", "huge", huge, error).is_empty());
+	CHECK(error.code == -32602);
+	CHECK_FALSE(theme->has_color("huge", "Button"));
+
+	// A colour string is accepted through the module's own `STRING -> COLOR`
+	// conversion, and the engine's normalisation is reported as what it stored.
+	error = MCPToolError();
+	const Dictionary string_color = MCPTools::theme_set_color(theme, save_path, "Button", "named", "#ff8800", error);
+	CHECK_FALSE(error.is_error());
+	CHECK(((Array)string_color["properties_set"]).has("named"));
+	CHECK(theme->get_color("named", "Button").is_equal_approx(Color(1.0, 136.0 / 255.0, 0.0, 1.0)));
+
+	// A constant: gated against the `int` member and read back.
+	const Dictionary constant_result = MCPTools::theme_set_constant(theme, save_path, "Button", "separation", 4, error);
+	CHECK_FALSE(error.is_error());
+	CHECK(((Array)constant_result["properties_set"]).has("separation"));
+	CHECK(theme->get_constant("separation", "Button") == 4);
+	error = MCPToolError();
+	CHECK(MCPTools::theme_set_constant(theme, save_path, "Button", "too_big", 2147483648LL, error).is_empty());
+	CHECK(error.code == -32602);
+	CHECK_FALSE(theme->has_constant("too_big", "Button"));
+
+	// A font size the engine stores but its own reader hides (`<= 0`): the GDR-22
+	// section 20.6 `ignored` channel, never "set".
+	const Dictionary size_result = MCPTools::theme_set_font_size(theme, save_path, "Button", "font_size", 16, error);
+	CHECK_FALSE(error.is_error());
+	CHECK(((Array)size_result["properties_set"]).has("font_size"));
+	CHECK(theme->get_font_size("font_size", "Button") == 16);
+	const Dictionary zero_result = MCPTools::theme_set_font_size(theme, save_path, "Button", "zero_size", 0, error);
+	CHECK_FALSE(error.is_error());
+	CHECK(((Array)zero_result["properties_set"]).is_empty());
+	CHECK_FALSE((bool)zero_result["font_size_readable"]);
+	const Dictionary taken = zero_result["ignored"];
+	CHECK(taken.has("zero_size"));
+	if (taken.has("zero_size")) {
+		const Dictionary entry = taken["zero_size"];
+		CHECK(String(entry["reason"]).contains("positive"));
+		CHECK((int64_t)entry["requested"] == 0);
+	}
+	CHECK(theme->has_font_size_nocheck("zero_size", "Button"));
+
+	// A style box: the four optional members are written into a real
+	// `StyleBoxFlat` and read back from the stored resource.
+	Dictionary box_args;
+	box_args["bg_color"] = "#ff8800";
+	box_args["border_width"] = 3;
+	box_args["corner_radius"] = 4;
+	const Dictionary box_result = MCPTools::theme_set_stylebox(theme, save_path, "Panel", "panel", box_args, error);
+	CHECK_FALSE(error.is_error());
+	CHECK(((Array)box_result["properties_set"]).has("panel"));
+	CHECK(((Dictionary)box_result["ignored"]).is_empty());
+	CHECK(String(box_result["stylebox_type"]) == "StyleBoxFlat");
+	const Ref<StyleBox> stored_box = theme->get_stylebox("panel", "Panel");
+	StyleBoxFlat *flat = Object::cast_to<StyleBoxFlat>(stored_box.ptr());
+	CHECK(flat != nullptr);
+	if (flat != nullptr) {
+		CHECK(flat->get_bg_color().is_equal_approx(Color(1.0, 136.0 / 255.0, 0.0, 1.0)));
+		CHECK(flat->get_border_width_min() == 3);
+		CHECK(flat->get_corner_radius(CORNER_TOP_LEFT) == 4);
+		CHECK(flat->get_corner_radius(CORNER_BOTTOM_RIGHT) == 4);
+	}
+
+	// The whole thing really reached the disk: a reload answers a Theme again
+	// with the same items.
+	const Ref<Resource> reloaded = ResourceLoader::load(save_path);
+	CHECK(reloaded.is_valid());
+	Theme *reloaded_theme = Object::cast_to<Theme>(reloaded.ptr());
+	CHECK(reloaded_theme != nullptr);
+	if (reloaded_theme != nullptr) {
+		CHECK(reloaded_theme->has_color("font_color", "Button"));
+		CHECK(reloaded_theme->get_color("font_color", "Button").is_equal_approx(Color(0.25, 0.5, 0.75, 1.0)));
+		CHECK(reloaded_theme->get_constant("separation", "Button") == 4);
+		CHECK(reloaded_theme->get_font_size("font_size", "Button") == 16);
+		CHECK(reloaded_theme->has_stylebox("panel", "Panel"));
+	}
+
+	// The read tool's builder answers the same items with feedable names.
+	const Dictionary info = MCPTools::theme_info_of(theme, save_path);
+	CHECK(String(info["path"]) == save_path);
+	CHECK((int)info["type_count"] >= 2);
+	const Dictionary colors = info["colors"];
+	CHECK(colors.has("Button"));
+	CHECK(((Dictionary)colors["Button"]).has("font_color"));
+	CHECK(((Dictionary)colors["Button"]).has("named"));
+	CHECK(((Dictionary)info["constants"]).has("Button"));
+	CHECK(((Dictionary)info["font_sizes"]).has("Button"));
+	// The stored-but-unreadable font size is named instead of silently missing.
+	CHECK(((Array)info["font_sizes_stored_not_readable"]).has("zero_size"));
+	CHECK(((Dictionary)info["styleboxes"]).has("Panel"));
+
+	// The path guard itself (no file is written).
+	String normalized;
+	MCPToolError path_error;
+	CHECK_FALSE(MCPTools::require_theme_file_path("res://task036-probe.txt", normalized, path_error));
+	CHECK(path_error.code == -32602);
+	CHECK_FALSE(MCPTools::require_theme_file_path("res://a/../b.tres", normalized, path_error));
+	CHECK(MCPTools::require_theme_file_path("res://ui/./theme.tres", normalized, path_error));
+	CHECK(normalized == "res://ui/theme.tres");
+	CHECK(MCPTools::require_theme_file_path("res://ui/panel.theme", normalized, path_error));
+	CHECK(MCPTools::require_theme_file_path("res://ui/panel.res", normalized, path_error));
+}
+
+TEST_CASE("[MCPServer] TASK-036 the export readers answer the real file and invent nothing") {
+	MCPToolRegistry registry;
+	TestMCPServer::build_all_tools_registry(registry);
+	MCPToolError error;
+
+	// This repository has no `res://export_presets.cfg`, so the honest answer is
+	// "the project has no presets" - not an error and not an invented preset.
+	const Variant info = registry.call_tool("project_get_export_info", Dictionary(), error);
+	CHECK_FALSE(error.is_error());
+	const Dictionary info_record = info;
+	CHECK_FALSE((bool)info_record["presets_file_present"]);
+	CHECK((int)info_record["preset_count"] == 0);
+	CHECK(String(info_record["presets_file"]) == "res://export_presets.cfg");
+	CHECK(String(info_record["message"]).length() > 0);
+	const Dictionary capabilities = info_record["capabilities"];
+	CHECK_FALSE((bool)capabilities["editor_process"]);
+	CHECK_FALSE((bool)capabilities["editor_export"]);
+	CHECK((int)info_record["unavailable_count"] >= 1);
+
+	const Variant listing = registry.call_tool("project_list_export_presets", Dictionary(), error);
+	CHECK_FALSE(error.is_error());
+	const Dictionary listing_record = listing;
+	CHECK((int)listing_record["count"] == 0);
+	CHECK(((Array)listing_record["presets"]).is_empty());
+	CHECK_FALSE((bool)listing_record["presets_file_present"]);
+	CHECK(String(listing_record["message"]).length() > 0);
+
+	// The same file, written under `user://`, is parsed by the engine's own
+	// `ConfigFile` (the source a game process has).
+	const String config_path = "user://task036-export_presets.cfg";
+	const String config_text =
+			"[preset.0]\n\nname=\"Android\"\nplatform=\"Android\"\nrunnable=true\nexport_path=\"build/task036.apk\"\n"
+			"custom_features=\"\"\n\n[preset.0.options]\n\npackage/unique_name=\"com.example.task036\"\n\n"
+			"[preset.1]\n\nname=\"Windows Desktop\"\nplatform=\"Windows Desktop\"\nrunnable=false\nexport_path=\"build/task036.exe\"\n";
+	CHECK(MCPTools::publish_text_atomically(config_path, config_text) == OK);
+
+	String source;
+	bool present = false;
+	String reason;
+	const Array presets = MCPTools::export_presets_read(config_path, source, present, reason);
+	CHECK(present);
+	CHECK(source == "export_presets.cfg");
+	CHECK(presets.size() == 2);
+	if (presets.size() == 2) {
+		const Dictionary android = presets[0];
+		CHECK(String(android["name"]) == "Android");
+		CHECK(String(android["platform"]) == "Android");
+		CHECK((bool)android["runnable"]);
+		CHECK(String(android["export_path"]) == "build/task036.apk");
+		CHECK(String(android["android_package_name"]) == "com.example.task036");
+		CHECK((int64_t)android["index"] == 0);
+		const Dictionary desktop = presets[1];
+		CHECK(String(desktop["platform"]) == "Windows Desktop");
+	}
+
+	bool found = false;
+	bool found_present = false;
+	String found_source;
+	String found_reason;
+	const Dictionary android_preset = MCPTools::android_preset_find(config_path, String(), -1, found, found_present,
+			found_source, found_reason);
+	CHECK(found);
+	CHECK(String(android_preset["name"]) == "Android");
+	MCPTools::android_preset_find(config_path, "Windows Desktop", -1, found, found_present, found_source, found_reason);
+	CHECK_FALSE(found);
+	MCPTools::android_preset_find(config_path, "Android", 1, found, found_present, found_source, found_reason);
+	CHECK_FALSE(found);
+	MCPTools::android_preset_find(config_path, String(), 0, found, found_present, found_source, found_reason);
+	CHECK(found);
+}
+
+TEST_CASE("[MCPServer] TASK-036 the Android capability report is honest in a process with no editor") {
+	const Dictionary environment = MCPTools::android_environment();
+	CHECK_FALSE((bool)environment["editor_process"]);
+	CHECK_FALSE((bool)environment["editor_settings_available"]);
+	CHECK_FALSE((bool)environment["android_sdk_ready"]);
+	CHECK_FALSE((bool)environment["java_sdk_ready"]);
+	CHECK((int)environment["missing_count"] >= 1);
+	const Array missing = environment["missing"];
+	bool names_settings = false;
+	for (int i = 0; i < missing.size(); i++) {
+		const Dictionary entry = missing[i];
+		CHECK(entry.has("capability"));
+		CHECK(String(entry["detail"]).length() > 0);
+		if (String(entry["capability"]) == "editor_settings") {
+			names_settings = true;
+		}
+	}
+	CHECK(names_settings);
+	// No path is fabricated: the SDK path really is empty here.
+	CHECK_FALSE((bool)environment["android_sdk_path_present"]);
+	CHECK(String(environment["adb_path"]).length() > 0);
+
+	// The device parser: the header, the daemon banner and blank lines are
+	// skipped, the first two fields are serial/state and every later `key:value`
+	// pair becomes a member - including a device that needs authorising, which is
+	// a real answer and not "no device".
+	const String sample =
+			"List of devices attached\n\n"
+			"emulator-5554\tdevice product:sdk_gphone64_x86_64 model:sdk_gphone64_x86_64 device:emu64xa transport_id:1\n"
+			"0123456789ABCDEF\tunauthorized usb:1-2\n"
+			"* daemon not running; starting now at tcp:5037\n";
+	const Array devices = MCPTools::parse_adb_devices(sample);
+	CHECK(devices.size() == 2);
+	if (devices.size() == 2) {
+		const Dictionary first = devices[0];
+		CHECK(String(first["serial"]) == "emulator-5554");
+		CHECK(String(first["state"]) == "device");
+		CHECK(String(first["model"]) == "sdk_gphone64_x86_64");
+		CHECK(String(first["transport_id"]) == "1");
+		const Dictionary second = devices[1];
+		CHECK(String(second["serial"]) == "0123456789ABCDEF");
+		CHECK(String(second["state"]) == "unauthorized");
+		CHECK(String(second["usb"]) == "1-2");
+	}
+
+	// The tool itself: with adb present it answers a real list (a zero count is
+	// real evidence of no device); without it, an honest -32000 that names what
+	// to install. Both are asserted as written, never collapsed into one.
+	MCPToolRegistry registry;
+	TestMCPServer::build_all_tools_registry(registry);
+	MCPToolError error;
+	const Variant result = registry.call_tool("os_list_android_devices", Dictionary(), error);
+	if (error.is_error()) {
+		CHECK(error.code == -32000);
+		const Variant data = error.data;
+		CHECK(data.get_type() == Variant::DICTIONARY);
+		if (data.get_type() == Variant::DICTIONARY) {
+			CHECK(String(((Dictionary)data)["suggestion"]).length() > 0);
+		}
+	} else {
+		const Dictionary answer = result;
+		CHECK(answer.has("devices"));
+		CHECK((int64_t)answer["count"] == ((Array)answer["devices"]).size());
+		CHECK(String(answer["source"]) == "adb devices -l");
+		CHECK(String(answer["adb_path"]).length() > 0);
+	}
+}
+
+TEST_CASE("[MCPServer] TASK-036 the navigation helpers refuse before anything navigation-owned exists") {
+	Node *plain = memnew(Node);
+	plain->set_name("Plain");
+	Node3D *three = memnew(Node3D);
+	three->set_name("Three");
+	Node2D *two = memnew(Node2D);
+	two->set_name("Two");
+
+	// The region classifier runs on the class name, before any navigation
+	// resource is touched.
+	MCPToolError error;
+	String kind;
+	CHECK_FALSE(MCPTools::navigation_region_kind(plain, ".", kind, error));
+	CHECK(error.code == -32602);
+	CHECK(error.message.contains("NavigationRegion"));
+	CHECK_FALSE(MCPTools::navigation_region_kind(three, "Three", kind, error));
+	CHECK(error.code == -32602);
+	CHECK(MCPTools::navigation_region_resource_property("3d") == String("navigation_mesh"));
+	CHECK(MCPTools::navigation_region_resource_property("2d") == String("navigation_polygon"));
+
+	// The layer mask is 32 bits wide and has no `ValueSlot` (GDR-22 section
+	// 20.1); the width is checked explicitly.
+	CHECK(MCPTools::navigation_layer_count() == 32);
+	CHECK(MCPTools::navigation_layer_mask_fits(0, error));
+	CHECK(MCPTools::navigation_layer_mask_fits(4294967295LL, error));
+	CHECK_FALSE(MCPTools::navigation_layer_mask_fits(-1, error));
+	CHECK(error.code == -32602);
+	CHECK(error.message.contains("0..4294967295"));
+	CHECK_FALSE(MCPTools::navigation_layer_mask_fits(4294967296LL, error));
+	CHECK(error.code == -32602);
+
+	const Array bits = MCPTools::navigation_layer_bits(5);
+	CHECK(bits.size() == 2);
+	if (bits.size() == 2) {
+		CHECK((int)bits[0] == 1);
+		CHECK((int)bits[1] == 3);
+	}
+	CHECK(MCPTools::navigation_layer_bits(0).is_empty());
+	CHECK(MCPTools::navigation_layer_names_of_mask(three, 5).size() == 2);
+	CHECK(MCPTools::navigation_layer_setting_prefix(three) == "layer_names/3d_navigation");
+	CHECK(MCPTools::navigation_layer_setting_prefix(two) == "layer_names/2d_navigation");
+	CHECK(MCPTools::navigation_layer_setting_prefix(plain) == "layer_names/2d_navigation");
+
+	// The write refuses a node without the member and a node that is not there,
+	// and never writes.
+	CHECK(MCPTools::set_navigation_layers_on(plain, ".", 5, error).is_empty());
+	CHECK(error.code == -32602);
+	CHECK(error.message.contains("navigation_layers"));
+	CHECK(MCPTools::set_navigation_layers_on(plain, "Nope", 5, error).is_empty());
+	CHECK(error.code == -32001);
+	CHECK(MCPTools::set_navigation_layers_on(plain, ".", -1, error).is_empty());
+	CHECK(error.code == -32602);
+
+	// The bake tool needs an edited scene, and this process has none: the honest
+	// state refusal, reached before anything navigation-owned is constructed.
+	MCPToolRegistry registry;
+	TestMCPServer::build_editor_process_registry(registry);
+	MCPToolError bake_error;
+	registry.call_tool("editor_bake_navigation_mesh", Dictionary(), bake_error);
+	CHECK(bake_error.code == -32603); // the deferred path, not the handler
+
+	CHECK(ClassDB::class_exists(StringName("NavigationRegion3D")));
+	CHECK(ClassDB::class_exists(StringName("NavigationRegion2D")));
+	CHECK(ClassDB::has_method(StringName("NavigationRegion3D"), StringName("bake_navigation_mesh")));
+	CHECK(ClassDB::has_method(StringName("NavigationRegion3D"), StringName("is_baking")));
+	CHECK(ClassDB::has_method(StringName("NavigationRegion2D"), StringName("bake_navigation_polygon")));
+	CHECK(ClassDB::has_method(StringName("NavigationRegion2D"), StringName("is_baking")));
+	CHECK(ClassDB::has_method(StringName("NavigationAgent3D"), StringName("get_next_path_position")));
+	CHECK(ClassDB::has_method(StringName("NavigationAgent3D"), StringName("is_navigation_finished")));
+
+	memdelete(two);
+	memdelete(three);
+	memdelete(plain);
+}
+
+TEST_CASE("[MCPServer] TASK-036 the movement target and speed helpers are closed") {
+	Node *root = memnew(Node);
+	root->set_name("Root");
+	Node2D *player = memnew(Node2D);
+	player->set_name("Player");
+	root->add_child(player);
+	Node2D *goal = memnew(Node2D);
+	goal->set_name("Goal");
+	goal->set_position(Vector2(8, 9));
+	root->add_child(goal);
+	Node3D *player_3d = memnew(Node3D);
+	player_3d->set_name("Player3D");
+	root->add_child(player_3d);
+
+	CHECK(MCPTools::move_is_3d(player_3d));
+	CHECK_FALSE(MCPTools::move_is_3d(player));
+
+	MCPToolError error;
+	CHECK(MCPTools::resolve_move_player(nullptr, root, "Player", error) == (Node *)player);
+	CHECK(MCPTools::resolve_move_player(nullptr, root, String(), error) == (Node *)player);
+	CHECK(MCPTools::resolve_move_player(nullptr, root, "Nope", error) == nullptr);
+	CHECK(error.code == -32001);
+
+	Vector3 target_3d;
+	Vector2 target_2d;
+	String source;
+
+	Dictionary coordinates;
+	coordinates["x"] = 3;
+	coordinates["y"] = 4;
+	CHECK(MCPTools::move_target_from_value(nullptr, root, coordinates, false, target_3d, target_2d, source, error));
+	CHECK(target_2d == Vector2(3, 4));
+	CHECK(source == "coordinates");
+	CHECK(target_3d == Vector3(3, 4, 0));
+
+	// A `z` member for a 2D player is refused, not silently ignored.
+	Dictionary coordinates_3d;
+	coordinates_3d["x"] = 1;
+	coordinates_3d["y"] = 2;
+	coordinates_3d["z"] = 3;
+	CHECK_FALSE(MCPTools::move_target_from_value(nullptr, root, coordinates_3d, false, target_3d, target_2d, source, error));
+	CHECK(error.code == -32602);
+	CHECK(error.message.contains("Node2D"));
+	// ... and its absence for a 3D player is refused too.
+	Dictionary coordinates_2d;
+	coordinates_2d["x"] = 1;
+	coordinates_2d["y"] = 2;
+	CHECK_FALSE(MCPTools::move_target_from_value(nullptr, root, coordinates_2d, true, target_3d, target_2d, source, error));
+	CHECK(error.code == -32602);
+	CHECK(error.message.contains("target"));
+	CHECK(MCPTools::move_target_from_value(nullptr, root, coordinates_3d, true, target_3d, target_2d, source, error));
+	CHECK(target_3d == Vector3(1, 2, 3));
+
+	// A mistyped component names the member.
+	Dictionary mistyped;
+	mistyped["x"] = "abc";
+	mistyped["y"] = 1;
+	CHECK_FALSE(MCPTools::move_target_from_value(nullptr, root, mistyped, false, target_3d, target_2d, source, error));
+	CHECK(error.code == -32602);
+	CHECK(error.message.contains("target.x"));
+
+	// A node-path target is resolved with the game-side semantics (the fallback
+	// here is the editor-side `find_node`, because this process has no tree).
+	CHECK(MCPTools::move_target_from_value(nullptr, root, String("Goal"), false, target_3d, target_2d, source, error));
+	CHECK(target_2d == Vector2(8, 9));
+	CHECK(source.begins_with("node_path:"));
+
+	// A 3D target vector for a 2D player and a 2D one for a 3D player are both
+	// refused.
+	CHECK_FALSE(MCPTools::move_target_from_value(nullptr, root, Variant(Vector3(1, 2, 3)), false, target_3d, target_2d, source, error));
+	CHECK(error.code == -32602);
+	CHECK_FALSE(MCPTools::move_target_from_value(nullptr, root, Variant(Vector2(1, 2)), true, target_3d, target_2d, source, error));
+	CHECK(error.code == -32602);
+	// Anything that is not a path or an object of coordinates.
+	CHECK_FALSE(MCPTools::move_target_from_value(nullptr, root, Variant(7), false, target_3d, target_2d, source, error));
+	CHECK(error.code == -32602);
+
+	// The speed and where it came from: the agent's own `max_speed` first, then a
+	// player `speed` property, then the migration source's documented 200.0.
+	String speed_source;
+	CHECK(MCPTools::move_speed_of(player, 7.0, false, speed_source) == 7.0);
+	CHECK(speed_source == "navigation_agent_max_speed");
+	CHECK(MCPTools::move_speed_of(player, 7.0, true, speed_source) == 14.0);
+	player->set("speed", 3.0);
+	CHECK(MCPTools::move_speed_of(player, 0.0, false, speed_source) == 3.0);
+	CHECK(speed_source == "player_speed");
+	Node2D *bare = memnew(Node2D);
+	CHECK(MCPTools::move_speed_of(bare, 0.0, false, speed_source) == 200.0);
+	CHECK(speed_source == "default_200");
+
+	memdelete(bare);
+	memdelete(player_3d);
+	memdelete(goal);
+	memdelete(player);
+	memdelete(root);
+}
+
+TEST_CASE("[MCPServer] the B5 batch 4 tool schemas are the contract entries verbatim") {
+	MCPToolRegistry editor_registry;
+	TestMCPServer::build_editor_process_registry(editor_registry);
+	const Array editor_list = editor_registry.build_tools_list(true);
+
+	const auto entry_of = [&editor_list](const String &p_name) -> Dictionary {
+		for (int i = 0; i < editor_list.size(); i++) {
+			const Variant entry = editor_list[i];
+			if (entry.get_type() != Variant::DICTIONARY) {
+				continue;
+			}
+			if (String(((Dictionary)entry)["name"]) == p_name) {
+				return entry;
+			}
+		}
+		return Dictionary();
+	};
+	const auto expect_description = [&entry_of](const String &p_name, const char *p_description) {
+		CHECK_MESSAGE(String(entry_of(p_name).get("description", Variant())) == String::utf8(p_description), p_name);
+	};
+	const auto expect_schema = [&entry_of](const String &p_name, const char *p_json) {
+		const Dictionary live = entry_of(p_name);
+		const Variant expected = TestMCPServer::parse_json(String::utf8(p_json));
+		CHECK_MESSAGE(live.has("inputSchema"), p_name);
+		CHECK_MESSAGE(TestMCPServer::canonical(live.get("inputSchema", Variant())) == TestMCPServer::canonical(expected), p_name);
+	};
+
+	expect_description("editor_bake_navigation_mesh", R"desc(烘焙导航网格)desc");
+	expect_schema("editor_bake_navigation_mesh", R"schema({"properties":{"navigation_region_path":{"type":"string"}},"required":["navigation_region_path"],"type":"object"})schema");
+
+	expect_description("editor_set_navigation_layers", R"desc(设置导航层)desc");
+	expect_schema("editor_set_navigation_layers", R"schema({"properties":{"layers":{"type":"integer"},"node_path":{"type":"string"}},"required":["node_path","layers"],"type":"object"})schema");
+
+	expect_description("running_game_move_player_to_target", R"desc(控制游戏角色直接移动到目标位置)desc");
+	expect_schema("running_game_move_player_to_target", R"schema({"properties":{"arrival_radius":{"description":"到达判定半径","type":"number"},"camera_path":{"description":"相机节点路径","type":"string"},"look_at_target":{"default":false,"description":"是否面向目标","type":"boolean"},"player_path":{"description":"玩家节点路径","type":"string"},"run":{"default":false,"description":"是否奔跑","type":"boolean"},"target":{"description":"目标位置（字符串路径或坐标字典）"},"timeout":{"default":15.0,"description":"超时时间（秒）","type":"number"}},"required":["target"],"type":"object"})schema");
+
+	expect_description("project_create_theme", R"desc(创建 Theme 资源)desc");
+	expect_schema("project_create_theme", R"schema({"properties":{"name":{"description":"主题名称","type":"string"},"path":{"description":"保存路径 (res://)","type":"string"}},"required":["path"],"type":"object"})schema");
+
+	expect_description("project_set_theme_color", R"desc(设置主题颜色)desc");
+	expect_schema("project_set_theme_color", R"schema({"properties":{"color":{"description":"包含 r,g,b,a 的字典","type":"object"},"color_name":{"type":"string"},"node_type":{"default":"Button","type":"string"},"theme_path":{"type":"string"}},"required":["theme_path","color_name","color"],"type":"object"})schema");
+
+	expect_description("project_set_theme_constant", R"desc(设置主题常量)desc");
+	expect_schema("project_set_theme_constant", R"schema({"properties":{"constant_name":{"type":"string"},"node_type":{"default":"Button","type":"string"},"theme_path":{"type":"string"},"value":{"type":"integer"}},"required":["theme_path","constant_name","value"],"type":"object"})schema");
+
+	expect_description("project_set_theme_font_size", R"desc(设置主题字体大小)desc");
+	expect_schema("project_set_theme_font_size", R"schema({"properties":{"font_size_name":{"type":"string"},"node_type":{"default":"Button","type":"string"},"size":{"type":"integer"},"theme_path":{"type":"string"}},"required":["theme_path","font_size_name","size"],"type":"object"})schema");
+
+	expect_description("project_set_theme_stylebox", R"desc(设置主题样式盒)desc");
+	expect_schema("project_set_theme_stylebox", R"schema({"properties":{"bg_color":{"type":"string"},"border_color":{"type":"string"},"border_width":{"type":"integer"},"corner_radius":{"type":"integer"},"node_type":{"default":"Panel","type":"string"},"stylebox_name":{"type":"string"},"theme_path":{"type":"string"}},"required":["theme_path","stylebox_name"],"type":"object"})schema");
+
+	expect_description("project_get_theme_info", R"desc(获取主题信息)desc");
+	expect_schema("project_get_theme_info", R"schema({"properties":{"theme_path":{"type":"string"}},"required":["theme_path"],"type":"object"})schema");
+
+	// The nine project/os tools are in the game view too; read them from the game
+	// listing, because scope does not change the contract.
+	MCPToolRegistry game_registry;
+	TestMCPServer::build_all_tools_registry(game_registry);
+	const Array game_list = game_registry.build_tools_list(false);
+	const auto game_entry_of = [&game_list](const String &p_name) -> Dictionary {
+		for (int i = 0; i < game_list.size(); i++) {
+			const Variant entry = game_list[i];
+			if (entry.get_type() != Variant::DICTIONARY) {
+				continue;
+			}
+			if (String(((Dictionary)entry)["name"]) == p_name) {
+				return entry;
+			}
+		}
+		return Dictionary();
+	};
+	const auto expect_game_description = [&game_entry_of](const String &p_name, const char *p_description) {
+		CHECK_MESSAGE(String(game_entry_of(p_name).get("description", Variant())) == String::utf8(p_description), p_name);
+	};
+	const auto expect_game_schema = [&game_entry_of](const String &p_name, const char *p_json) {
+		const Dictionary live = game_entry_of(p_name);
+		const Variant expected = TestMCPServer::parse_json(String::utf8(p_json));
+		CHECK_MESSAGE(live.has("inputSchema"), p_name);
+		CHECK_MESSAGE(TestMCPServer::canonical(live.get("inputSchema", Variant())) == TestMCPServer::canonical(expected), p_name);
+	};
+
+	expect_game_description("project_get_export_info", R"desc(获取导出信息)desc");
+	expect_game_schema("project_get_export_info", R"schema({"properties":{},"required":[],"type":"object"})schema");
+
+	expect_game_description("project_list_export_presets", R"desc(列出所有导出预设)desc");
+	expect_game_schema("project_list_export_presets", R"schema({"properties":{},"required":[],"type":"object"})schema");
+
+	expect_game_description("project_get_android_preset_info", R"desc(获取 Android 导出预设信息)desc");
+	expect_game_schema("project_get_android_preset_info", R"schema({"properties":{"preset_index":{"description":"预设索引（可选）","type":"integer"},"preset_name":{"description":"预设名称（可选）","type":"string"}},"required":[],"type":"object"})schema");
+
+	expect_game_description("os_list_android_devices", R"desc(列出已连接的 Android 设备)desc");
+	expect_game_schema("os_list_android_devices", R"schema({"properties":{},"required":[],"type":"object"})schema");
+
+	expect_game_description("os_deploy_to_android_device", R"desc(将项目导出并部署到 Android 设备)desc");
+	expect_game_schema("os_deploy_to_android_device", R"schema({"properties":{"debug":{"default":true,"description":"是否以 debug 模式导出","type":"boolean"},"device_id":{"description":"目标设备 serial（可选，部署到第一个可用设备）","type":"string"},"launch":{"default":true,"description":"安装后是否启动应用","type":"boolean"},"preset_name":{"description":"Android 导出预设名称","type":"string"},"skip_export":{"default":false,"description":"是否跳过导出步骤（直接安装已有 APK）","type":"boolean"}},"required":["preset_name"],"type":"object"})schema");
+}
+
+} // namespace Task036

@@ -1,0 +1,17 @@
+mcp_server: TASK-052 doctests for the two added tools (red-first, 8 cases)
+
+Eight cases, written against the registry before the tools existed (the red run:
+4 cases ran, 47/97 assertions failed, every added-tool call answered -32601
+"Unknown tool") and green after the implementation (8/8 cases, 199/199
+assertions): registration on both endpoints with the contract entry verbatim, the
+INT Variant types of the timeout_ms bounds (the defect gate 1 caught: JSON::parse
+turns 1000 into 1000.0), the four dedicated families + project.godot + paths
+outside res://, the write/read-back/overwrite rules, the absence of a delete path,
+the argument rules of the build and its capability chain, the .csproj search and
+the command line, and a real child process that is started, drained and killed.
+
+The tool-count literals in the pre-existing cases move by exactly +2 (the two
+added tools are scope=both): the game table 69->71, the editor table 171->173, an
+editor view 148->150 and a game table's editor view 46->48; the TASK-038 trace
+fixture's `tool_count` moves with its own assertion so the round trip stays one
+value.

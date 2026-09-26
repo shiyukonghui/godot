@@ -1,0 +1,123 @@
+import[import-after] attempt 1/3 exit=0 project=F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\live_after\proj log=F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\live_after\logs\import-after.attempt1.log
+[PASS] L001_import_ok
+       --import exit=0 after 1 attempt(s)
+[PASS] L002_editor_ready
+       editor on 9888 answered GET /mcp with +20 frames
+  editor_tools_list                          bytes=62209  sha=e90787d24f35 
+[PASS] L003_read_tool_present_after
+       live editor tools/list carries 154 tool(s); project_read_text_file present=True
+  editor_open_main                           bytes=126    sha=872938705dad {"opened":true,"path":"res://scenes/main.tscn"}
+[PASS] L004_scene_opened
+       open response: {"opened":true,"path":"res://scenes/main.tscn"}
+  add_bad                                    bytes=133    sha=d18903c87132 {"name":"Bad","node_path":"Bad","type":"Node2D"}
+  add_bad2                                   bytes=135    sha=6c4c1326836c {"name":"Bad2","node_path":"Bad2","type":"Node2D"}
+  add_bad3                                   bytes=135    sha=27864751f639 {"name":"Bad3","node_path":"Bad3","type":"Node2D"}
+  add_good                                   bytes=135    sha=13f109cf1b8a {"name":"Good","node_path":"Good","type":"Node2D"}
+  d2_batch_incompatible                      bytes=1313   sha=a788caa97f45 code=-32000 nodes[0]: Node 'Bad' (Node2D) cannot carry script 'res://scripts/coin.gd': the script inherits from native type 'Area2D', which is not a c
+[PASS] L010_d2_after_refuses_incompatible
+       code=-32000; message=nodes[0]: Node 'Bad' (Node2D) cannot carry script 'res://scripts/coin.gd': the script inherits from native type 'Area2D', which is not a class of this node, so the engine would drop the attachment when the scene is loaded; suggestion=The engine attaches a script only when the script's native base type is a class of the node (GDScript::instance_create(), modules/gdscript/gdscript.cpp:420-426; CSharpScript::instance_create(), modules/mono/csharp_script.cpp:2461-2465) - the editor process takes the placeholder branch instead (Object::set_script(), core/object/object.cpp:1069-1072) and so cannot report the mismatch by itself. Attach 'res://scripts/coin.gd' to a node that is a 'Area2D' (or a subclass of it), or change the script's 'extends' to a class of 'Node2D'; sha=a788caa97f45d9a12fd16cdde30869a89d664ad702635edda0cc5bae14d41aa3
+  d2_batch_compatible                        bytes=355    sha=618d3ba458b7 {"attached":[{"attached":true,"index":0,"node_path":"Good","previous_script_path":"","readable":true,"script_path":"res://scripts/ok.gd"}],"count":1,"
+[PASS] L011_d2_after_compatible_control_is_readable
+       no error; attached:true=True; readable:true=True; sha=618d3ba458b7a62cd09677017253ff12fc71ba04e51a7a19f321cc6a39229719
+  d2_single_incompatible                     bytes=831    sha=5122bf0094fe code=-32000 Node 'Bad' (Node2D) cannot carry script 'res://scripts/coin.gd': the script inherits from native type 'Area2D', which is not a class of th
+[PASS] L012_d2_after_single_refuses
+       code=-32000; message=Node 'Bad' (Node2D) cannot carry script 'res://scripts/coin.gd': the script inherits from native type 'Area2D', which is not a class of this node, so the engine would drop the attachment when the scene is loaded; suggestion=The engine attaches a script only when the script's native base type is a class of the node (GDScript::instance_create(), modules/gdscript/gdscript.cpp:420-426; CSharpScript::instance_create(), modules/mono/csharp_script.cpp:2461-2465) - the editor process takes the placeholder branch instead (Object::set_script(), core/object/object.cpp:1069-1072) and so cannot report the mismatch by itself. Attach 'res://scripts/coin.gd' to a node that is a 'Area2D' (or a subclass of it), or change the script's 'extends' to a class of 'Node2D'
+  d4_tree_after_open                         bytes=3092   sha=481c21d87d2c {"scene_path":"res://scenes/main.tscn","tree":{"absolute_path":"/root/@EditorNode@20539/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBo
+[PASS] L020_d4_tree_shows_load_time_instance_internals
+       editor_get_scene_tree: World/Player children=1; 'Anim' anywhere in the tree=True; sha=481c21d87d2ccb7c69379433a4af9f300dcef8ab8afa42d70e81b7b43fbc0254
+  d4_get_anim_autoplay                       bytes=168    sha=a3bdc98d95ca {"node_path":"Player/Anim","properties":{"autoplay":""},"type":"AnimationPlayer"}
+  d4_set_anim_autoplay                       bytes=186    sha=f6c84e83f47d {"ignored":{},"new_value":"run","node_path":"Player/Anim","old_value":"","property":"autoplay"}
+  d4_connect_anim                            bytes=190    sha=1e9a763a5c79 {"connected":true,"persisted":true,"signal":"animation_finished","source":"Player/Anim","target":"."}
+[PASS] L021_d4_three_tools_on_the_same_path
+       get properties code=; set property code= body={"ignored":{},"new_value":"run","node_path":"Player/Anim","old_value":"","property":"autoplay"}; connect signal code= msg=
+  d4_add_instance_runtime                    bytes=165    sha=93e8afe9d2df {"name":"Player2","node_path":"Player2","scene_path":"res://scenes/player.tscn"}
+  d4_tree_after_runtime_instance             bytes=3975   sha=cc25a11e0a40 {"scene_path":"res://scenes/main.tscn","tree":{"absolute_path":"/root/@EditorNode@20539/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBo
+  d4_connect_player2_anim                    bytes=191    sha=0c80aa72f6b0 {"connected":true,"persisted":true,"signal":"animation_finished","source":"Player2/Anim","target":"."}
+[PASS] L022_d4_runtime_instance_reproduced
+       editor_add_scene_instance returned code=; world/Player2 children=1 (a miss means the instance was not added); Player2/Anim connect code=
+  d5_add_tilemaplayer                        bytes=143    sha=c6605de19c14 {"name":"Layer","node_path":"Layer","type":"TileMapLayer"}
+  d5_create_empty_tileset                    bytes=211    sha=d57936563cec {"changed":{},"ignored":{},"ignored_count":0,"path":"res://tiles/empty_tileset.tres","properties_set":[],"type":"TileSet"}
+  d5_info_before_assign                      bytes=292    sha=d2f1d203a3c9 {"cell_count":0,"enabled":true,"has_tile_set":false,"layer":0,"node_path":"Layer","node_type":"TileMapLayer","source_count":0,"tile_set":null,"used_re
+  d5_attach_tileset                          bytes=154    sha=e293dc246d39 {"node_path":"Layer","property":"tile_set","resource_type":"TileSet"}
+  d5_set_tileset_property                    bytes=296    sha=0d44a4428d3f {"ignored":{},"new_value":{"path":"res://tiles/empty_tileset.tres","type":"TileSet"},"node_path":"Layer","old_value":{"local_to_scene":false,"path":""
+  d5_info_after_assign                       bytes=402    sha=c4da8d8c35eb {"cell_count":0,"enabled":true,"has_tile_set":true,"layer":0,"node_path":"Layer","node_type":"TileMapLayer","source_count":0,"sources":[],"tile_set":{
+  d5_set_cell                                bytes=391    sha=4e66d062186e code=-32602 The TileSet of this TileMapLayer has no source 0; it has: no source at all (add a TileSetAtlasSource first)
+[PASS] L030_d5_characterised
+       create_tileset code= props_set={"changed":{},"ignored":{},"ignored_count":0,"path":"res://tiles/empty_tileset.tres","properties_set":[],"type":"TileSet"}; info_before has_tile_set={"cell_count":0,"enabled":true,"has_tile_set":false,"layer":0,"node_path":"Layer","node_type":"TileMapLayer","source_count":0,"tile_set":null,"used_rect":{"height":0,"width":0,"x":0,"y":0}}; attach code= msg=; set_property code= msg=; info_after has_tile_set={"cell_count":0,"enabled":true,"has_tile_set":true,"layer":0,"node_path":"Layer","node_type":"TileMapLayer","source_count":0,"sources":[],"tile_set":{"path":"res://tiles/empty_tileset.tres","type":"TileSet"},"tile_size":{"x":16,"y":16},"used_rect":{"height":0,"width":0,"x":0,"y":0}}; set_cell code=-32602 msg=The TileSet of this TileMapLayer has no source 0; it has: no source at all (add a TileSetAtlasSource first)
+  read_write_receipt                         bytes=219    sha=75a6facef87c {"bytes":20,"created":true,"path":"res://save/slot1.json","sha256":"c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d"}
+[PASS] L040_write_receipt_sha_matches_disk
+       write receipt sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; disk sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; bytes=20
+  read_tool_roundtrip                        bytes=492    sha=daf4d2784a79 {"note":"The bytes are answered as they are: this tool does not parse, validate or interpret the file's format (a JSON, config, project or scene file 
+[PASS] L041_read_tool_three_way_sha
+       read sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; write receipt sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; disk sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; size=20; text matches=True
+  read_refuse_outside_res                    bytes=299    sha=6419b7ba1fc7 code=-32602 Parameter 'path' must address the project ('res://...'), got 'user://outside.txt'
+[PASS] L042_read_refuses_outside_res
+       code=-32602; message=Parameter 'path' must address the project ('res://...'), got 'user://outside.txt'; suggestion='path' must address the project ('res://...') and must not contain a '..' segment: this tool reads only inside the project directory
+  read_refuse_dotdot                         bytes=294    sha=89e266216d3b code=-32602 Parameter 'path' must not walk upwards with '..', got 'res://../secrets.txt'
+[PASS] L043_read_refuses_dotdot
+       code=-32602; message=Parameter 'path' must not walk upwards with '..', got 'res://../secrets.txt'
+  read_refuse_absolute                       bytes=299    sha=496a69db8dee code=-32602 Parameter 'path' must address the project ('res://...'), got 'C:/Windows/win.ini'
+[PASS] L044_read_refuses_absolute
+       code=-32602; message=Parameter 'path' must address the project ('res://...'), got 'C:/Windows/win.ini'
+  read_refuse_directory                      bytes=259    sha=9c6586687fd4 code=-32602 Parameter 'path' names the directory 'res://scenes', not a file
+[PASS] L045_read_refuses_directory
+       code=-32602; message=Parameter 'path' names the directory 'res://scenes', not a file; suggestion=Append the file name, e.g. 'res://save/slot1.json'; project_get_filesystem_tree lists the files of the project
+  read_refuse_missing                        bytes=242    sha=ee97a3016e32 code=-32001 File 'res://save/no_such_file.json' not found
+[PASS] L046_read_missing_is_32001_with_suggestion
+       code=-32001; message=File 'res://save/no_such_file.json' not found; suggestion=Use project_get_filesystem_tree to list the files of the project, or project_write_text_file to create this one
+  read_write_big                             bytes=218    sha=6de77b3996be {"bytes":4096,"created":true,"path":"res://save/big.txt","sha256":"a2e659dacb4691e887ac0139f8893d04764ee197d70fb73d3190d56113d18e3e"}
+  read_big_omitted                           bytes=735    sha=b1a8bd7bf896 {"max_bytes":16,"note":"The bytes are answered as they are: this tool does not parse, validate or interpret the file's format (a JSON, config, project
+  read_big_included                          bytes=4555   sha=d7ed8a1eed0c {"note":"The bytes are answered as they are: this tool does not parse, validate or interpret the file's format (a JSON, config, project or scene file 
+[PASS] L047_max_bytes_omits_then_includes
+       max_bytes=16 -> text_omitted=True reason=The file is 4096 byte(s), larger than 'max_bytes' (16): its text was not put into this answer. The 'size' and 'sha256' fields describe the WHOLE file, so it can still be verified without reading it; pass a larger 'max_bytes' (up to 16777216) to read the text size=4096 sha=a2e659dacb4691e887ac0139f8893d04764ee197d70fb73d3190d56113d18e3e; max_bytes=8192 -> text_omitted=False text length=4096
+  read_refuse_over_limit                     bytes=331    sha=fbc527185475 code=-32602 Parameter 'max_bytes' must not exceed 16777216 (16 MiB), got 33554432
+[PASS] L048_max_bytes_upper_bound_refused
+       code=-32602; message=Parameter 'max_bytes' must not exceed 16777216 (16 MiB), got 33554432
+  read_refuse_non_utf8                       bytes=480    sha=570181af4971 code=-32000 File 'res://save/binary.bin' is 6 byte(s) long but its bytes are not valid UTF-8 text
+[PASS] L049_non_utf8_refused_with_suggestion
+       code=-32000; message=File 'res://save/binary.bin' is 6 byte(s) long but its bytes are not valid UTF-8 text; suggestion=This tool answers text and refuses to publish a decoded string that is not the file's content. Read it as a resource with project_read_resource if it is a .tres/.res, or read it outside the tool surface (the sha256 of the bytes is still obtainable by asking for this path with 'max_bytes' below the file size)
+  save_main                                  bytes=125    sha=3d27d1110cc6 {"path":"res://scenes/main.tscn","saved":true}
+  read_main_tscn                             bytes=1381   sha=08cddddee860 {"content":"[gd_scene format=3 uid=\"uid://88oxb6qwydi3\"]\n\n[ext_resource type=\"PackedScene\" path=\"res://scenes/player.tscn\" id=\"1_o3k07\"]\n[e
+[PASS] L050_saved_scene_read_back
+       editor_save_scene code=; disk bytes=967 sha256=22911eeca49aabebf8025c45c690b55af166d0352afbbc13a79ab6789674168c; the read-back names Main=True; carries scripts: coin.gd=False ok.gd=True
+  game_good_marker                           bytes=159    sha=134465a1caab {"node_path":"/root/Main/Good","properties":{"marker":75},"type":"Node2D"}
+  game_bad_value                             bytes=282    sha=4e50aa58c029 code=-32001 Property 'value' on node '/root/Main/Bad' not found
+[PASS] L060_game_compatible_script_is_live
+       Good.marker read from the running game: {"node_path":"/root/Main/Good","properties":{"marker":75},"type":"Node2D"}
+[PASS] L061_game_incompatible_script_is_absent
+       Bad.value read from the running game: code=-32001 Property 'value' on node '/root/Main/Bad' not found
+[PASS] L070_engine_message_absent_everywhere_after_the_fix
+       editor.err.log occurrences of the engine mismatch message=0; game.err.log occurrences=0 (the refused attachment never reached the saved scene)
+[PASS] L080_user_port_9877_untouched
+       environment_fact_no_listener_before_or_after: listening=False pid_before=-1 pid_after=-1 ours=False same_pid=True asked_by_us=False classification=environment_fact_no_listener_before_or_after our_pids=[89196,89880] our_ports=[0,9888,9889] our_command_lines=3
+
+--- summary ---
+[PASS] L001_import_ok :: --import exit=0 after 1 attempt(s)
+[PASS] L002_editor_ready :: editor on 9888 answered GET /mcp with +20 frames
+[PASS] L003_read_tool_present_after :: live editor tools/list carries 154 tool(s); project_read_text_file present=True
+[PASS] L004_scene_opened :: open response: {"opened":true,"path":"res://scenes/main.tscn"}
+[PASS] L010_d2_after_refuses_incompatible :: code=-32000; message=nodes[0]: Node 'Bad' (Node2D) cannot carry script 'res://scripts/coin.gd': the script inherits from native type 'Area2D', which is not a class of this node, so the engine would drop the attachment when the scene is loaded; suggestion=The engine attaches a script only when the script's native base type is a class of the node (GDScript::instance_create(), modules/gdscript/gdscript.cpp:420-426; CSharpScript::instance_create(), modules/mono/csharp_script.cpp:2461-2465) - the editor process takes the placeholder branch instead (Object::set_script(), core/object/object.cpp:1069-1072) and so cannot report the mismatch by itself. Attach 'res://scripts/coin.gd' to a node that is a 'Area2D' (or a subclass of it), or change the script's 'extends' to a class of 'Node2D'; sha=a788caa97f45d9a12fd16cdde30869a89d664ad702635edda0cc5bae14d41aa3
+[PASS] L011_d2_after_compatible_control_is_readable :: no error; attached:true=True; readable:true=True; sha=618d3ba458b7a62cd09677017253ff12fc71ba04e51a7a19f321cc6a39229719
+[PASS] L012_d2_after_single_refuses :: code=-32000; message=Node 'Bad' (Node2D) cannot carry script 'res://scripts/coin.gd': the script inherits from native type 'Area2D', which is not a class of this node, so the engine would drop the attachment when the scene is loaded; suggestion=The engine attaches a script only when the script's native base type is a class of the node (GDScript::instance_create(), modules/gdscript/gdscript.cpp:420-426; CSharpScript::instance_create(), modules/mono/csharp_script.cpp:2461-2465) - the editor process takes the placeholder branch instead (Object::set_script(), core/object/object.cpp:1069-1072) and so cannot report the mismatch by itself. Attach 'res://scripts/coin.gd' to a node that is a 'Area2D' (or a subclass of it), or change the script's 'extends' to a class of 'Node2D'
+[PASS] L020_d4_tree_shows_load_time_instance_internals :: editor_get_scene_tree: World/Player children=1; 'Anim' anywhere in the tree=True; sha=481c21d87d2ccb7c69379433a4af9f300dcef8ab8afa42d70e81b7b43fbc0254
+[PASS] L021_d4_three_tools_on_the_same_path :: get properties code=; set property code= body={"ignored":{},"new_value":"run","node_path":"Player/Anim","old_value":"","property":"autoplay"}; connect signal code= msg=
+[PASS] L022_d4_runtime_instance_reproduced :: editor_add_scene_instance returned code=; world/Player2 children=1 (a miss means the instance was not added); Player2/Anim connect code=
+[PASS] L030_d5_characterised :: create_tileset code= props_set={"changed":{},"ignored":{},"ignored_count":0,"path":"res://tiles/empty_tileset.tres","properties_set":[],"type":"TileSet"}; info_before has_tile_set={"cell_count":0,"enabled":true,"has_tile_set":false,"layer":0,"node_path":"Layer","node_type":"TileMapLayer","source_count":0,"tile_set":null,"used_rect":{"height":0,"width":0,"x":0,"y":0}}; attach code= msg=; set_property code= msg=; info_after has_tile_set={"cell_count":0,"enabled":true,"has_tile_set":true,"layer":0,"node_path":"Layer","node_type":"TileMapLayer","source_count":0,"sources":[],"tile_set":{"path":"res://tiles/empty_tileset.tres","type":"TileSet"},"tile_size":{"x":16,"y":16},"used_rect":{"height":0,"width":0,"x":0,"y":0}}; set_cell code=-32602 msg=The TileSet of this TileMapLayer has no source 0; it has: no source at all (add a TileSetAtlasSource first)
+[PASS] L040_write_receipt_sha_matches_disk :: write receipt sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; disk sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; bytes=20
+[PASS] L041_read_tool_three_way_sha :: read sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; write receipt sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; disk sha256=c824cf30d46289d3488999485166bd2a84082dbe441c1039092ff0c31e1d4f3d; size=20; text matches=True
+[PASS] L042_read_refuses_outside_res :: code=-32602; message=Parameter 'path' must address the project ('res://...'), got 'user://outside.txt'; suggestion='path' must address the project ('res://...') and must not contain a '..' segment: this tool reads only inside the project directory
+[PASS] L043_read_refuses_dotdot :: code=-32602; message=Parameter 'path' must not walk upwards with '..', got 'res://../secrets.txt'
+[PASS] L044_read_refuses_absolute :: code=-32602; message=Parameter 'path' must address the project ('res://...'), got 'C:/Windows/win.ini'
+[PASS] L045_read_refuses_directory :: code=-32602; message=Parameter 'path' names the directory 'res://scenes', not a file; suggestion=Append the file name, e.g. 'res://save/slot1.json'; project_get_filesystem_tree lists the files of the project
+[PASS] L046_read_missing_is_32001_with_suggestion :: code=-32001; message=File 'res://save/no_such_file.json' not found; suggestion=Use project_get_filesystem_tree to list the files of the project, or project_write_text_file to create this one
+[PASS] L047_max_bytes_omits_then_includes :: max_bytes=16 -> text_omitted=True reason=The file is 4096 byte(s), larger than 'max_bytes' (16): its text was not put into this answer. The 'size' and 'sha256' fields describe the WHOLE file, so it can still be verified without reading it; pass a larger 'max_bytes' (up to 16777216) to read the text size=4096 sha=a2e659dacb4691e887ac0139f8893d04764ee197d70fb73d3190d56113d18e3e; max_bytes=8192 -> text_omitted=False text length=4096
+[PASS] L048_max_bytes_upper_bound_refused :: code=-32602; message=Parameter 'max_bytes' must not exceed 16777216 (16 MiB), got 33554432
+[PASS] L049_non_utf8_refused_with_suggestion :: code=-32000; message=File 'res://save/binary.bin' is 6 byte(s) long but its bytes are not valid UTF-8 text; suggestion=This tool answers text and refuses to publish a decoded string that is not the file's content. Read it as a resource with project_read_resource if it is a .tres/.res, or read it outside the tool surface (the sha256 of the bytes is still obtainable by asking for this path with 'max_bytes' below the file size)
+[PASS] L050_saved_scene_read_back :: editor_save_scene code=; disk bytes=967 sha256=22911eeca49aabebf8025c45c690b55af166d0352afbbc13a79ab6789674168c; the read-back names Main=True; carries scripts: coin.gd=False ok.gd=True
+[PASS] L060_game_compatible_script_is_live :: Good.marker read from the running game: {"node_path":"/root/Main/Good","properties":{"marker":75},"type":"Node2D"}
+[PASS] L061_game_incompatible_script_is_absent :: Bad.value read from the running game: code=-32001 Property 'value' on node '/root/Main/Bad' not found
+[PASS] L070_engine_message_absent_everywhere_after_the_fix :: editor.err.log occurrences of the engine mismatch message=0; game.err.log occurrences=0 (the refused attachment never reached the saved scene)
+[PASS] L080_user_port_9877_untouched :: environment_fact_no_listener_before_or_after: listening=False pid_before=-1 pid_after=-1 ours=False same_pid=True asked_by_us=False classification=environment_fact_no_listener_before_or_after our_pids=[89196,89880] our_ports=[0,9888,9889] our_command_lines=3
+--- checks: 26, failures: 0 ---
+--- evidence root: F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\live_after\evidence ---
+MCP075 LIVE EVIDENCE PASS (phase after)

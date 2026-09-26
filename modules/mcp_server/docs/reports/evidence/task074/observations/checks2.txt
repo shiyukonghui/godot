@@ -1,0 +1,15 @@
+. type=Node2D children=4 script=None
+  World type=Node2D children=8 script=None
+    World/Ground type=StaticBody2D children=0 script=None
+    World/Player type=CharacterBody2D children=0 script=None
+    World/Enemy1 type=CharacterBody2D children=0 script=None
+    World/Enemy2 type=CharacterBody2D children=0 script=None
+    World/Enemy3 type=CharacterBody2D children=0 script=None
+    World/Coin1 type=Area2D children=0 script=None
+    World/Coin2 type=Area2D children=0 script=None
+    World/Terrain type=TileMapLayer children=0 script=None
+  Sfx type=AudioStreamPlayer2D children=0 script=None
+  Sky type=ParallaxBackground children=1 script=None
+    Sky/Far type=ParallaxLayer children=0 script=None
+  HUD type=CanvasLayer children=0 script=None
+has Anim mention in file: False

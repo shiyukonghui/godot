@@ -1,0 +1,1 @@
+{"id":21,"jsonrpc":"2.0","result":{"content":[{"text":"{\"message\":\"Compiled: the loaded .NET assembly contains a build of this source, and the file has not been modified since that build\",\"path\":\"res://scripts/CsVerdict.cs\",\"valid\":true}","type":"text"}]}}

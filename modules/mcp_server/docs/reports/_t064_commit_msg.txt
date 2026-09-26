@@ -1,0 +1,60 @@
+mcp: derive the contract-size expectations in the evidence scripts, and make the two capture defects impossible (TASK-064)
+
+TASK-064, from REPORT-063 section 6.2 (D-8) and BREAKOUT-FINDINGS section 3
+(D-4, D-9). Two halves; no implementation code is touched, so the four gates
+of the ported batches are unaffected by construction.
+
+(1) Six stale expectations in the evidence scripts pinned the old contract
+size. The contract is `171 ported + _meta.added_count` (176 / added_count 5
+today), so mcp052's and mcp053's `(152, 72)` endpoint pair - the editor view is
+153 since TASK-063 appended an editor-scope tool - and the `175` literals in
+mcp053/mcp054 plus mcp053's four-name `added_tools` literal and mcp054's
+`added_count == 4` all went red on a tree where nothing they assert had
+changed. They now derive: the contract must equal `171 + added_count`, and
+`_meta.added_tools` must equal the sixth manifest
+`docs/tool-groups-added.json` name for name in order (the two-way equality
+`check_tool_groups.py --added` already enforces). The 171 stays a checked
+literal on purpose - a contract that silently lost a ported entry would still
+satisfy `count == len(result.tools)`, and that is exactly what this half
+catches. No check was deleted, made constant, relaxed to `-ge` or widened to a
+containment test; the live 9888/9889 counts are still required to equal the
+derived views. The two one-off pre/post comparators derive as well:
+`mcp053_contract_diff.py` takes the after count as `before + the declared pair`
+and adds the `171 + added_count` formula to its meta check (34/34 on the real
+TASK-053 revision pair, exit 0), and `mcp059_contract_pre_post.py` derives both
+sides from their own `_meta` and allows the after side to grow only by the
+names it declares in `added_tools`, with an explicit
+`declared_growth_is_consistent` check that in a no-growth run still requires
+`count`/`added_tools`/`added_count` not to move (all PASS, exit 0).
+
+(2) The two round-2 capture defects become unrepresentable rather than merely
+documented. (i) D-4: the writer used a fixed `<dir>\<id>.response.json`, so the
+four reuses of `c2_b0_build` overwrote each other and 37 of 200 comparable
+run-log lines could not be reconciled. `mcp_evidence_guard.ps1` now owns the
+writer: the path always carries the run sequence and the first eight hex digits
+of the payload's own sha256 (`<leaf>__<id>__<seq>__<sha8>`), one path may never
+hold two different contents - refused with both digests named, whether the
+earlier bytes came from this process or from a previous run - and
+`Assert-McpEvidenceTreeUniqueness` audits a finished tree. A repeat of identical
+bytes is not an overwrite and is reported as `SameContentSeen` instead of
+silently rewriting history. (ii) D-9/P4b: the before/after scene snapshots had
+the same sha256 because the "before" capture already contained the 18 script
+assignments. `Write-McpEvidenceSnapshotPair` makes the order a property of the
+function (before, then the step, then after) and requires the two digests to
+differ; equality is only allowed with `-ExpectedIdentical` AND a stated
+`-Reason`, in which case equality is asserted instead.
+
+Two self-contained probes carry the evidence, both pure ASCII and both green on
+consecutive runs (exit 0): `mcp064_stale_expectation_reverse_probe.ps1`
+evaluates the verbatim old expression and the verbatim new one on the same
+inputs (13 probes: every old one False => a gate reaching it exits non-zero,
+every new one True), and `mcp064_evidence_hygiene_probe.ps1` manufactures the
+six defects - the old fixed-name writer, same path/different sha, same
+path/same sha, a frozen pair, an undeclared "expected identical", and a
+declared-identical pair that moved - and requires every one to be refused while
+the correct writers land (20 cases, 0 failures).
+
+The three engine-driven scripts still cannot be re-run end to end in this tree:
+mono is anchored at cd7224274 while HEAD is c589eae24, exactly the wall
+REPORT-063 section 6.2 documented, and this batch deliberately builds nothing.
+That is recorded as the remaining coverage gap in the report, not as a green.

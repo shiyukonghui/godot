@@ -1,0 +1,58 @@
+======================================================================
+port 9888 calls 198 ok 170 non-ok 28
+  codes: {-32000: 4, -32602: 9, -32001: 12, -32601: 3}
+  non-ok by tool: {'project_create_scene_file': 3, 'project_write_text_file': 1, 'editor_set_node_script': 1, 'editor_get_node_properties': 5, 'editor_set_tilemap_cell': 2, 'editor_set_tilemap_cells_in_rect': 2, 'editor_create_particles': 1, 'editor_set_particle_preset': 1, 'editor_get_particle_info': 1, 'editor_add_resource_to_node_property': 2, 'editor_add_nodes_batch': 1, 'editor_set_control_theme': 1, 'project_get_theme_info': 1, 'editor_set_node_property': 1, 'editor_set_node_properties_batch': 1, 'editor_connect_signal': 2, 'project_read_file': 1, 'project_read_text_file': 1}
+======================================================================
+port 9889 calls 34 ok 32 non-ok 2
+  codes: {-32001: 2}
+  non-ok by tool: {'running_game_get_node_properties': 2}
+  tool hist: {'running_game_get_scene_tree': 3, 'running_game_get_node_properties': 15, 'running_game_play_input_recording': 4, 'running_game_get_node_property_samples': 4, 'running_game_assert_screen_text': 3, 'running_game_capture_screenshot': 2, 'running_game_run_test_scenario': 2, 'running_game_capture_signal_emissions': 1}
+  --- all game calls ---
+   n=1   running_game_get_scene_tree                ok                           
+   n=2   running_game_get_node_properties           ok                           
+   n=3   running_game_play_input_recording          ok                           
+   n=4   running_game_get_node_property_samples     ok                           
+   n=5   running_game_get_node_properties           ok                           
+   n=6   running_game_assert_screen_text            ok                           
+   n=7   running_game_capture_screenshot            ok                           
+   n=8   running_game_run_test_scenario             ok                           
+   n=1   running_game_get_node_properties           ok                           
+   n=2   running_game_get_node_properties           ok                           
+   n=3   running_game_get_scene_tree                ok                           
+   n=4   running_game_play_input_recording          ok                           
+   n=5   running_game_get_node_property_samples     ok                           
+   n=6   running_game_get_node_properties           ok                           
+   n=7   running_game_get_node_properties           ok                           
+   n=8   running_game_play_input_recording          ok                           
+   n=9   running_game_get_node_property_samples     ok                           
+   n=10  running_game_assert_screen_text            ok                           
+   n=4   running_game_get_scene_tree                ok                           
+   n=5   running_game_get_node_properties           error curl=0 code=-32001     
+   n=6   running_game_get_node_properties           ok                           
+   n=7   running_game_play_input_recording          ok                           
+   n=8   running_game_get_node_property_samples     ok                           
+   n=9   running_game_get_node_properties           ok                           
+   n=10  running_game_capture_signal_emissions      ok                           
+   n=11  running_game_get_node_properties           ok                           
+   n=6   running_game_get_node_properties           ok                           
+   n=6   running_game_get_node_properties           error curl=0 code=-32001     
+   n=7   running_game_get_node_properties           ok                           
+   n=8   running_game_run_test_scenario             ok                           
+   n=9   running_game_get_node_properties           ok                           
+   n=10  running_game_get_node_properties           ok                           
+   n=11  running_game_assert_screen_text            ok                           
+   n=12  running_game_capture_screenshot            ok                           
+  --- game non-ok detail ---
+   n=5   running_game_get_node_properties         {"node_path": "World/CoinField/Coin002", "properties": ["value", "taken"]}
+        resp: response.json sha 7311979b01995886
+   n=6   running_game_get_node_properties         {"node_path": "World/CoinField/Coin002", "properties": ["value", "taken", "monitoring"]}
+        resp: response.json sha 27f5b3f3a7d90a0c
+
+=== game-side error codes in game traces (independent) ===
+game tools/call: 8 non-ok: 0 []
+game2 tools/call: 10 non-ok: 0 []
+game3 tools/call: 9 non-ok: 1 [(2, 'running_game_get_node_properties', -32001, False)]
+game4 tools/call: 7 non-ok: 1 [(1, 'running_game_get_node_properties', -32001, False)]
+
+editor-output-log.txt content:
+{"available":true,"count":17,"editor":true,"in_process":true,"lines":["Godot Engine v4.8.dev.custom_build (c) 2007-present Juan Linietsky, Ariel Manzur & Godot Contributors.","[MCP] pending_timeout_ms=30000 (configured=30000) pending_ticks_per_frame=8","[MCP] trace enabled: file=C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-platformer\\trace-editor.jsonl (records initialize / tools/list / every tools/call; arguments may contain project content)","[MCP] capture enabled: mode=every_call viewport=2d dir=C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-platformer\\shots-editor diff_image=false scale=2","[MCP] capture keeps every PNG it writes (no size limit, nothing is ever deleted); the trace line carries total_bytes and a single WARN is printed above 1073741824 bytes","[MCP] role=editor configured_port=9888 source=cmdline listen=true","[MCP] listening on 127.0.0.1:9888 (editor=true, tools=153)","[MCP] INFO: MCP server is ready on 127.0.0.1:9888 as the editor process (port source=cmdline, tools=153)","  ERROR: Task 'update_script_paths_documentation' already exists.","  ERROR: editor\\gui\\progress_dialog.cpp:270 - Condition \"!tasks.has(p_task)\" is true.","  ERROR: res://scripts/main.gd:1 - Parse Error: Unexpected identifier \"using\" in class body.","  ERROR: modules\\gdscript\\gdscript_resource_format.cpp:50 - Failed to load script \"res://scripts/main.gd\" with error \"Parse error\".","  ERROR: gdscript://-9223370389365644557.gd:1 - Parse Error: Unexpected identifier \"using\" in class body.","  ERROR: gdscript://-9223370388761664748.gd:1 - Parse Error: Unexpected identifier \"using\" in class body.","  ERROR: scene\\animation\\animation_mixer.cpp:272 - Method/function failed. Returning: Ref<AnimationLibrary>()","  ERROR: gdscript://-9223370301251705655.gd:1 - Parse Error: Unexpected identifier \"using\" in class body.",""],"log_path":"user://logs/godot.log","note":"","pid":92828,"port":9888,"process":"editor","source":"editor_log"}

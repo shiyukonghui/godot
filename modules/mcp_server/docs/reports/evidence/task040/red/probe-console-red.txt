@@ -1,0 +1,102 @@
+TASK-040 red baseline - transcribed console output of
+  powershell -NoProfile -ExecutionPolicy Bypass -File scripts\mcp040_defect_probes.ps1 -Label base
+run against the HEAD binary 4.8.dev.custom_build.6afe08746 (git 6afe08746a).
+
+The primary evidence is the per-call files in this directory (the raw request /
+response bytes for the decisive calls, each with its sha256 printed below), plus
+the module doctest red run in doctest-red.log. This text is the same run's
+console lines, copied verbatim (the run's own checks.json was never written: its
+final serialisation line failed after all checks had run - see the report's
+deviations).
+
+--- decisive checks -----------------------------------------------------------------
+
+[A01_read_physics_material_override] port=9888 bytes=243 sha256=28983499f5d55b14d8cf73af6e78ab8727b992bf1a427007667f2de61055407d
+       {"error":{"code":-32001,"data":{"suggestion":"Call editor_get_node_properties without 'properties' to list every readable property of this node"},"message":"Property 'physics_material_override' on node 'Car' not found"},"id":1,"jsonrpc":"2.0"}
+[PASS] D1_reference_read_is_not_found
+       editor_get_node_properties(Car.physics_material_override) code=-32001
+[A02_add_resource_on_missing_property] port=9888 bytes=177 sha256=2b7dc6cd14c5de9564ac6b024845c4f12dc9385ddce8b552607c0c7d7b9f760a
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"Car\",\"property\":\"physics_material_override\",\"resource_type\":\"PhysicsMaterial\"}","type":"text"}]}}
+[FAIL] D1_add_resource_on_missing_property_refused
+       code=0 (want -32001) message='' suggestion=''
+[FAIL] D1_add_resource_refusal_names_the_property
+       message=''
+[FAIL] D1_add_resource_refusal_has_suggestion
+       data.suggestion=''
+[FAIL] D1_add_resource_success_shape_has_old_new
+       payload={"node_path":"Car","property":"physics_material_override","resource_type":"PhysicsMaterial"}
+[PASS] D1_add_resource_on_missing_property_left_no_effect
+       the .tscn json has no PhysicsMaterial sub-resource: True
+
+[A03_add_resource_wrong_category] port=9888 bytes=156 sha256=3b52d7e24a4c3d80bdd2e7ee35b14fd543081d2e77669e03b345653066e6aa2c
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"Button\",\"property\":\"material\",\"resource_type\":\"Gradient\"}","type":"text"}]}}
+[FAIL] D1_add_resource_wrong_category_refused
+       code=0 (want non-zero) message='' suggestion=''
+[A04_read_button_material] port=9888 bytes=154 sha256=e0b7b606f9f7ef04babe7c66961777c7f5f75d3f45945f586d71c2785e7c3a90
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"Button\",\"properties\":{\"material\":null},\"type\":\"Button\"}","type":"text"}]}}
+[FAIL] D1_wrong_category_left_the_slot_alone
+       the refusal is an argument-shape error (want -32602); read back material=
+
+[A05_add_resource_good] port=9888 bytes=166 sha256=9928d8eec56508c6ce9a8dfd4c8e43343b29ddfd39991044a1a02202d0b2b0fb
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"Button\",\"property\":\"material\",\"resource_type\":\"CanvasItemMaterial\"}","type":"text"}]}}
+[PASS] D1_add_resource_good_still_ok
+[PASS] D1_good_write_is_readable_back
+       editor_get_node_properties(Button.material) = {"local_to_scene":false,"path":"","type":"CanvasItemMaterial"}
+[PASS] D1_good_write_landed_in_the_scene_file
+       main.tscn contains a CanvasItemMaterial sub-resource: True
+
+[A08_connect_signal] port=9888 bytes=155 sha256=53ea1e784f234e00fae0f3f6814f709cf7082fc35d83ce06aad7d6474a39b283
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"connected\":true,\"signal\":\"pressed\",\"source\":\"Button\",\"target\":\".\"}","type":"text"}]}}
+[FAIL] D2_connect_signal_reports_persisted
+       payload has 'persisted': False; value=
+[PASS] D2_connection_is_live_in_memory
+       count=1
+[A10_save_scene_with_connection] port=9888 bytes=125 sha256=3d27d1110cc6e2521facad213cf00dfee1b715e53dfade0aa5cf14d9e09f90c7
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"path\":\"res://scenes/main.tscn\",\"saved\":true}","type":"text"}]}}
+NOTE   main.tscn after save: bytes=379 sha256=130fa3abcc68de5255fe7aa8c2e04b57fb7a0d271fe87c0e0f6bd826b8c52cd1 [connection] count=0
+[FAIL] D2_connection_is_on_disk
+       [connection] count=0 lines=
+[B01_list_connections_after_restart] port=9888 bytes=105 sha256=2d231ce499d69d0dd3def3a2f6c2318e5a2d71314e77cec78cebd401c7b9641f
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"connections\":[],\"count\":0}","type":"text"}]}}
+[FAIL] D2_connection_survives_a_restart
+       count=0 payload={"connections":[],"count":0}
+[B02_analyze_signal_flow_after_restart] port=9888 bytes=142 sha256=9ab53453f795bba11c39f933fd4f7effe55bbea2132f1133b40e656c68a37b9e
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"nodes\":[],\"scene\":\"res://scenes/main.tscn\",\"total_nodes\":0}","type":"text"}]}}
+[FAIL] D2_analyze_signal_flow_sees_the_persistent_connection
+
+[C01_game_read_missing_name] port=9889 bytes=210 sha256=a9ea1f3021c46c766d3cf41df24f135bdaf3ede572cc17a20be3e571208586e8
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"/root/Main/Car\",\"properties\":{\"collision_layer\":1,\"physics_material_override\":null},\"type\":\"CharacterBody2D\"}","type":"text"}]}}
+NOTE   D-3 mixed read: code=0 text={"node_path":"/root/Main/Car","properties":{"collision_layer":1,"physics_material_override":null},"type":"CharacterBody2D"}
+[FAIL] D3_game_read_of_a_missing_name_refused
+       code=0 (want -32001) message='' suggestion=''
+[C02_game_read_real_property] bytes=175 sha256=907465fe495f8be644bbef9c9aac0be9e5a697fc734e49a5bda4774c5aba2e18
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"node_path\":\"/root/Main/Car\",\"properties\":{\"collision_layer\":1},\"type\":\"CharacterBody2D\"}","type":"text"}]}}
+[PASS] D3_game_read_of_a_real_property_still_ok
+[C03_game_read_all_properties] bytes=2131
+[PASS] D3_unfiltered_read_still_answers_every_property
+       code=0 property_count=66
+[C04_game_set_missing_name] bytes=230 sha256=ea962036f26b272d88b13e35302f6fae4e8dba93fac87f3e93478c81a6036a46
+       {"error":{"code":-32001,"data":{"suggestion":"Use running_game_get_node_properties to list the properties this node has"},"message":"Property 'physics_material_override' on node '/root/Main/Car' not found"},"id":1,"jsonrpc":"2.0"}
+[PASS] D3_write_side_still_refuses_the_same_name
+[C05_game_read_batch] bytes=314 sha256=6a1a82751f4ab722c54d3c55bebec9f56a850687c860fa23566f8d6639425b9e
+       {"id":1,"jsonrpc":"2.0","result":{"content":[{"text":"{\"count\":2,\"results\":[{\"node_path\":\"/root/Main/Car\",\"properties\":{\"collision_layer\":1},\"type\":\"CharacterBody2D\"},{\"node_path\":\"/root/Main/Car\",\"properties\":{\"no_such_property_zzq\":null},\"type\":\"CharacterBody2D\"}]}","type":"text"}]}}
+
+--- environment note -------------------------------------------------------------
+
+The D-3 probes ran against the *leftover TASK-039 racing game* on 9889
+(pid 73176, `godot.windows.editor.x86_64.mono.exe --headless --path
+%TEMP%\mcp-racing-test --mcp-port=9889`), because that port was occupied and this
+run never kills a process it did not start: `C00_play_scene` (editor_play_scene
+with mcp_port=9889) was refused with
+`-32000 mcp_port 9889 is not free on 127.0.0.1 (another process is listening on it)`.
+That made the red D-3 evidence a measurement of the *real* racing scene
+(`/root/Main/Car` is the racing project's `CharacterBody2D`, 66 properties, no
+`physics_material_override`). The fix run starts the module's own game child on a
+tool-picked free port.
+
+--- red doctest ------------------------------------------------------------------
+
+%TEMP%\mcp040\doctest_red.log (copied here as doctest-red.log):
+[doctest] test cases:   276 |   272 passed |  4 failed | 1429 skipped
+[doctest] assertions: 15864 | 15850 passed | 14 failed |
+[doctest] Status: FAILURE!

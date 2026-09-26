@@ -1,0 +1,45 @@
+# TASK-074 section B (observer) -- baseline capture
+# captured: 2026-09-25T20:30:52+08:00 (local)
+# authority: observer session, read-only recon before the blocking watcher was armed
+
+repo            = F:\RustProjects\godot-mcp-pro\code\godot
+branch          = feature/mcp-server-module
+HEAD            = 58becb2f33
+git status      = clean except the 4 pre-existing untracked items
+                  (.graphifyignore, build-m0.cmd, graphify-out/, install-deps-m0.cmd)
+                  plus untracked modules/mcp_server/docs/tasks/TASK-074-round5-platformer.md
+
+contract        = modules/mcp_server/docs/tools_list.renamed.json
+contract_tools  = 176
+prefix_counts   = editor 104 / project 47 / running_game 23 / os 2
+
+# port guard: Get-NetTCPConnection -State Listen | Where LocalPort in 9877,9888,9889
+port_9877_listen = NONE
+port_9888_listen = NONE
+port_9889_listen = NONE
+pid_36392        = NOT PRESENT (the process named by the task book is gone)
+
+scratch          = %TEMP%\mcp-platformer -> does not exist before the watcher ran
+godot_processes  = none (no godot/dotnet/scons/python process)
+bin_editor_exe   = godot.windows.editor.x86_64.console.exe  (mtime 2026/9/25 18:51:28)
+bin_mono_exe     = godot.windows.editor.x86_64.mono.console.exe (mtime 2026/9/25 18:53:30)
+
+prior_task074_artifacts = none
+  reports\PLATFORMER-DEV-LOG.md      : absent
+  reports\PLATFORMER-FINDINGS.md     : absent
+  reports\PLATFORMER-OBSERVATIONS.md : absent (this run creates it)
+  evidence\task074\                  : existed but empty
+
+# watcher invocation actually used (see report section 1 for why):
+#   powershell -NoProfile -ExecutionPolicy Bypass -Command
+#     "& <repo>\modules\mcp_server\scripts\mcp_watch_run.ps1
+#        -Marker <TEMP>\mcp-platformer\DEV-DONE.marker
+#        -TracePath @('<TEMP>\mcp-platformer\*.jsonl','<TEMP>\mcp-platformer\*.md')
+#        -TimeoutSec 4800 -StaleSec 300 -IntervalSec 30
+#        -OutDir <TEMP>\mcp-platformer\watch"
+# the -File form prescribed by the task book fails with exit 1:
+#   "Cannot bind parameter because parameter 'TracePath' is specified more than once."
+#
+# analyzer available for the analysis step:
+#   modules/mcp_server/scripts/analyze_mcp_trace.py (28775 B)
+#   usage: python analyze_mcp_trace.py <trace.jsonl> [--json out.json] [--quiet]

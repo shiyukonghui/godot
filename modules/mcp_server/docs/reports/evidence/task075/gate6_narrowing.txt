@@ -1,0 +1,27 @@
+  [gate    ] tools/tool_helpers.cpp:1869  G24-THE-GATE  const float narrowed = (float)value;
+
+note: 18 pinned line number(s) drifted (the pin is by marker id + occurrence, so this is not a failure; update the list when convenient):
+  tools/editor_animation_tree_write.cpp  marker=G24-ANIM-POSITION  occurrence=1  pinned_line=746  now=759
+  tools/editor_input_simulation.cpp  marker=G24-EDITOR-INPUT-EVENT-BUILD  occurrence=0  pinned_line=258  now=263
+  tools/editor_input_simulation.cpp  marker=G24-EDITOR-INPUT-EVENT-BUILD  occurrence=1  pinned_line=260  now=265
+  tools/editor_input_simulation.cpp  marker=G24-EDITOR-INPUT-EVENT-BUILD  occurrence=2  pinned_line=270  now=275
+  tools/editor_input_simulation.cpp  marker=G24-EDITOR-INPUT-EVENT-BUILD  occurrence=3  pinned_line=272  now=277
+  tools/editor_input_simulation.cpp  marker=G24-EDITOR-INPUT-EVENT-BUILD  occurrence=4  pinned_line=274  now=279
+  tools/editor_input_simulation.cpp  marker=G24-EDITOR-INPUT-EVENT-BUILD  occurrence=5  pinned_line=288  now=293
+  tools/editor_write_scene_editor.cpp  marker=G24-CAMERA-FOV  occurrence=0  pinned_line=781  now=792
+  tools/project_theme_write.cpp  marker=G24-THEME-STYLEBOX-DEFAULT  occurrence=0  pinned_line=403  now=433
+  tools/project_theme_write.cpp  marker=G24-THEME-STYLEBOX-DEFAULT  occurrence=1  pinned_line=407  now=437
+  tools/project_write_resource_scene.cpp  marker=G24-RESOURCE-SET-WIDTH  occurrence=0  pinned_line=190  now=238
+  tools/tool_helpers.cpp  marker=G24-INPUT-PERSIST-DEADZONE  occurrence=0  pinned_line=697  now=777
+  tools/tool_helpers.cpp  marker=G24-INPUT-PERSIST-DEADZONE  occurrence=1  pinned_line=703  now=783
+  tools/tool_helpers.cpp  marker=G24-DIFF-PIXEL-UNCHANGED  occurrence=0  pinned_line=1033  now=1113
+  tools/tool_helpers.cpp  marker=G24-DIFF-PIXEL-CHANGED  occurrence=0  pinned_line=1125  now=1205
+  tools/tool_helpers.cpp  marker=G24-DIFF-PIXEL-CHANGED  occurrence=1  pinned_line=1155  now=1235
+  tools/tool_helpers.cpp  marker=G24-DIFF-PIXEL-UNCHANGED  occurrence=1  pinned_line=1159  now=1239
+  tools/tool_helpers.cpp  marker=G24-THE-GATE  occurrence=0  pinned_line=1754  now=1869
+
+PASS: every narrowing point of the module that one of the declared spellings
+      matches is annotated and pinned; the declared set is bounded and probed
+      (`--coverage`; TASK-031 / DESIGN-DETAIL section 22.3b), a new point in one of
+      those spellings fails this check whether or not unrelated lines moved, and a
+      vanished marker fails as a stale entry.

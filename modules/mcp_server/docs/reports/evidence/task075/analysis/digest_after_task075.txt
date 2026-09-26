@@ -1,0 +1,19 @@
+     CAP  seq=6    running_game_assert_screen_text   status=done changed=True reason=None
+     seq=7    running_game_capture_screenshot   ok=True  code=0       ms=37    args={"save_path":"user://game4_shot.png"}
+     CAP  seq=7    running_game_capture_screenshot   status=done changed=True reason=None
+
+== D9: NON-OK CALLS BY PORT (CALLS.jsonl, the authoritative per-call record) ==
+  CALLS.jsonl NOT FOUND at F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task074\observations\..\..\CALLS.jsonl: no per-port count is possible here
+
+== D9: WHAT THE TRACES COVER (the trace is a bounded snapshot) ==
+  trace-editor.jsonl     non-ok in trace = 28
+  trace-game.jsonl       non-ok in trace = 0
+  trace-game2.jsonl      non-ok in trace = 0
+  trace-game3.jsonl      non-ok in trace = 1
+  trace-game4.jsonl      non-ok in trace = 1
+  ---------------------------------------------------------------
+  editor: trace=28   CALLS.jsonl=0   delta=-28 (not represented in the trace)
+  game:   trace=2   CALLS.jsonl=0   delta=-2 (not represented in any trace)
+
+== D9: CROSS-CHECK AGAINST raw/** (one directory per call, response with an error key) ==
+  raw/** NOT FOUND at F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task074\observations\..\..\raw

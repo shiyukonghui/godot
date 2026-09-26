@@ -1,0 +1,22 @@
+ANCHOR_JUDGE VERDICT=ANCHOR_EQUAL
+ANCHOR_JUDGE ANCHOR=077694816 ANCHOR_REPORTED=077694816 HEAD=077694816
+ANCHOR_JUDGE ANCESTOR=yes
+ANCHOR_JUDGE CRITERION=A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)
+ANCHOR_JUDGE DIFF_COUNT=0 SAFE_COUNT=0 RED_COUNT=0
+ANCHOR_JUDGE REASON=the binary self-reports the very commit HEAD points at; the diff is empty by construction
+ANCHOR_JUDGE SUMMARY anchor=077694816 anchor_reported=077694816 head=077694816 verdict=ANCHOR_EQUAL ancestor=yes diff_count=0 safe_count=0 red_count=0 criterion="A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)" reason="the binary self-reports the very commit HEAD points at; the diff is empty by construction" diff=[<empty>]
+ANCHOR_JUDGE RESULT PASS
+ANCHOR_JUDGE VERDICT=ANCHOR_STRUCTURAL_EQUIVALENT
+ANCHOR_JUDGE ANCHOR=077694816 ANCHOR_REPORTED=077694816 HEAD=9a035486f
+ANCHOR_JUDGE ANCESTOR=yes
+ANCHOR_JUDGE CRITERION=A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)
+ANCHOR_JUDGE DIFF_COUNT=6 SAFE_COUNT=6 RED_COUNT=0
+ANCHOR_JUDGE SAFE modules/mcp_server/docs/reports/REPORT-075-round5-fixes.md
+ANCHOR_JUDGE SAFE modules/mcp_server/docs/reports/evidence/task075/gate1_contract_subset.txt
+ANCHOR_JUDGE SAFE modules/mcp_server/docs/reports/evidence/task075/gate3_doctest_mcpserver.txt
+ANCHOR_JUDGE SAFE modules/mcp_server/docs/reports/evidence/task075/gate4_full_doctest.txt
+ANCHOR_JUDGE SAFE modules/mcp_server/docs/reports/evidence/task075/gate_engine_anchor.txt
+ANCHOR_JUDGE SAFE modules/mcp_server/docs/reports/evidence/task075/sha256_manifest.txt
+ANCHOR_JUDGE REASON=077694816 is an ancestor of 9a035486f and all 6 file(s) in the diff are non-compiling; the binary is NOT equal to HEAD, it is structurally equivalent to it
+ANCHOR_JUDGE SUMMARY anchor=077694816 anchor_reported=077694816 head=9a035486f verdict=ANCHOR_STRUCTURAL_EQUIVALENT ancestor=yes diff_count=6 safe_count=6 red_count=0 criterion="A is an ancestor of H (A == H counts) and git diff --name-only A..H contains no compile input (safe = declared non-compiling whitelist, everything else red)" reason="077694816 is an ancestor of 9a035486f and all 6 file(s) in the diff are non-compiling; the binary is NOT equal to HEAD, it is structurally equivalent to it" diff=[S:modules/mcp_server/docs/reports/REPORT-075-round5-fixes.md S:modules/mcp_server/docs/reports/evidence/task075/gate1_contract_subset.txt S:modules/mcp_server/docs/reports/evidence/task075/gate3_doctest_mcpserver.txt S:modules/mcp_server/docs/reports/evidence/task075/gate4_full_doctest.txt S:modules/mcp_server/docs/reports/evidence/task075/gate_engine_anchor.txt S:modules/mcp_server/docs/reports/evidence/task075/sha256_manifest.txt]
+ANCHOR_JUDGE RESULT PASS

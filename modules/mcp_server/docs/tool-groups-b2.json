@@ -1,0 +1,149 @@
+{
+  "_comment": "B2 group manifest for TASK-010. The 25 B2 tools of DESIGN-DETAIL.md section 10 (old names) are translated to the frozen v1.1 contract names of docs/tools_list.renamed.json through docs/tool-rename-map.json and partitioned into 9 groups. Same invariants as the B1 manifest (docs/tool-groups.json): every tool appears exactly once, every group is one channel + one mutating value (checked against the rename map) + one scope, each group fits one tools/<group>.{h,cpp} file and holds at most 10 tools. This file is a *sister* file of the B1 manifest and does not modify it.",
+  "batch": "B2",
+  "total": 25,
+  "source": {
+    "batch_list": "docs/DESIGN-DETAIL.md section 10 (B2 = 25 old tools, the E3 unlock point)",
+    "names": "docs/tools_list.renamed.json (171 entries, v1.4 generated)",
+    "map": "docs/tool-rename-map.json (v1.1, 174 entries)",
+    "excluded": "none: all 25 B2 old names are disposition=rename and survive into the contract"
+  },
+  "counts": {
+    "b2_old_tools": 25,
+    "excluded": 0,
+    "b2_tools_to_port": 25,
+    "groups": 9
+  },
+  "notes": {
+    "partition_axis": "The B1 manifest could partition mostly by channel. B2 cannot: the batch is dominated by `scope = game` tools that differ in their *dependency*, and the `mutating` axis is fixed per group (GDR-18), so two families that look like one feature split. The declared grouping therefore follows the axis the group file itself cares about - which engine subsystem the tool needs and whether it writes - so that one group is one file with one set of helpers.",
+    "frame_clock_axis": "Three game-scope reads need the *frame clock* rather than the node tree: running_game_get_node_property_samples (N samples across frames), running_game_find_node_when_available (poll until the node appears) and running_game_capture_frames (N rendered frames). The module executes a tool synchronously inside one frame (MCPServer::pump_frame -> MCPHttpServer::poll -> tool handler), so these three cannot be implemented without a deferred-response mechanism; they form their own group and are the documented blocker of TASK-010 section 2.",
+    "capture_family_split": "running_game_capture_frames and running_game_capture_screenshot are one capability (read the viewport back) but GDR-18 makes the screenshot tool mutating=true (its optional save_path can write res://) while the frames tool stays mutating=false, and a group may only carry one mutating value. The manifest cannot put them in one group; the split is forced by the rule, not by a difference in dependency.",
+    "script_execution_alone": "running_game_execute_gdscript is the E3 lever: it compiles a GDScript at runtime and therefore reaches engine singletons (Input/Engine/OS) that the migration source's Expression-based path could not. It is alone in its group because it is the only tool of the batch that executes arbitrary caller code, and its file owns that one decision."
+  },
+  "groups": [
+    {
+      "name": "running_game_observation",
+      "batch": "B2",
+      "channel": "running_game",
+      "scope": "game",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "running_game_get_scene_tree",
+        "running_game_get_node_properties",
+        "running_game_get_node_properties_batch",
+        "running_game_get_autoload_node",
+        "running_game_find_nodes_by_script",
+        "running_game_find_ui_elements"
+      ],
+      "notes": "TASK-010 section 2: the game-side observation group. Six read-only tools that answer inside a single frame from the running game's SceneTree::get_current_scene(): the tree, one node's properties, many nodes' properties, an autoload, the nodes carrying one script, and the Control nodes. Owns tools/running_game_observation.{h,cpp}. Implemented by TASK-010 together with the group below; see the report for why the two remaining game-scope reads had to leave the group."
+    },
+    {
+      "name": "running_game_frame_observation",
+      "batch": "B2",
+      "channel": "running_game",
+      "scope": "game",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "running_game_get_node_property_samples",
+        "running_game_find_node_when_available",
+        "running_game_capture_frames"
+      ],
+      "notes": "The frame-clock reads. All three need the game to advance frames between two observations (sampling, polling, rendering), which the module's one-frame-synchronous tool execution cannot express. TASK-010 reported this as the minimal counterexample and did not register them (GDR-7: never register what does not work). TASK-011 implemented the deferred response channel of GDR-20 and ported all three: each handler returns a MCPDeferred::Task, the transport drives it with the SceneTree frame counter under a per-frame tick budget, and an expired wait ends with -32000 + data.suggestion + data.timeout_ms. Only this group and running_game_capture were flipped to implemented by TASK-011."
+    },
+    {
+      "name": "running_game_script_execution",
+      "batch": "B2",
+      "channel": "running_game",
+      "scope": "game",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "running_game_execute_gdscript"
+      ],
+      "notes": "The E3 lever of the batch (D56): the module lives in the game process, so this tool compiles the caller's GDScript in that process and reaches the engine singletons directly. Owns tools/running_game_script_execution.{h,cpp}. It is a separate group from running_game_observation because it is mutating=true (it can change anything the script changes) while every observation tool is read-only, and a group carries exactly one mutating value."
+    },
+    {
+      "name": "running_game_input",
+      "batch": "B2",
+      "channel": "running_game",
+      "scope": "game",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "running_game_create_input_recording",
+        "running_game_stop_input_recording",
+        "running_game_play_input_recording",
+        "running_game_simulate_button_click_by_text"
+      ],
+      "notes": "Input synthesis and recording in the game process. One dependency surface (the Input singleton plus InputEvent reconstruction) and one file. Note that play_input_recording is also frame-clock bound (it replays events on a time line); start/stop are not, because the recording accumulates in _input between two calls that sit on different frames already. TASK-012 implemented all four: create/stop drive the module's own recorder node (tools/input_recorder.{h,cpp}) - the built-in module has no GDScript autoload to borrow - and play_input_recording is the first deferred tool that *writes* (GDR-20) instead of observing. This is also the group DECISIONS D56 is about: these four act on the game process' Input, while the editor_* input tools act on the editor's."
+    },
+    {
+      "name": "running_game_node_write",
+      "batch": "B2",
+      "channel": "running_game",
+      "scope": "game",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "running_game_set_node_property"
+      ],
+      "notes": "The one game-scope property write. It shares the property coercion helpers (property_type_of / coerce_to_property_type, tools/tool_helpers.h) with the three project/editor write groups, which is why it is its own file: B3 ports the rest of the node-write family and this is its game-side header. TASK-012 implemented it and observes the write: the answer carries the serialized old_value and the new_value read back after Object::set()."
+    },
+    {
+      "name": "running_game_capture",
+      "batch": "B2",
+      "channel": "running_game",
+      "scope": "game",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "running_game_capture_screenshot"
+      ],
+      "notes": "The viewport readback that writes a file (GDR-18 conditional write, hence mutating=true). Its read-only sibling running_game_capture_frames sits in running_game_frame_observation. TASK-011 ported it: inside the game process there is no user:// file IPC to wait for any more, so it is an ordinary immediate tool (it does not need the deferred channel); the two groups share the framebuffer helpers of tools/tool_helpers. A process without a framebuffer (the headless display server, whose dummy renderer has no texture storage) is refused with -32000 instead of returning an empty picture."
+    },
+    {
+      "name": "editor_playback",
+      "batch": "B2",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_play_scene",
+        "editor_stop_scene"
+      ],
+      "notes": "The editor-side play/stop pair (channel=editor, scope=editor, mutating=true). This is the group the mapping deliberately keeps in the *editor* process: it starts and stops the editor's own scene player and never drives a game endpoint (TASK-010 section 0: the editor_simulate_* family injects the editor process' input, which is the E3 root cause and must not be used to drive a game). TASK-012 implemented both. Starting playback spawns a game *child process* (EditorRun::run); that child reads its MCP port from its own project settings, so a test project that wants the child on the test port must set godot_mcp/port - the module does not invent a port for a game it starts, and editor_stop_scene is the lever that keeps the child from being orphaned."
+    },
+    {
+      "name": "editor_input_simulation",
+      "batch": "B2",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_simulate_input_action",
+        "editor_simulate_key",
+        "editor_simulate_mouse_click",
+        "editor_simulate_mouse_move",
+        "editor_simulate_input_sequence",
+        "editor_add_input_action"
+      ],
+      "notes": "The editor-process input simulation family plus the one input-map write that is not a simulation. All are scope=editor and mutating=true, all need EditorInterface/InputMap, so one file. Split from editor_playback because the play/stop pair drives the editor's scene player while these inject synthetic events into the editor's own input queue. TASK-013 implemented all six (B2 = 25/25): each is guarded by MCP_EDITOR_TOOLS_ENABLED and by its scope (so it is absent from a game process' table and endpoint), every success answer carries target=editor, editor_add_input_action reports persisted=false because it writes the editor process' InputMap in memory only, and editor_simulate_input_sequence is the group's one deferred tool (its frame_delay is a frame clock). The D59/GDR-21 boundary is measured in REPORT-013: an event injected here is counted by an EditorPlugin inside the editor process while the same counters of a game running on the test port do not move."
+    },
+    {
+      "name": "editor_input_read",
+      "batch": "B2",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_input_actions"
+      ],
+      "notes": "The read-only member of the editor input family: listing the project's input actions. It cannot join editor_input_simulation (mutating differs) nor editor_playback, so it stands alone; a one-tool group is the shape the mutating invariant forces for a lone read among writes. TASK-012 implemented it: it lists the *editor process'* InputMap singleton (the mapping's stated reason for the editor_ channel), sorted ascending because InputMap::get_actions() iterates a HashMap and its order is not part of the engine's contract."
+    }
+  ]
+}

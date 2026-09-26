@@ -1,0 +1,439 @@
+==========================================================================================
+M6__002_attach_coin_script_batch30
+-- request.json (964 B) sha256=f61eb952cb9d7095b11254412e3e003495e043d3f431aa83657f54ea9463ce6e
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "keep_existing": false,
+   "node_paths": [
+    "World/CoinField/Coin000",
+    "World/CoinField/Coin001",
+    "World/CoinField/Coin002",
+    "World/CoinField/Coin003",
+    "World/CoinField/Coin004",
+    "World/CoinField/Coin005",
+    "World/CoinField/Coin006",
+    "World/CoinField/Coin007",
+    "World/CoinField/Coin008",
+    "World/CoinField/Coin009",
+    "World/CoinField/Coin010",
+    "World/CoinField/Coin011",
+    "World/CoinField/Coin012",
+    "World/CoinField/Coin013",
+    "World/CoinField/Coin014",
+    "World/CoinField/Coin015",
+    "World/CoinField/Coin016",
+    "World/CoinField/Coin017",
+    "World/CoinField/Coin018",
+    "World/CoinField/Coin019",
+    "World/CoinField/Coin020",
+    "World/CoinField/Coin021",
+    "World/CoinField/Coin022",
+    "World/CoinField/Coin023",
+    "World/CoinField/Coin024",
+    "World/CoinField/Coin025",
+    "World/CoinField/Coin026",
+    "World/CoinField/Coin027",
+    "World/CoinField/Coin028",
+    "World/CoinField/Coin029"
+   ],
+   "script_path": "res://scripts/coin.gd"
+  },
+  "name": "editor_set_node_script_batch"
+ },
+ "id": 2,
+ "jsonrpc": "2.0"
+}
+-- response.json (4615 B) sha256=ef8db75df33ab89b1ada7fa1a0a21c1d257a2d8dc3886e83b49dec750b41478a
+{
+ "id": 2,
+ "jsonrpc": "2.0",
+ "result": {
+  "content": [
+   {
+    "text": "{\"attached\":[{\"attached\":true,\"index\":0,\"node_path\":\"World/CoinField/Coin000\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":1,\"node_path\":\"World/CoinField/Coin001\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":2,\"node_path\":\"World/CoinField/Coin002\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":3,\"node_path\":\"World/CoinField/Coin003\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":4,\"node_path\":\"World/CoinField/Coin004\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":5,\"node_path\":\"World/CoinField/Coin005\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":6,\"node_path\":\"World/CoinField/Coin006\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":7,\"node_path\":\"World/CoinField/Coin007\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":8,\"node_path\":\"World/CoinField/Coin008\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":9,\"node_path\":\"World/CoinField/Coin009\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":10,\"node_path\":\"World/CoinField/Coin010\",\"previous_script_path\":\"\",\"script_path\":\"res://scripts/coin.gd\"},{\"attached\":true,\"index\":11,\"node_path\":\"World/CoinField/Coin011\",\"previous_script_path\":\"
+==========================================================================================
+M6__003_coin000_props
+-- request.json (172 B) sha256=05affdf0fbce99b30f6a52fecdbd5cefb1077b49d004a28a243f80c55bb689d2
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "properties": [
+    "script",
+    "value"
+   ],
+   "path": "World/CoinField/Coin000"
+  },
+  "name": "editor_get_node_properties"
+ },
+ "id": 3,
+ "jsonrpc": "2.0"
+}
+-- response.json (434 B) sha256=20f7e60eb8d2c0724714feaac9c8a6cc8155e8d3f5ea9464cc92fa5d2b0cf1d8
+{
+ "error": {
+  "code": -32001,
+  "data": {
+   "suggestion": "editor_get_node_properties never answers with an empty map for a property it was asked for by name. Names starting with '_' and the 'script' property are kept out of the property listing (the migration source's rule); ask for the properties you need by their public names instead"
+  },
+  "message": "Property 'script' on node 'Coin000' is not readable by name not found"
+ },
+ "id": 3,
+ "jsonrpc": "2.0"
+}
+==========================================================================================
+M6__009_conn3_anim_finished
+-- request.json (215 B) sha256=516b7b521967db5690d79304ca51ab25f65afb01b4b56ffbbf144d567cac7598
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "source_path": "World/Player/Anim",
+   "target_path": ".",
+   "method": "OnAnimationFinished",
+   "signal": "animation_finished"
+  },
+  "name": "editor_connect_signal"
+ },
+ "id": 9,
+ "jsonrpc": "2.0"
+}
+-- response.json (183 B) sha256=36815bbcfbff8990472ed373569dd31fad5ba5fe0fce8c5070dcebd7568ca3b4
+{
+ "error": {
+  "code": -32001,
+  "data": {
+   "suggestion": "Use editor_get_scene_tree to list the nodes of the edited scene"
+  },
+  "message": "Node 'World/Player/Anim' not found"
+ },
+ "id": 9,
+ "jsonrpc": "2.0"
+}
+==========================================================================================
+M6__006_player_signals
+-- request.json (131 B) sha256=21b9b1c1b721d3b3d189365442628a041a8adb874df51543cc54a1770fe11110
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "node_path": "World/Player"
+  },
+  "name": "editor_get_node_signals"
+ },
+ "id": 6,
+ "jsonrpc": "2.0"
+}
+-- response.json (3683 B) sha256=33947374361dfe8bd1e07517b8f49b9a3c9f9a81a9d1eb0a5d6ebae0a23971ee
+{
+ "id": 6,
+ "jsonrpc": "2.0",
+ "result": {
+  "content": [
+   {
+    "text": "{\"count\":22,\"node_path\":\"World/Player\",\"signals\":[{\"args\":[],\"connections\":[{\"method\":\"SceneTreeEditor::_node_script_changed\",\"target\":\"../../../../../../../../../../../../../../DockVSplitLeftR/DockSlotLeftUR/Scene/@VBoxContainer@5378/@MarginContainer@5441/@SceneTreeEditor@5485\"},{\"method\":\"ScriptEditor::_queue_update_list\",\"target\":\"../../../../../../../../../Script\"},{\"method\":\"ScriptEditor::_queue_update_list\",\"target\":\"../../../../../../../../../../../../@EditorBottomPanel@8211/Shader Editor\"}],\"name\":\"script_changed\"},{\"args\":[],\"connections\":[],\"name\":\"property_list_changed\"},{\"args\":[],\"connections\":[],\"name\":\"ready\"},{\"args\":[],\"connections\":[],\"name\":\"renamed\"},{\"args\":[],\"connections\":[],\"name\":\"tree_entered\"},{\"args\":[],\"connections\":[],\"name\":\"tree_exiting\"},{\"args\":[],\"connections\":[{\"method\":\"ScriptEditor::_queue_update_list\",\"target\":\"../../../../../../../../../Script\"},{\"method\":\"ScriptEditor::_queue_update_list\",\"target\":\"../../../../../../../../../../../../@EditorBottomPanel@8211/Shader Editor\"}],\"name\":\"tree_exited\"},{\"args\":[{\"name\":\"node\",\"type\":\"Object\"}],\"connections\":[{\"method\":\"ScriptEditor::_connect_to_scene_recursive\",\"target\":\"../../../../../../../../../Script\"},{\"method\":\"ScriptEditor::_connect_to_scene_recursive\",\"target\":\"../../../../../../../../../../../../@EditorBottomPanel@8211/Shader Editor\"}],\"name\":\"child_entered_tree\"},{\"args\":[{\"name\":\"node\",\"type\":\"Object\"}],\"connections\":[],\"name\":\"child_exiting_tree\"},{\"args\":[],\"connections\":[{\"method\":\"SceneTreeEditor::_node_child_order_changed\",\"target\":\"..
+==========================================================================================
+M6__012_conns_user
+-- request.json (127 B) sha256=830b25879301d1174891a6c33055e8ce38ca8e020e6dfcf5c9e6bf5d8de4c5e1
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "scope": "user"
+  },
+  "name": "editor_list_signal_connections"
+ },
+ "id": 12,
+ "jsonrpc": "2.0"
+}
+-- response.json (643 B) sha256=db88134f049057f1663a437184763c8bfdc3a682809bc2f4b0b2c2d61cd61be2
+{
+ "id": 12,
+ "jsonrpc": "2.0",
+ "result": {
+  "content": [
+   {
+    "text": "{\"connections\":[{\"method\":\"OnCoinCollected\",\"signal\":\"coin_collected\",\"source\":\"World/CoinField/Coin000\",\"target\":\".\"},{\"method\":\"OnCoinCollected\",\"signal\":\"coin_collected\",\"source\":\"World/CoinField/Coin001\",\"target\":\".\"},{\"method\":\"SetPaused\",\"signal\":\"pressed\",\"source\":\"HUD/HudRoot/PauseButton\",\"target\":\".\"},{\"method\":\"OnAnimationFinished\",\"signal\":\"button_down\",\"source\":\"HUD/HudRoot/PauseButton\",\"target\":\".\"}],\"count\":4,\"counts\":{\"all\":1354,\"internal\":1350,\"user\":4},\"scope\":\"user\"}",
+    "type": "text"
+   }
+  ]
+ }
+}
+==========================================================================================
+M6__017_read_save_json
+-- request.json (130 B) sha256=d489e6572a72bcd663976d5cb3039281476a5242fb6ba2cd9cf083ae93df0900
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "path": "res://save/slot1.json"
+  },
+  "name": "project_read_file"
+ },
+ "id": 17,
+ "jsonrpc": "2.0"
+}
+-- response.json (97 B) sha256=cfae598469611f291c724db1bfc41c92bf3af9872521be5243ec732e386aa050
+{
+ "error": {
+  "code": -32601,
+  "message": "Method not found: project_read_file"
+ },
+ "id": 17,
+ "jsonrpc": "2.0"
+}
+==========================================================================================
+M6__018_read_text_save
+-- request.json (135 B) sha256=80cbdaff7396c90ab7ff3fe642194787c57457d7742e8e07ba7617c236c50d0b
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "path": "res://save/slot1.json"
+  },
+  "name": "project_read_text_file"
+ },
+ "id": 18,
+ "jsonrpc": "2.0"
+}
+-- response.json (102 B) sha256=225ca14d27640c8f58ea1061e03fbd6209166e3952382de819dc8e8ff1524543
+{
+ "error": {
+  "code": -32601,
+  "message": "Method not found: project_read_text_file"
+ },
+ "id": 18,
+ "jsonrpc": "2.0"
+}
+==========================================================================================
+M6__016_write_save_json
+-- request.json (334 B) sha256=88a6f4117aedc6f695e8e37e8add31f347748ad799b5ff1264ed9078a87424cb
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "path": "res://save/slot1.json",
+   "overwrite": true,
+   "content": "{\"version\":1,\"level\":\"level1\",\"score\":7,\"lives\":3,\"coins\":[{\"x\":1000,\"y\":-500},{\"x\":1017,\"y\":-501}],\"saved_by\":\"editor_project_write_text_file\"}"
+  },
+  "name": "project_write_text_file"
+ },
+ "id": 16,
+ "jsonrpc": "2.0"
+}
+-- response.json (221 B) sha256=0f2e46221d8045250424f2ff8eb20704fb3d866f93b08c0a8342365ddef78c9e
+{
+ "id": 16,
+ "jsonrpc": "2.0",
+ "result": {
+  "content": [
+   {
+    "text": "{\"bytes\":144,\"created\":true,\"path\":\"res://save/slot1.json\",\"sha256\":\"d39c679f9561495281083c8cf8ead887bb09bd9b57a80f81f8adbb5fd2661c40\"}",
+    "type": "text"
+   }
+  ]
+ }
+}
+==========================================================================================
+M7__005_conn6_coin002
+-- request.json (213 B) sha256=da75fcacdf75db2a03f043a7ff48fd97816a9dd85c2f1ea94880fa289759e22e
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "source_path": "World/CoinField/Coin002",
+   "target_path": ".",
+   "method": "OnCoinCollected",
+   "signal": "coin_collected"
+  },
+  "name": "editor_connect_signal"
+ },
+ "id": 5,
+ "jsonrpc": "2.0"
+}
+-- response.json (198 B) sha256=3d37639a119691f3a9bef695d06e0156c831819ca9cd02b1f57d2d5b255d7ce9
+{
+ "id": 5,
+ "jsonrpc": "2.0",
+ "result": {
+  "content": [
+   {
+    "text": "{\"connected\":true,\"persisted\":true,\"signal\":\"coin_collected\",\"source\":\"World/CoinField/Coin002\",\"target\":\".\"}",
+    "type": "text"
+   }
+  ]
+ }
+}
+==========================================================================================
+M7__007_attach_coin002_single
+-- request.json (179 B) sha256=4c880341551e7f29624a7d10a77e2b18cb7922d6ac64bef0a778e5d7d7447436
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "node_path": "World/CoinField/Coin002",
+   "script_path": "res://scripts/coin.gd"
+  },
+  "name": "editor_set_node_script"
+ },
+ "id": 7,
+ "jsonrpc": "2.0"
+}
+-- response.json (227 B) sha256=7ef8d95304ee287549f6922c193716fb8d66ad0b005a2f1696394e7fd97ac331
+{
+ "id": 7,
+ "jsonrpc": "2.0",
+ "result": {
+  "content": [
+   {
+    "text": "{\"attached\":true,\"node_path\":\"World/CoinField/Coin002\",\"previous_script_path\":\"res://scripts/coin.gd\",\"script_path\":\"res://scripts/coin.gd\"}",
+    "type": "text"
+   }
+  ]
+ }
+}
+==========================================================================================
+M11__002_attach_coin002
+-- request.json (179 B) sha256=11ca54a84b97a6cb01709501c4113e3831adda9b0111cde2d33e92cd262a3ef1
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "node_path": "World/CoinField/Coin002",
+   "script_path": "res://scripts/coin.gd"
+  },
+  "name": "editor_set_node_script"
+ },
+ "id": 2,
+ "jsonrpc": "2.0"
+}
+-- response.json (227 B) sha256=9e04ec7f77883b321236665fe0b7a78dbacc0b3bf4e7156b27b7d7cb057b12f7
+{
+ "id": 2,
+ "jsonrpc": "2.0",
+ "result": {
+  "content": [
+   {
+    "text": "{\"attached\":true,\"node_path\":\"World/CoinField/Coin002\",\"previous_script_path\":\"res://scripts/coin.gd\",\"script_path\":\"res://scripts/coin.gd\"}",
+    "type": "text"
+   }
+  ]
+ }
+}
+==========================================================================================
+M11__005_coin002_props
+-- request.json (182 B) sha256=812c5150179df782fdfc64237a364bbad8e812317a933efe8728b71c67d6d697
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "node_path": "World/CoinField/Coin002",
+   "properties": [
+    "value",
+    "taken"
+   ]
+  },
+  "name": "running_game_get_node_properties"
+ },
+ "id": 5,
+ "jsonrpc": "2.0"
+}
+-- response.json (302 B) sha256=7311979b01995886c3bac8c71c233f6c5f557557391afc90b588d82ad2d6ef79
+{
+ "error": {
+  "code": -32001,
+  "data": {
+   "suggestion": "Call running_game_get_node_properties without 'properties' to list every property this node has, or running_game_get_node_signals for its signals"
+  },
+  "message": "Property 'value' on node '/root/Main/World/CoinField/Coin002' not found"
+ },
+ "id": 5,
+ "jsonrpc": "2.0"
+}
+==========================================================================================
+M13__003_coin002_script
+-- request.json (179 B) sha256=328c86b8a74bcf5a4e8cc91ae2f7c6fbe6696981e5ed3d5e27cb0148f03bb400
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "node_path": "World/CoinField/Coin002",
+   "script_path": "res://scripts/coin.gd"
+  },
+  "name": "editor_set_node_script"
+ },
+ "id": 3,
+ "jsonrpc": "2.0"
+}
+-- response.json (227 B) sha256=b4b4a0a572fc8db69b523079327201b5fc55aba44f7f27ced0b471a45c56c7ce
+{
+ "id": 3,
+ "jsonrpc": "2.0",
+ "result": {
+  "content": [
+   {
+    "text": "{\"attached\":true,\"node_path\":\"World/CoinField/Coin002\",\"previous_script_path\":\"res://scripts/coin.gd\",\"script_path\":\"res://scripts/coin.gd\"}",
+    "type": "text"
+   }
+  ]
+ }
+}
+==========================================================================================
+M13__006_coin002_props
+-- request.json (195 B) sha256=839431054fb56937973df3c4cf328b5d2e48fb4cb459d19b02fc74a245ca9d0a
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "node_path": "World/CoinField/Coin002",
+   "properties": [
+    "value",
+    "taken",
+    "monitoring"
+   ]
+  },
+  "name": "running_game_get_node_properties"
+ },
+ "id": 6,
+ "jsonrpc": "2.0"
+}
+-- response.json (302 B) sha256=27f5b3f3a7d90a0c372ebf16a9832f9ba339ea423a969f07cae421a69486be75
+{
+ "error": {
+  "code": -32001,
+  "data": {
+   "suggestion": "Call running_game_get_node_properties without 'properties' to list every property this node has, or running_game_get_node_signals for its signals"
+  },
+  "message": "Property 'value' on node '/root/Main/World/CoinField/Coin002' not found"
+ },
+ "id": 6,
+ "jsonrpc": "2.0"
+}
+==========================================================================================
+M5__004_batch100_coins
+-- request.json (11273 B) sha256=18c0ecd50c4c74eae084388792a189ede4132e254b08d056871b43cafa10ea20
+{
+ "method": "tools/call",
+ "params": {
+  "arguments": {
+   "nodes": [
+    {
+     "parent_path": "World/CoinField",
+     "properties": {
+      "position": {
+       "y": -40,
+       "x": -60
+      }
+     },
+     "name": "Coin000",
+     "type": "Node2D"
+    },
+    {
+     "parent_path": "World/CoinField",
+     "properties": {
+      "position": {
+       "y": -40,
+       "x": -12
+      }

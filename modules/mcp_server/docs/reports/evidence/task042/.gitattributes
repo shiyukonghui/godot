@@ -1,0 +1,10 @@
+# TASK-042 evidence: every file in this directory is a raw artifact copied out
+# of %TEMP%, and the byte count + sha256 recorded in INDEX.md are of the bytes as
+# they were produced there. The repository root's `.gitattributes` sets
+# `* text=auto eol=lf`, which would rewrite the CRLF files on the next add and
+# make INDEX.md's hashes describe bytes that are not in the commit, so this
+# subtree opts out of every translation.
+#
+# This file is scoped to this directory on purpose: TASK-041's evidence lives in
+# a sibling directory and its stored bytes must not change.
+* -text

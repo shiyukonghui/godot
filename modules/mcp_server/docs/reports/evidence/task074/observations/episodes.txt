@@ -1,0 +1,465 @@
+====================================================================================================
+EPISODE: C# script creation (the -32602 dedicated-tool hint, then the -32001)
+====================================================================================================
+  seq=2    line=3    conn=3    tool=project_create_scene_file         ok=False code=-32000  dur=18ms
+        args={"path":"res://scenes/main.tscn","root_name":"Main","root_type":"Node2D"}
+        ERROR=Scene file already exists: res://scenes/main.tscn
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=3    line=5    conn=4    tool=editor_open_scene                 ok=True  code=0       dur=17ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=4    line=7    conn=5    tool=project_create_scene_file         ok=False code=-32000  dur=16ms
+        args={"path":"res://scenes/player.tscn","root_name":"Player","root_type":"CharacterBody2D"}
+        ERROR=Scene file already exists: res://scenes/player.tscn
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=5    line=9    conn=6    tool=editor_open_scene                 ok=True  code=0       dur=26ms
+        args={"path":"res://scenes/player.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=6    line=11   conn=7    tool=editor_add_nodes_batch            ok=True  code=0       dur=11ms
+        args={"nodes":[{"name":"Body","parent_path":".","properties":{"position":{"x":0.0,"y":0.0}},"type":"CollisionShape2D"},{"name":"Art","parent_path":".","properties":{"position":{"x":0.0,"y":0.0},"scale":{"x":1.5,"y":1.5}},"type":"Sprite2D"},{"name":"Anim","parent_path":".","type":"AnimationPlayer"}]}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=7    line=13   conn=8    tool=project_write_text_file           ok=False code=-32602  dur=10ms
+        args={"content":"using Godot;\n\n// TASK-074 section A: the C# half of the mixed-language platformer.\n// Plain (non-[Export]) public fields are still readable/writable by name through\n// Object::get/set, which is what running_game_set_node_property / get_properties\n// use; the [Export] ones are the ones that show up in get_property_list().\npublic partial class Player : CharacterBody2D\n{\n    [Export] public float Speed { get; set; } = 240.0f;\n    [Export] public float Jump { get; set; } = 520.0f;\n    [Export] public float Gravity { get; set; } = 1400.0f;\n    [Export] public float GroundY { get; set; } = 0.0f;\n\n    // Not [Export] on purpose: reached by name only (M3 PLAYBOOK fact).\n    public int PlainField = 4242;\n\n    private float _vy = 0.0f;\n\n    public override void _Ready()\n    {\n        GD.Print(\"[player-cs] ready at \" + Position);\n    }\n\n    public override void _PhysicsProcess(double delta)\n    {\n        float dt = (float)delta;\n        float dir = 0.0f;\n        if (Input.IsActionPressed(\"move_left\")) { dir -= 1.0f; }\n        if (Input.IsActionPressed(\"move_right\")) { dir += 1.0f; }\n        Vector2 v = Velocity;\n        v.X = dir * Speed;\n        if (IsOnFloor())\n        {\n            _vy = 0.0f;\n        }\n        else\n        {\n            _vy += Gravity * dt;\n        }\n        if (Input.IsActionJustPressed(\"jump\") && IsOnFloor())\n        {\n            _vy = -Jump;\n        }\n        v.Y = _vy;\n        Velocity = v;\n        MoveAndSlide();\n        if (Position.Y > GroundY) { Position = new Vector2(Position.X, GroundY); }\n    }\n}","overwrite":true,"path":"res://scripts/Player.cs"}
+        ERROR=Parameter 'path' names a '.cs' file ('res://scripts/Player.cs'), which has a dedicated tool
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=8    line=15   conn=9    tool=editor_set_node_script            ok=False code=-32001  dur=10ms
+        args={"node_path":".","script_path":"res://scripts/Player.cs"}
+        ERROR=Script 'res://scripts/Player.cs' not found
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=9    line=17   conn=10   tool=editor_save_scene                 ok=True  code=0       dur=34ms
+        args={"path":"res://scenes/player.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=10   line=19   conn=11   tool=project_create_scene_file         ok=False code=-32000  dur=10ms
+        args={"path":"res://scenes/enemy.tscn","root_name":"Enemy","root_type":"CharacterBody2D"}
+        ERROR=Scene file already exists: res://scenes/enemy.tscn
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=11   line=21   conn=12   tool=editor_open_scene                 ok=True  code=0       dur=21ms
+        args={"path":"res://scenes/enemy.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=12   line=23   conn=13   tool=editor_add_nodes_batch            ok=True  code=0       dur=10ms
+        args={"nodes":[{"name":"Body","parent_path":".","type":"CollisionShape2D"},{"name":"Art","parent_path":".","properties":{"scale":{"x":1.2,"y":1.2}},"type":"Sprite2D"}]}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=22   line=43   conn=23   tool=project_create_script             ok=True  code=0       dur=23ms
+        args={"content":"using Godot;\n\n// TASK-074 section A: the C# half of the mixed-language platformer.\n// Plain (non-[Export]) public fields are still reachable by name through\n// Object::get/set, which is what running_game_* property tools use.\npublic partial class Player : CharacterBody2D\n{\n    [Export] public float Speed { get; set; } = 240.0f;\n    [Export] public float Jump { get; set; } = 520.0f;\n    [Export] public float Gravity { get; set; } = 1400.0f;\n    [Export] public float GroundY { get; set; } = 0.0f;\n\n    // Not [Export] on purpose: reached by name only (PLAYBOOK M3 fact).\n    public int PlainField = 4242;\n\n    private float _vy = 0.0f;\n\n    public override void _Ready()\n    {\n        GD.Print(\"[player-cs] ready at \" + Position);\n    }\n\n    public override void _PhysicsProcess(double delta)\n    {\n        float dt = (float)delta;\n        float dir = 0.0f;\n        if (Input.IsActionPressed(\"move_left\")) { dir -= 1.0f; }\n        if (Input.IsActionPressed(\"move_right\")) { dir += 1.0f; }\n        Vector2 v = Velocity;\n        v.X = dir * Speed;\n        if (IsOnFloor())\n        {\n            _vy = 0.0f;\n        }\n        else\n        {\n            _vy += Gravity * dt;\n        }\n        if (Input.IsActionJustPressed(\"jump\") && IsOnFloor())\n        {\n            _vy = -Jump;\n        }\n        v.Y = _vy;\n        Velocity = v;\n        MoveAndSlide();\n        if (Position.Y > GroundY) { Position = new Vector2(Position.X, GroundY); }\n    }\n}","path":"res://scripts/Player.cs"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=23   line=45   conn=24   tool=editor_open_scene                 ok=True  code=0       dur=19ms
+        args={"path":"res://scenes/player.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=24   line=47   conn=25   tool=editor_set_node_script            ok=True  code=0       dur=18ms
+        args={"node_path":".","script_path":"res://scripts/Player.cs"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=25   line=49   conn=26   tool=editor_save_scene                 ok=True  code=0       dur=37ms
+        args={"path":"res://scenes/player.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+
+====================================================================================================
+EPISODE: editor_get_node_properties on ['script'] (first pair)
+====================================================================================================
+  seq=26   line=51   conn=27   tool=editor_open_scene                 ok=True  code=0       dur=18ms
+        args={"path":"res://scenes/enemy.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=27   line=53   conn=28   tool=editor_get_node_properties        ok=False code=-32001  dur=17ms
+        args={"path":".","properties":["script"]}
+        ERROR=Property 'script' on node 'Enemy' is not readable by name not found
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=28   line=55   conn=29   tool=editor_open_scene                 ok=True  code=0       dur=18ms
+        args={"path":"res://scenes/coin.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=29   line=57   conn=30   tool=editor_get_node_properties        ok=False code=-32001  dur=18ms
+        args={"path":".","properties":["script"]}
+        ERROR=Property 'script' on node 'Coin' is not readable by name not found
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=30   line=59   conn=31   tool=project_write_text_file           ok=True  code=0       dur=24ms
+        args={"content":"<Project Sdk=\"Godot.NET.Sdk/4.8.0-dev\">\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n    <EnableDynamicLoading>true</EnableDynamicLoading>\n    <RootNamespace>Mcp074</RootNamespace>\n  </PropertyGroup>\n</Project>","overwrite":true,"path":"res://Mcp074.csproj"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+
+====================================================================================================
+EPISODE: TileMapLayer: two tools, four different failures
+====================================================================================================
+  seq=51   line=101  conn=52   tool=editor_get_node_properties        ok=True  code=0       dur=17ms
+        args={"path":"World/Terrain","properties":["tile_set","tile_map_data","enabled","texture_filter"]}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=52   line=103  conn=53   tool=editor_get_tilemap_cell           ok=True  code=0       dur=16ms
+        args={"node_path":"World/Terrain","x":0.0,"y":0.0}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=53   line=105  conn=54   tool=editor_set_tilemap_cell           ok=False code=-32602  dur=16ms
+        args={"atlas_x":0.0,"atlas_y":0.0,"node_path":"World/Terrain","source_id":0.0,"x":0.0,"y":0.0}
+        ERROR=Unknown parameters atlas_y, atlas_x for tool 'editor_set_tilemap_cell'
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=54   line=107  conn=55   tool=editor_set_tilemap_cells_in_rect  ok=False code=-32602  dur=16ms
+        args={"atlas_x":0.0,"atlas_y":0.0,"height":2.0,"node_path":"World/Terrain","source_id":0.0,"width":4.0,"x":0.0,"y":0.0}
+        ERROR=Unknown parameters atlas_y, atlas_x, width, y, height, x for tool 'editor_set_tilemap_cells_in_rect'
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=55   line=109  conn=56   tool=editor_get_tilemap_info           ok=True  code=0       dur=16ms
+        args={"node_path":"World/Terrain"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=91   line=180  conn=92   tool=editor_set_tilemap_cell           ok=False code=-32000  dur=17ms
+        args={"atlas_coords":{"x":0.0,"y":0.0},"node_path":"World/Terrain","source_id":0.0,"x":0.0,"y":0.0}
+        ERROR=TileMapLayer 'World/Terrain' has no TileSet, so it has no source or atlas to name
+        CAPTURE status=done changed=True px=6 ratio=4.49726566247721e-06 before=c448765ef26e after=dd91a26a307d reason=None
+  seq=92   line=182  conn=93   tool=editor_get_tilemap_info           ok=True  code=0       dur=17ms
+        args={"node_path":"World/Terrain"}
+        CAPTURE status=done changed=True px=7 ratio=5.24680993955675e-06 before=dd91a26a307d after=5413a263e714 reason=None
+  seq=97   line=193  conn=98   tool=editor_set_node_property          ok=True  code=0       dur=26ms
+        args={"path":"World/Terrain","property":"tile_set","value":{"path":"res://world/terrain_tileset.tres","type":"TileSet"}}
+        CAPTURE status=done changed=True px=8 ratio=5.99635421663629e-06 before=55f31ec537ba after=c1119f24503e reason=None
+  seq=98   line=195  conn=99   tool=editor_get_tilemap_info           ok=True  code=0       dur=18ms
+        args={"node_path":"World/Terrain"}
+        CAPTURE status=done changed=True px=9 ratio=6.74589849371582e-06 before=a832ca5c7381 after=14a6e99e8608 reason=None
+  seq=99   line=197  conn=100  tool=editor_set_tilemap_cells_in_rect  ok=False code=-32602  dur=20ms
+        args={"atlas_coords":{"x":0.0,"y":0.0},"node_path":"World/Terrain","rect":{"height":2.0,"width":8.0,"x":0.0,"y":0.0},"source_id":0.0}
+        ERROR=The TileSet of this TileMapLayer has no source 0; it has: no source at all (add a TileSetAtlasSource first)
+        CAPTURE status=done changed=True px=12 ratio=8.99453132495443e-06 before=ccb3daa6827b after=70408107dcbf reason=None
+  seq=100  line=199  conn=101  tool=editor_set_node_property          ok=True  code=0       dur=18ms
+        args={"path":"HUD/HudRoot/MenuTitle","property":"visible","value":false}
+        CAPTURE status=done changed=True px=84 ratio=6.2961719274681e-05 before=b7a694d9e82e after=205969e11be7 reason=None
+
+====================================================================================================
+EPISODE: particles / theme / batch-property naming
+====================================================================================================
+  seq=61   line=121  conn=62   tool=editor_create_particles           ok=False code=-32602  dur=17ms
+        args={"name":"Dust","parent_path":"World","particle_type":"CPUParticles2D"}
+        ERROR=particle_type must be GPUParticles2D or GPUParticles3D: this family writes the node's particle properties and its process_material slot, which those two classes have. Got 'CPUParticles2D'
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=62   line=123  conn=63   tool=editor_set_particle_preset        ok=False code=-32001  dur=17ms
+        args={"node_path":"World/Dust","preset":"snow"}
+        ERROR=Node 'World/Dust' in the edited scene not found
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=63   line=125  conn=64   tool=editor_get_particle_info          ok=False code=-32001  dur=16ms
+        args={"node_path":"World/Dust"}
+        ERROR=Node 'World/Dust' in the edited scene not found
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=72   line=143  conn=73   tool=editor_set_control_theme          ok=False code=-32001  dur=16ms
+        args={"node_path":"HUD/HudRoot/ScoreLabel","theme_path":"res://ui/platformer_theme.tres"}
+        ERROR=Node 'HUD/HudRoot/ScoreLabel' in the edited scene not found
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=73   line=145  conn=74   tool=project_get_theme_info            ok=False code=-32602  dur=17ms
+        args={"path":"res://ui/platformer_theme.tres"}
+        ERROR=Unknown parameter 'path' for tool 'project_get_theme_info'
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=78   line=155  conn=79   tool=editor_add_nodes_batch            ok=True  code=0       dur=18ms
+        args={"nodes":[{"name":"HudRoot","parent_path":"HUD","type":"Control"},{"name":"ScoreLabel","parent_path":"HUD/HudRoot","properties":{"position":{"x":24.0,"y":16.0},"text":"SCORE 0"},"type":"Label"},{"name":"LivesLabel","parent_path":"HUD/HudRoot","properties":{"position":{"x":24.0,"y":48.0},"text":"LIVES 3"},"type":"Label"},{"name":"PauseButton","parent_path":"HUD/HudRoot","properties":{"position":{"x":1000.0,"y":16.0},"text":"PAUSE"},"type":"Button"},{"name":"MenuTitle","parent_path":"HUD/HudRoot","properties":{"position":{"x":480.0,"y":280.0},"text":"PAUSED"},"type":"Label"}],"resolve_within_batch":true}
+        CAPTURE status=done changed=True px=402 ratio=0.000301316799385973 before=ea4519e93527 after=1ccc4f5403fa reason=None
+  seq=79   line=157  conn=80   tool=editor_create_particles           ok=True  code=0       dur=42ms
+        args={"name":"Dust","parent_path":"World","particle_type":"GPUParticles2D"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=1ccc4f5403fa after=1ccc4f5403fa reason=None
+  seq=80   line=158  conn=81   tool=editor_set_particle_preset        ok=True  code=0       dur=17ms
+        args={"node_path":"World/Dust","preset":"snow"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=1ccc4f5403fa after=1ccc4f5403fa reason=None
+  seq=82   line=162  conn=83   tool=editor_get_particle_info          ok=True  code=0       dur=19ms
+        args={"node_path":"World/Dust"}
+        CAPTURE status=done changed=True px=1 ratio=7.49544277079536e-07 before=1ccc4f5403fa after=bb0e22a3677a reason=None
+  seq=83   line=164  conn=84   tool=editor_set_node_property          ok=True  code=0       dur=19ms
+        args={"path":"Sky/Far","property":"motion_mirroring","value":{"x":1152.0,"y":648.0}}
+        CAPTURE status=done changed=True px=1 ratio=7.49544277079536e-07 before=bb0e22a3677a after=1ccc4f5403fa reason=None
+  seq=84   line=166  conn=85   tool=editor_set_node_property          ok=True  code=0       dur=18ms
+        args={"path":"Sky/Far","property":"motion_scale","value":{"x":0.35,"y":1.0}}
+        CAPTURE status=done changed=True px=1 ratio=7.49544277079536e-07 before=1ccc4f5403fa after=d7b5c13c6167 reason=None
+  seq=85   line=168  conn=86   tool=editor_set_control_theme          ok=True  code=0       dur=20ms
+        args={"node_path":"HUD/HudRoot/ScoreLabel","theme_path":"res://ui/platformer_theme.tres"}
+        CAPTURE status=done changed=True px=220 ratio=0.000164899740957498 before=d7b5c13c6167 after=f832018a6129 reason=None
+  seq=86   line=170  conn=87   tool=project_get_theme_info            ok=True  code=0       dur=18ms
+        args={"theme_path":"res://ui/platformer_theme.tres"}
+        CAPTURE status=done changed=True px=5 ratio=3.74772138539768e-06 before=f832018a6129 after=3268ddc7d6c7 reason=None
+  seq=88   line=174  conn=89   tool=project_create_resource           ok=True  code=0       dur=30ms
+        args={"path":"res://world/terrain_tileset.tres","type":"TileSet"}
+        CAPTURE status=done changed=True px=2 ratio=1.49908855415907e-06 before=23a4a040c952 after=311e1e0e6cdb reason=None
+  seq=89   line=176  conn=90   tool=editor_set_node_property          ok=False code=-32602  dur=18ms
+        args={"path":"World/Terrain","property":"tile_set","value":{}}
+        ERROR=Parameter 'value' is the empty object {} and an Object-valued property cannot take it: {} names no resource, so it is not a legal value in either direction (the read side answers null for an unset reference and {"type","path"} for a set one). Send null to clear the property, a res:// string, or the {"type":...,"path":...} shape the read side answered
+        CAPTURE status=done changed=True px=3 ratio=2.24863283123861e-06 before=311e1e0e6cdb after=870adbcaad81 reason=None
+  seq=90   line=178  conn=91   tool=editor_add_resource_to_node_property ok=False code=-32602  dur=18ms
+        args={"node_path":"World/Terrain","property":"tile_set","resource_properties":{"tile_size":{"x":32.0,"y":32.0}},"resource_type":"TileSet"}
+        ERROR=Parameter 'resource_properties' cannot be written to a Vector2i property: the value is a Dictionary ({"y":32.0,"x":32.0}) and this engine's own conversion relation (Variant::can_convert) does not list Dictionary -> Vector2i, so type_convert would answer {"x":0,"y":0} instead of the value you sent. Send the property type's own shape: a JSON object naming its components for a vector/colour, the property's own JSON type, or a JSON string for a String-typed property (a "#rrggbb" string is accepted for a colour;
+        CAPTURE status=done changed=True px=4 ratio=2.99817710831814e-06 before=870adbcaad81 after=c448765ef26e reason=None
+  seq=93   line=184  conn=94   tool=editor_set_node_properties_batch  ok=False code=-32601  dur=18ms
+        args={"updates":[{"path":"HUD/HudRoot/MenuTitle","property":"visible","value":false}]}
+        ERROR=Method not found: editor_set_node_properties_batch
+        CAPTURE status=done changed=True px=4 ratio=2.99817710831814e-06 before=5413a263e714 after=53932e9f576a reason=None
+  seq=102  line=203  conn=103  tool=editor_get_node_properties        ok=False code=-32001  dur=18ms
+        args={"path":"Anim","properties":["current_animation","playback_speed"]}
+        ERROR=Property 'playback_speed' on node 'Anim' not found
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+
+====================================================================================================
+EPISODE: batch + signal block
+====================================================================================================
+  seq=124  line=247  conn=125  tool=editor_save_scene                 ok=True  code=0       dur=40ms
+        args={"path":"res://scenes/player.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=ea4519e93527 after=ea4519e93527 reason=None
+  seq=125  line=249  conn=126  tool=editor_open_scene                 ok=True  code=0       dur=20ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=451 ratio=0.000338044468962871 before=ea4519e93527 after=9a4eaaea0526 reason=None
+  seq=126  line=251  conn=127  tool=editor_get_node_properties        ok=False code=-32001  dur=30ms
+        args={"path":"World/Coin1","properties":["script","value","taken"]}
+        ERROR=Property 'script' on node 'Coin1' is not readable by name not found
+        CAPTURE status=done changed=True px=8 ratio=5.99635421663629e-06 before=4e998a585622 after=723d8cb22792 reason=None
+  seq=127  line=253  conn=128  tool=editor_add_node                   ok=True  code=0       dur=18ms
+        args={"name":"CoinField","parent_path":"World","type":"Node2D"}
+        CAPTURE status=done changed=True px=12 ratio=8.99453132495443e-06 before=897f54923dc4 after=b7500eda9080 reason=None
+  seq=128  line=255  conn=129  tool=editor_add_nodes_batch            ok=True  code=0       dur=21ms
+        args={"nodes":[{"name":"Coin000","parent_path":"World/CoinField","properties":{"position":{"x":-60.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin001","parent_path":"World/CoinField","properties":{"position":{"x":-12.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin002","parent_path":"World/CoinField","properties":{"position":{"x":36.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin003","parent_path":"World/CoinField","properties":{"position":{"x":84.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin004","parent_path":"World/CoinField","properties":{"position":{"x":132.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin005","parent_path":"World/CoinField","properties":{"position":{"x":180.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin006","parent_path":"World/CoinField","properties":{"position":{"x":228.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin007","parent_path":"World/CoinField","properties":{"position":{"x":276.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin008","parent_path":"World/CoinField","properties":{"position":{"x":324.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin009","parent_path":"World/CoinField","properties":{"position":{"x":372.0,"y":-40.0}},"type":"Node2D"},{"name":"Coin010","parent_path":"World/CoinField","properties":{"position":{"x":-60.0,"y":-76.0}},"type":"Node2D"},{"name":"Coin011","parent_path":"World/CoinField","properties":{"position":{"x":-12.0,"y":-76.0}},"type":"Node2D"},{"name":"Coin012","parent_path":"World/CoinField","properties":{"position":{"x":36.0,"y":-76.0}},"type":"Node2D"},{"name":"Coin013","parent_path":"World/CoinField","properties":{"position":{"x":84.0,"y":-76.0}},"type":"Node2D"},{"name":"Coin014","parent_path":"World/CoinField","properties":{"position":{"x":132.0,"y":-76.0}},"type":"Node2D"},{"name":"Coin015","parent_path":"World/CoinField","properties":{"position":{"x":180.0,"y":-76.0}},"type":"Node2D"},{"name":"Coin016","parent_path":"World/CoinField","properties":{"position":{"x":228.0,"y":-76.0}},"type":"Node2D"},{"name":"Coin017","parent_... (line truncated to 2000 chars)
+        CAPTURE status=done changed=True px=8 ratio=5.99635421663629e-06 before=ecd08caac1f2 after=ce054b9bb345 reason=None
+  seq=129  line=257  conn=130  tool=editor_set_node_property_updates  ok=True  code=0       dur=19ms
+        args={"updates":[{"path":"World/CoinField/Coin000","property":"position","value":{"x":1000.0,"y":-500.0}},{"path":"World/CoinField/Coin001","property":"position","value":{"x":1017.0,"y":-501.0}},{"path":"World/CoinField/Coin002","property":"position","value":{"x":1034.0,"y":-502.0}},{"path":"World/CoinField/Coin003","property":"position","value":{"x":1051.0,"y":-503.0}},{"path":"World/CoinField/Coin004","property":"position","value":{"x":1068.0,"y":-504.0}},{"path":"World/CoinField/Coin005","property":"position","value":{"x":1085.0,"y":-505.0}},{"path":"World/CoinField/Coin006","property":"position","value":{"x":1102.0,"y":-506.0}},{"path":"World/CoinField/Coin007","property":"position","value":{"x":1119.0,"y":-507.0}},{"path":"World/CoinField/Coin008","property":"position","value":{"x":1136.0,"y":-508.0}},{"path":"World/CoinField/Coin009","property":"position","value":{"x":1153.0,"y":-509.0}},{"path":"World/CoinField/Coin010","property":"position","value":{"x":1170.0,"y":-510.0}},{"path":"World/CoinField/Coin011","property":"position","value":{"x":1187.0,"y":-511.0}}]}
+        CAPTURE status=done changed=True px=10 ratio=7.49544277079536e-06 before=f982ef1e524f after=e10e10e2d032 reason=None
+  seq=130  line=259  conn=131  tool=editor_get_node_properties        ok=True  code=0       dur=19ms
+        args={"path":"World/CoinField/Coin000","properties":["position"]}
+        CAPTURE status=done changed=True px=11 ratio=8.24498704787489e-06 before=fe47cc53bac9 after=c86f30153102 reason=None
+  seq=131  line=261  conn=132  tool=editor_get_node_properties        ok=True  code=0       dur=18ms
+        args={"path":"World/CoinField/Coin011","properties":["position"]}
+        CAPTURE status=done changed=True px=4 ratio=2.99817710831814e-06 before=9d6af4e3d4d9 after=257640e9a3c6 reason=None
+  seq=135  line=269  conn=136  tool=editor_set_node_script_batch      ok=True  code=0       dur=23ms
+        args={"keep_existing":false,"node_paths":["World/CoinField/Coin000","World/CoinField/Coin001","World/CoinField/Coin002","World/CoinField/Coin003","World/CoinField/Coin004","World/CoinField/Coin005","World/CoinField/Coin006","World/CoinField/Coin007","World/CoinField/Coin008","World/CoinField/Coin009","World/CoinField/Coin010","World/CoinField/Coin011","World/CoinField/Coin012","World/CoinField/Coin013","World/CoinField/Coin014","World/CoinField/Coin015","World/CoinField/Coin016","World/CoinField/Coin017","World/CoinField/Coin018","World/CoinField/Coin019","World/CoinField/Coin020","World/CoinField/Coin021","World/CoinField/Coin022","World/CoinField/Coin023","World/CoinField/Coin024","World/CoinField/Coin025","World/CoinField/Coin026","World/CoinField/Coin027","World/CoinField/Coin028","World/CoinField/Coin029"],"script_path":"res://scripts/coin.gd"}
+        CAPTURE status=done changed=True px=9 ratio=6.74589849371582e-06 before=6db61a9eb222 after=8b20d2507a04 reason=None
+  seq=136  line=271  conn=137  tool=editor_get_node_properties        ok=False code=-32001  dur=18ms
+        args={"path":"World/CoinField/Coin000","properties":["script","value"]}
+        ERROR=Property 'script' on node 'Coin000' is not readable by name not found
+        CAPTURE status=done changed=True px=12 ratio=8.99453132495443e-06 before=d4cfa728e17d after=ceb4fd4e4a94 reason=None
+  seq=137  line=273  conn=138  tool=editor_get_node_signals           ok=True  code=0       dur=17ms
+        args={"node_path":"World/CoinField/Coin000"}
+        CAPTURE status=done changed=True px=8 ratio=5.99635421663629e-06 before=eabd289ca4b9 after=e015430ab4af reason=None
+  seq=138  line=275  conn=139  tool=editor_get_node_signals           ok=True  code=0       dur=19ms
+        args={"node_path":"HUD/HudRoot/PauseButton"}
+        CAPTURE status=done changed=True px=10 ratio=7.49544277079536e-06 before=be6118620a24 after=793706f1018e reason=None
+  seq=139  line=277  conn=140  tool=editor_get_node_signals           ok=True  code=0       dur=19ms
+        args={"node_path":"World/Player"}
+        CAPTURE status=done changed=True px=9 ratio=6.74589849371582e-06 before=2b8210ead7c4 after=597fe86737c8 reason=None
+  seq=140  line=279  conn=141  tool=editor_connect_signal             ok=True  code=0       dur=18ms
+        args={"method":"SetPaused","signal":"pressed","source_path":"HUD/HudRoot/PauseButton","target_path":"."}
+        CAPTURE status=done changed=True px=10 ratio=7.49544277079536e-06 before=2c3824f8db49 after=37d99a017d07 reason=None
+  seq=141  line=281  conn=142  tool=editor_connect_signal             ok=True  code=0       dur=19ms
+        args={"method":"OnCoinCollected","signal":"coin_collected","source_path":"World/CoinField/Coin000","target_path":"."}
+        CAPTURE status=done changed=True px=8 ratio=5.99635421663629e-06 before=d73b97b02ba4 after=e45a09460019 reason=None
+  seq=142  line=283  conn=143  tool=editor_connect_signal             ok=False code=-32001  dur=18ms
+        args={"method":"OnAnimationFinished","signal":"animation_finished","source_path":"World/Player/Anim","target_path":"."}
+        ERROR=Node 'World/Player/Anim' not found
+        CAPTURE status=done changed=True px=6 ratio=4.49726566247721e-06 before=b47d8736dae6 after=7b876245f1fa reason=None
+  seq=143  line=285  conn=144  tool=editor_connect_signal             ok=True  code=0       dur=18ms
+        args={"method":"OnCoinCollected","signal":"coin_collected","source_path":"World/CoinField/Coin001","target_path":"."}
+        CAPTURE status=done changed=True px=10 ratio=7.49544277079536e-06 before=cb4032a06c34 after=d0eb51d06b5a reason=None
+  seq=144  line=287  conn=145  tool=editor_connect_signal             ok=True  code=0       dur=18ms
+        args={"method":"OnAnimationFinished","signal":"button_down","source_path":"HUD/HudRoot/PauseButton","target_path":"."}
+        CAPTURE status=done changed=True px=11 ratio=8.24498704787489e-06 before=ab95aff3c90f after=06741c381f53 reason=None
+  seq=145  line=289  conn=146  tool=editor_list_signal_connections    ok=True  code=0       dur=27ms
+        args={"scope":"user"}
+        CAPTURE status=done changed=True px=6 ratio=4.49726566247721e-06 before=1ceaf6b556ea after=20da21875ba1 reason=None
+  seq=146  line=291  conn=147  tool=editor_list_signal_connections    ok=True  code=0       dur=35ms
+        args={"scope":"all"}
+        CAPTURE status=done changed=True px=4 ratio=2.99817710831814e-06 before=eb756a9e3d7a after=501ebd82a8ed reason=None
+  seq=147  line=293  conn=148  tool=project_create_script             ok=True  code=0       dur=26ms
+        args={"content":"using Godot;\n\n// TASK-074 section A: Main is C#; it consumes the GDScript coin/enemy scenes and\n// drives the GDScript-authored AnimationPlayer.\npublic partial class Main : Node2D\n{\n    [Signal] public delegate void GameOverEventHandler();\n\n    public int Score = 0;\n    public int Lives = 3;\n    public bool Paused = false;\n    public int AnimFinished = 0;\n\n    private Label _scoreLabel;\n    private Label _livesLabel;\n    private AnimationPlayer _anim;\n\n    public override void _Ready()\n    {\n        _scoreLabel = GetNodeOrNull<Label>(\"HUD/HudRoot/ScoreLabel\");\n        _livesLabel = GetNodeOrNull<Label>(\"HUD/HudRoot/LivesLabel\");\n        _anim = GetNodeOrNull<AnimationPlayer>(\"World/Player/Anim\");\n        if (_anim != null && _anim.HasAnimation(\"run\"))\n        {\n            _anim.Play(\"run\");\n        }\n        GD.Print(\"[main-cs] ready score=\" + Score + \" lives=\" + Lives);\n        RefreshHud();\n    }\n\n    public void AddScore(int amount)\n    {\n        Score += amount;\n        RefreshHud();\n        GD.Print(\"[main-cs] score=\" + Score);\n    }\n\n    public void OnCoinCollected(int value)\n    {\n        AddScore(value);\n    }\n\n    public void OnPlayerDied()\n    {\n        Lives -= 1;\n        RefreshHud();\n        GD.Print(\"[main-cs] lives=\" + Lives);\n        if (Lives <= 0) { EmitSignal(SignalName.GameOver); }\n    }\n\n    public void OnAnimationFinished(string name)\n    {\n        AnimFinished += 1;\n        GD.Print(\"[main-cs] animation finished: \" + name);\n    }\n\n    public void SetPaused(bool value)\n    {\n        Paused = value;\n        if (_anim != null && _anim.HasAnimation(\"jump\")) { _anim.Play(\"jump\"); }\n    }\n\n    private void RefreshHud()\n    {\n        if (_scoreLabel != null) { _scoreLabel.Text = \"SCORE \" + Score; }\n        if (_livesLabel != null) { _livesLabel.Text = \"LIVES \" + Lives; }\n    }\n}","path":"res://scripts/Main.cs"}
+        CAPTURE status=done changed=True px=9 ratio=6.74589849371582e-06 before=ed912de16484 after=54e74b9428ec reason=None
+  seq=148  line=295  conn=149  tool=editor_save_scene                 ok=True  code=0       dur=42ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=12 ratio=8.99453132495443e-06 before=a2788ea19bce after=fbb5ee0f10f6 reason=None
+
+====================================================================================================
+EPISODE: save/load sha round trip (two -32601 on the reader name)
+====================================================================================================
+  seq=149  line=297  conn=150  tool=project_write_text_file           ok=True  code=0       dur=23ms
+        args={"content":"{\"version\":1,\"level\":\"level1\",\"score\":7,\"lives\":3,\"coins\":[{\"x\":1000,\"y\":-500},{\"x\":1017,\"y\":-501}],\"saved_by\":\"editor_project_write_text_file\"}","overwrite":true,"path":"res://save/slot1.json"}
+        CAPTURE status=done changed=True px=12 ratio=8.99453132495443e-06 before=d5a014db6ac3 after=c8c85c936204 reason=None
+  seq=150  line=299  conn=151  tool=project_read_file                 ok=False code=-32601  dur=18ms
+        args={"path":"res://save/slot1.json"}
+        ERROR=Method not found: project_read_file
+        CAPTURE status=done changed=True px=9 ratio=6.74589849371582e-06 before=1db7893fbb87 after=193f23e59c06 reason=None
+  seq=151  line=301  conn=152  tool=project_read_text_file            ok=False code=-32601  dur=18ms
+        args={"path":"res://save/slot1.json"}
+        ERROR=Method not found: project_read_text_file
+        CAPTURE status=done changed=True px=9 ratio=6.74589849371582e-06 before=4d0c355a139f after=a1f12e796d0a reason=None
+  seq=152  line=304  conn=153  tool=project_build_csharp              ok=True  code=0       dur=4759ms
+        args={"configuration":"Debug","rescan":true,"timeout_ms":300000.0}
+        CAPTURE status=unavailable changed=None px=None ratio=None before= after= reason=the call is answered across frames (deferred), which the capture does not cover
+  seq=153  line=305  conn=154  tool=project_validate_scripts          ok=True  code=0       dur=30ms
+        args={"paths":["res://scripts/Main.cs","res://scripts/Player.cs","res://scripts/enemy.gd","res://scripts/coin.gd","res://scripts/main.gd"]}
+        CAPTURE status=done changed=True px=12 ratio=8.99453132495443e-06 before=30d7b835e287 after=a380af14c150 reason=None
+  seq=154  line=307  conn=155  tool=project_validate_script           ok=True  code=0       dur=19ms
+        args={"path":"res://scripts/Main.cs"}
+        CAPTURE status=done changed=True px=11 ratio=8.24498704787489e-06 before=f91a9bad2924 after=ec8147715102 reason=None
+  seq=155  line=309  conn=156  tool=editor_open_scene                 ok=True  code=0       dur=18ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=10 ratio=7.49544277079536e-06 before=8ed6e77f512b after=be78186cee1b reason=None
+  seq=156  line=311  conn=157  tool=editor_connect_signal             ok=True  code=0       dur=19ms
+        args={"method":"OnCoinCollected","signal":"coin_collected","source_path":"World/CoinField/Coin002","target_path":"."}
+        CAPTURE status=done changed=True px=16 ratio=1.19927084332726e-05 before=256ef6686951 after=da5a44d632d1 reason=None
+  seq=157  line=313  conn=158  tool=editor_list_signal_connections    ok=True  code=0       dur=26ms
+        args={"scope":"user"}
+        CAPTURE status=done changed=True px=13 ratio=9.74407560203396e-06 before=0efee2e5f7ea after=1d1087c00726 reason=None
+  seq=158  line=315  conn=159  tool=editor_set_node_script            ok=True  code=0       dur=18ms
+        args={"node_path":"World/CoinField/Coin002","script_path":"res://scripts/coin.gd"}
+        CAPTURE status=done changed=True px=12 ratio=8.99453132495443e-06 before=bc04d8950d12 after=745a16d92168 reason=None
+  seq=159  line=317  conn=160  tool=editor_set_node_script_batch      ok=True  code=0       dur=19ms
+        args={"node_paths":["World/CoinField/Coin003","World/CoinField/Coin004"],"script_path":"res://scripts/coin.gd"}
+        CAPTURE status=done changed=True px=8 ratio=5.99635421663629e-06 before=d326a52f7e14 after=4f5e80ee3e0d reason=None
+  seq=160  line=319  conn=161  tool=editor_save_scene                 ok=True  code=0       dur=43ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=7 ratio=5.24680993955675e-06 before=c1cd5b3d4673 after=1dbc30c61cfd reason=None
+
+====================================================================================================
+EPISODE: Coin002 script persistence + final pass
+====================================================================================================
+  seq=165  line=328  conn=166  tool=editor_open_scene                 ok=True  code=0       dur=22ms
+        args={"path":"res://scenes/player.tscn"}
+        CAPTURE status=done changed=True px=451 ratio=0.000338044468962871 before=b145e4530f67 after=ea4519e93527 reason=None
+  seq=166  line=330  conn=167  tool=editor_set_node_property          ok=True  code=0       dur=20ms
+        args={"path":"Body","property":"shape","value":{"path":"res://shapes/player_shape.tres","type":"RectangleShape2D"}}
+        CAPTURE status=done changed=True px=150 ratio=0.00011243164156193 before=ea4519e93527 after=b4edf10c6633 reason=None
+  seq=168  line=334  conn=169  tool=editor_set_node_property          ok=True  code=0       dur=18ms
+        args={"path":".","property":"collision_mask","value":1.0}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=b4edf10c6633 after=b4edf10c6633 reason=None
+  seq=170  line=338  conn=171  tool=editor_open_scene                 ok=True  code=0       dur=21ms
+        args={"path":"res://scenes/enemy.tscn"}
+        CAPTURE status=done changed=True px=150 ratio=0.00011243164156193 before=b4edf10c6633 after=ea4519e93527 reason=None
+  seq=171  line=340  conn=172  tool=editor_set_node_property          ok=True  code=0       dur=21ms
+        args={"path":"Body","property":"shape","value":{"path":"res://shapes/enemy_shape.tres","type":"RectangleShape2D"}}
+        CAPTURE status=done changed=True px=110 ratio=8.24498704787489e-05 before=ea4519e93527 after=64ab4daf6bb5 reason=None
+  seq=173  line=344  conn=174  tool=editor_set_node_property          ok=True  code=0       dur=18ms
+        args={"path":".","property":"collision_mask","value":1.0}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=64ab4daf6bb5 after=64ab4daf6bb5 reason=None
+  seq=174  line=346  conn=175  tool=editor_save_scene                 ok=True  code=0       dur=38ms
+        args={"path":"res://scenes/enemy.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=64ab4daf6bb5 after=64ab4daf6bb5 reason=None
+  seq=175  line=348  conn=176  tool=editor_open_scene                 ok=True  code=0       dur=23ms
+        args={"path":"res://scenes/coin.tscn"}
+        CAPTURE status=done changed=True px=110 ratio=8.24498704787489e-05 before=64ab4daf6bb5 after=ea4519e93527 reason=None
+  seq=176  line=350  conn=177  tool=editor_set_node_property          ok=True  code=0       dur=20ms
+        args={"path":"Body","property":"shape","value":{"path":"res://shapes/coin_shape.tres","type":"RectangleShape2D"}}
+        CAPTURE status=done changed=True px=56 ratio=4.1974479516454e-05 before=ea4519e93527 after=1d8a4d6bb89a reason=None
+  seq=179  line=356  conn=180  tool=editor_save_scene                 ok=True  code=0       dur=40ms
+        args={"path":"res://scenes/coin.tscn"}
+        CAPTURE status=done changed=False px=0 ratio=0.0 before=1d8a4d6bb89a after=1d8a4d6bb89a reason=None
+  seq=180  line=358  conn=181  tool=editor_open_scene                 ok=True  code=0       dur=27ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=510 ratio=0.000382267581310563 before=1d8a4d6bb89a after=730c3bd2ced5 reason=None
+  seq=187  line=373  conn=188  tool=editor_open_scene                 ok=True  code=0       dur=21ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=7 ratio=5.24680993955675e-06 before=b2c25bc839a0 after=a4eb60a884cf reason=None
+  seq=188  line=375  conn=189  tool=editor_set_node_script            ok=True  code=0       dur=18ms
+        args={"node_path":"World/CoinField/Coin002","script_path":"res://scripts/coin.gd"}
+        CAPTURE status=done changed=True px=7 ratio=5.24680993955675e-06 before=4388f2975245 after=2a278b57b4f3 reason=None
+  seq=189  line=376  conn=190  tool=editor_save_scene                 ok=True  code=0       dur=45ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=7 ratio=5.24680993955675e-06 before=2a278b57b4f3 after=bad4fb927f1d reason=None
+  seq=193  line=384  conn=194  tool=project_read_scene_file_content   ok=True  code=0       dur=23ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=9 ratio=6.74589849371582e-06 before=4b9a2c1751be after=371c85fa203b reason=None
+  seq=195  line=389  conn=196  tool=editor_open_scene                 ok=True  code=0       dur=22ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=6 ratio=4.49726566247721e-06 before=4942805f9e7d after=63e765e3ef59 reason=None
+  seq=196  line=391  conn=197  tool=editor_add_node                   ok=True  code=0       dur=24ms
+        args={"name":"Body","parent_path":"World/CoinField/Coin002","properties":{"shape":{"path":"res://shapes/coin_shape.tres","type":"RectangleShape2D"}},"type":"CollisionShape2D"}
+        CAPTURE status=done changed=True px=6 ratio=4.49726566247721e-06 before=50018be8fa5d after=4cc0eab030cf reason=None
+  seq=197  line=392  conn=198  tool=editor_set_node_script            ok=True  code=0       dur=20ms
+        args={"node_path":"World/CoinField/Coin002","script_path":"res://scripts/coin.gd"}
+        CAPTURE status=done changed=True px=9 ratio=6.74589849371582e-06 before=4cc0eab030cf after=19e2c8a3aa21 reason=None
+  seq=198  line=394  conn=199  tool=editor_connect_signal             ok=False code=-32001  dur=18ms
+        args={"method":"_on_body_entered","signal":"body_entered","source_path":"World/CoinField/Coin002","target_path":"World/CoinField/Coin002"}
+        ERROR=Signal 'body_entered' on node 'Coin002' not found
+        CAPTURE status=done changed=True px=10 ratio=7.49544277079536e-06 before=19e2c8a3aa21 after=3a9dd29bca58 reason=None
+  seq=199  line=396  conn=200  tool=editor_save_scene                 ok=True  code=0       dur=47ms
+        args={"path":"res://scenes/main.tscn"}
+        CAPTURE status=done changed=True px=9 ratio=6.74589849371582e-06 before=3a9dd29bca58 after=deae8c8c7915 reason=None
+
+====================================================================================================
+CAPTURE NOISE QUANTIFICATION (changed=true)
+====================================================================================================
+  changed=true captures: 86 of 198
+  changed_pixels: min=1 p25=7 median=9.0 max=10115 mean=161.3
+  <= 1     px : 3 (3.5%)
+  <= 4     px : 12 (14.0%)
+  <= 16    px : 73 (84.9%)
+  <= 64    px : 74 (86.0%)
+  <= 256   px : 80 (93.0%)
+  <= 1024  px : 85 (98.8%)
+  every changed=true capture with <= 4 pixels:
+    seq=82   px=1   tool=editor_get_particle_info           ok=True  code=0      
+    seq=83   px=1   tool=editor_set_node_property           ok=True  code=0      
+    seq=84   px=1   tool=editor_set_node_property           ok=True  code=0      
+    seq=88   px=2   tool=project_create_resource            ok=True  code=0      
+    seq=94   px=2   tool=editor_save_scene                  ok=True  code=0      
+    seq=89   px=3   tool=editor_set_node_property           ok=False code=-32602 
+    seq=87   px=4   tool=editor_get_node_properties         ok=True  code=0      
+    seq=90   px=4   tool=editor_add_resource_to_node_property ok=False code=-32602 
+    seq=93   px=4   tool=editor_set_node_properties_batch   ok=False code=-32601 
+    seq=95   px=4   tool=editor_get_scene_tree              ok=True  code=0      
+    seq=131  px=4   tool=editor_get_node_properties         ok=True  code=0      
+    seq=146  px=4   tool=editor_list_signal_connections     ok=True  code=0      
+
+====================================================================================================
+CAPTURE paired with a NON-OK call (no tool body ran) but changed=true
+====================================================================================================
+  seq=89   tool=editor_set_node_property           code=-32602  px=3      ratio=2.24863283123861e-06
+  seq=90   tool=editor_add_resource_to_node_property code=-32602  px=4      ratio=2.99817710831814e-06
+  seq=91   tool=editor_set_tilemap_cell            code=-32000  px=6      ratio=4.49726566247721e-06
+  seq=93   tool=editor_set_node_properties_batch   code=-32601  px=4      ratio=2.99817710831814e-06
+  seq=99   tool=editor_set_tilemap_cells_in_rect   code=-32602  px=12     ratio=8.99453132495443e-06
+  seq=126  tool=editor_get_node_properties         code=-32001  px=8      ratio=5.99635421663629e-06
+  seq=136  tool=editor_get_node_properties         code=-32001  px=12     ratio=8.99453132495443e-06
+  seq=142  tool=editor_connect_signal              code=-32001  px=6      ratio=4.49726566247721e-06
+  seq=150  tool=project_read_file                  code=-32601  px=9      ratio=6.74589849371582e-06
+  seq=151  tool=project_read_text_file             code=-32601  px=9      ratio=6.74589849371582e-06
+  seq=198  tool=editor_connect_signal              code=-32001  px=10     ratio=7.49544277079536e-06
+
+====================================================================================================
+CONTRACT CROSS-CHECK (tools_list.renamed.json)
+====================================================================================================
+  contract tools=176
+  name contains read               -> 4: project_read_resource, project_read_scene_file_content, project_read_script, project_read_shader
+  name contains text               -> 3: project_write_text_file, running_game_assert_screen_text, running_game_simulate_button_click_by_text
+  name contains tilemap            -> 6: editor_get_tilemap_cell, editor_get_tilemap_info, editor_get_tilemap_used_cells, editor_remove_all_tilemap_cells, editor_set_tilemap_cell, editor_set_tilemap_cells_in_rect
+  name contains tileset            -> 0: 
+  name contains property           -> 8: editor_add_resource_to_node_property, editor_set_audio_bus_property, editor_set_node_property, editor_set_node_property_batch, editor_set_node_property_updates, project_set_node_property_across_scenes, running_game_get_node_property_samples, running_game_set_node_property
+  name contains signal             -> 6: editor_analyze_signal_flow, editor_connect_signal, editor_disconnect_signal, editor_get_node_signals, editor_list_signal_connections, running_game_capture_signal_emissions
+  name contains script             -> 13: editor_execute_gdscript, editor_get_open_scripts, editor_set_node_script, editor_set_node_script_batch, project_create_script, project_edit_script, project_find_script_references, project_list_scripts, project_read_script, project_validate_script, project_validate_scripts, running_game_execute_gdscript, running_game_find_nodes_by_script
+  name contains animation_keyframe -> 1: editor_set_animation_keyframe
+  name contains instance           -> 2: editor_add_mesh_instance, editor_add_scene_instance
+  name contains save               -> 1: editor_save_scene
+
+  ABSENT FROM CONTRACT: editor_set_node_properties_batch
+  editor_set_node_property_updates
+     desc: Set a different value on each of many nodes in the edited scene in one call, and answer per entry whether the value landed.
+     required: ['updates']
+     params: ['stop_on_error', 'updates']
+  ABSENT FROM CONTRACT: project_read_file
+  ABSENT FROM CONTRACT: project_read_text_file
+  project_read_scene_file_content
+     desc: 读取 .tscn 场景文件内容
+     required: ['path']
+     params: ['path']
+  editor_get_node_properties
+     desc: 获取节点属性 A node path here is resolved relative to the edited scene root and this parameter names ONE node (the plural tools spell the same strings as 'node_paths', an array: editor_set_node_script_batch and editor_set_node_property_updates): 'Bricks/Car' and './Bricks/Car' address 'Car' inside 'Bricks', and the edited scene root's own name may be used as a prefix ('Main/Bricks/Car' == 'Bricks/Car' =
+     required: ['path']
+     params: ['path', 'properties']
+  editor_set_tilemap_cell
+     desc: 设置瓦片地图单元格
+     required: ['node_path', 'x', 'y', 'source_id']
+     params: ['atlas_coords', 'node_path', 'source_id', 'x', 'y']
+  editor_set_tilemap_cells_in_rect
+     desc: 填充瓦片地图矩形区域
+     required: ['node_path', 'rect', 'source_id']
+     params: ['atlas_coords', 'node_path', 'rect', 'source_id']
+  editor_set_animation_keyframe
+     desc: 在指定轨道的指定时间插入或更新关键帧
+     required: ['node_path', 'animation', 'track_index', 'time', 'value']
+     params: ['animation', 'easing', 'node_path', 'time', 'track_index', 'value']
+  editor_add_scene_instance
+     desc: 将外部场景作为实例添加到当前编辑场景
+     required: ['scene_path']
+     params: ['name', 'parent_path', 'scene_path']
+  editor_save_scene
+     desc: 保存当前场景
+     required: []
+     params: ['path']
+  editor_set_node_script_batch
+     desc: Attach one script to many nodes in the edited scene in a single call, and answer per node whether the attachment landed and the script was readable. 'node_paths' is an array of node paths resolved relative to the edited scene root - the same strings the singular tools take under the name 'path' (editor_set_node_property, editor_get_node_properties): 'Bricks/Car' and './Bricks/Car' address 'Car' in
+     required: ['node_paths', 'script_path']
+     params: ['keep_existing', 'node_paths', 'script_path']
+  editor_connect_signal
+     desc: 连接节点的信号到目标方法
+     required: ['source_path', 'signal', 'method']
+     params: ['method', 'signal', 'source_path', 'target_path']
+  project_write_text_file
+     desc: Write a project text file such as a .csproj, .sln, NuGet.config or .cfg, and answer the resulting size and sha256. Refuses scene, resource and script paths (use the dedicated tools for those) and refuses project.godot (use project_set_setting).
+     required: ['path', 'content']
+     params: ['content', 'overwrite', 'path']

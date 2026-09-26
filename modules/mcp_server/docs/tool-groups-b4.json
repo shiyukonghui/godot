@@ -1,0 +1,64 @@
+{
+  "_comment": "B4 group manifest for TASK-015. The unimplemented contract entries of docs/tools_list.renamed.json are partitioned into B3/B4/B5 so that each group is one tools/<group>.{h,cpp} file: one channel, one scope, one mutating value, at most 10 tools, every tool exactly once across the three files. The union of the three manifests is exactly the contract minus the 66 B1/B2 tools; docs/scripts/check_tool_groups.py --batch B4 and --check-completeness make that assertion executable.",
+  "batch": "B4",
+  "total": 7,
+  "source": {
+    "batch_list": "docs/DESIGN-DETAIL.md section 10 (B4)",
+    "names": "docs/tools_list.renamed.json (171 entries) minus the 66 tools of docs/tool-groups.json and docs/tool-groups-b2.json",
+    "map": "docs/tool-rename-map.json (v1.1, 174 entries; channel/scope/mutating are read from it, never invented)",
+    "excluded": "none: the two unregister_until_implemented entries are absent from the 171 entry contract already"
+  },
+  "counts": {
+    "unimplemented_contract_tools": 105,
+    "unimplemented_in_this_batch": 7,
+    "groups": 3
+  },
+  "notes": {
+    "partition_axis": "B4 is the test and assertion batch: the editor-side test report/screenshot-diff readers, the running game's three assertion/observation tools, and the two scenario/stress runners. The mutating split is forced by GDR-18 exactly as it was for the capture family in B2.",
+    "fix_implementation_first": [
+      "editor_get_test_report"
+    ]
+  },
+  "groups": [
+    {
+      "name": "editor_testing_read",
+      "batch": "B4",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_test_report",
+        "editor_analyze_screenshot_diff"
+      ],
+      "notes": "The editor-side test readers: the report of the last run and the screenshot diff. Read-only, one file, one dependency (the editor's test artefacts)."
+    },
+    {
+      "name": "running_game_assertion",
+      "batch": "B4",
+      "channel": "running_game",
+      "scope": "game",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "running_game_assert_node_state",
+        "running_game_assert_screen_text",
+        "running_game_capture_signal_emissions"
+      ],
+      "notes": "The running game's assertion/observation tools (node state, screen text, signal emissions). All read-only and all answer from the current frame, so they share running_game_observation's dependency without sharing its file."
+    },
+    {
+      "name": "running_game_test_execution",
+      "batch": "B4",
+      "channel": "running_game",
+      "scope": "game",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "running_game_run_test_scenario",
+        "running_game_run_stress_test"
+      ],
+      "notes": "The two scenario drivers. They are mutating because they run the caller's scenario (input, waits, assertions) inside the game process, and they are the group that will need the deferred channel (GDR-20) the same way play_input_recording did."
+    }
+  ]
+}

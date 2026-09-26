@@ -1,0 +1,250 @@
+===== tree-main.json =====
+{
+ "scene_path": "res://scenes/main.tscn",
+ "tree": {
+  "absolute_path": "/root/@EditorNode@20573/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBoxContainer@38/DockVSplitCenter/@VSplitContainer@102/@VBoxContainer@103/@EditorMainScreen@166/2D/@VBoxContainer@9985/@VSplitContainer@9991/@HSplitContainer@9993/@HSplitContainer@9995/@Control@9996/@SubViewportContainer@9997/@SubViewport@9998/Main",
+  "children": [
+   {
+    "absolute_path": "/root/@EditorNode@20573/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBoxContainer@38/DockVSplitCenter/@VSplitContainer@102/@VBoxContainer@103/@EditorMainScreen@166/2D/@VBoxContainer@9985/@VSplitContainer@9991/@HSplitContainer@9993/@HSplitContainer@9995/@Control@9996/@SubViewportContainer@9997/@SubViewport@9998/Main/World",
+    "children": [
+     {
+      "absolute_path": "/root/@EditorNode@20573/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBoxContainer@38/DockVSplitCenter/@VSplitContainer@102/@VBoxContainer@103/@EditorMainScreen@166/2D/@VBoxContainer@9985/@VSplitContainer@9991/@HSplitContainer@9993/@HSplitContainer@9995/@Control@9996/@SubViewportContainer@9997/@SubViewport@9998/Main/World/Ground",
+      "name": "Ground",
+      "path": "World/Ground",
+      "type": "StaticBody2D"
+     },
+     {
+      "absolute_path": "/root/@EditorNode@20573/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBoxContainer@38/DockVSplitCenter/@VSplitContainer@102/@VBoxContainer@103/@EditorMainScreen@166/2D/@VBoxContainer@9985/@VSplitContainer@9991/@HSplitContainer@9993/@HSplitContainer@9995/@Control@9996/@SubViewportContainer@9997/@SubViewport@9998/Main/World/Player",
+      "name": "Player",
+      "path": "World/Player",
+      "type": "CharacterBody2D"
+     },
+     {
+      "absolute_path": "/root/@EditorNode@20573/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBoxContainer@38/DockVSplitCenter/@VSplitContainer@102/@VBoxContainer@103/@EditorMainScreen@166/2D/@VBoxContainer@9985/@VSplitContainer@9991/@HSplitContainer@9993/@HSplitContainer@9995/@Control@9996/@SubViewportContainer@9997/@SubViewport@9998/Main/World/Enemy1",
+      "name": "Enemy1",
+      "path": "World/Enemy1",
+      "type": "CharacterBody2D"
+     },
+     {
+      "absolute_path": "/root/@EditorNode@20573/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBoxContainer@38/DockVSplitCenter/@VSplitContainer@102/@VBoxContainer@103/@EditorMainScreen@166/2D/@VBoxContainer@9985/@VSplitContainer@9991/@HSplitContainer@9993/@HSplitContainer@9995/@Control@9996/@SubViewportContainer@9997/@SubViewport@9998/Main/World/Enemy2",
+      "name": "Enemy2",
+      "path": "World/Enemy2",
+      "type": "CharacterBody2D"
+     },
+     {
+      "absolute_path": "/root/@EditorNode@20573/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBoxContainer@38/DockVSplitCenter/@VSplitContainer@102/@VBoxContainer@103/@EditorMainScreen@166/2D/@VBoxContainer@9985/@VSplitContainer@9991/@HSplitContainer@9993/@HSplitContainer@9995/@Control@9996/@SubViewportContainer@9997/@SubViewport@9998/Main/World/Enemy3",
+      "name": "Enemy3",
+      "path": "World/Enemy3",
+      "type": "CharacterBody2D"
+     },
+     {
+      "absolute_path": "/root/@EditorNode@20573/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBoxContainer@38/DockVSplitCenter/@VSplitContainer@102/@VBoxContainer@103/@EditorMainScreen@166/2D/@VBoxContainer@9985/@VSplitContainer@9991/@HSplitContainer@9993/@HSplitContainer@9995/@Control@9996/@SubViewportContainer@9997/@SubViewport@9998/Main/World/Coin1",
+      "name": "Coin1",
+      "path": "World/Coin1",
+      "type": "Area2D"
+     },
+     {
+      "absolute_path": "/root/@EditorNode@20573/@Panel@14/@VBoxContainer@16/DockVSplitMain/DockHSplitMain/@VBoxContainer@38/DockVSplitCenter/@VSplitContainer@102/@VBoxContainer@103/@EditorMainScreen@166/2D/@VBoxContainer@9985/@VSplitContainer@9991/@HSplitContainer@9993/@HSplitContainer@9995/@Control@9996/@SubViewportContainer@9997/@SubViewport@9998/Main/World/Coin2
+===== game-scene-tree.json =====
+{
+ "tree": {
+  "children": [
+   {
+    "children": [
+     {
+      "name": "Ground",
+      "path": "/root/Main/World/Ground",
+      "type": "StaticBody2D"
+     },
+     {
+      "children": [
+       {
+        "name": "Body",
+        "path": "/root/Main/World/Player/Body",
+        "type": "CollisionShape2D"
+       },
+       {
+        "name": "Art",
+        "path": "/root/Main/World/Player/Art",
+        "type": "Sprite2D"
+       },
+       {
+        "name": "Anim",
+        "path": "/root/Main/World/Player/Anim",
+        "type": "AnimationPlayer"
+       }
+      ],
+      "name": "Player",
+      "path": "/root/Main/World/Player",
+      "script": "res://scripts/Player.cs",
+      "type": "CharacterBody2D"
+     },
+     {
+      "children": [
+       {
+        "name": "Body",
+        "path": "/root/Main/World/Enemy1/Body",
+        "type": "CollisionShape2D"
+       },
+       {
+        "name": "Art",
+        "path": "/root/Main/World/Enemy1/Art",
+        "type": "Sprite2D"
+       }
+      ],
+      "name": "Enemy1",
+      "path": "/root/Main/World/Enemy1",
+      "script": "res://scripts/enemy.gd",
+      "type": "CharacterBody2D"
+     },
+     {
+      "children": [
+       {
+        "name": "Body",
+        "path": "/root/Main/World/Enemy2/Body",
+        "type": "CollisionShape2D"
+       },
+       {
+        "name": "Art",
+        "path": "/root/Main/World/Enemy2/Art",
+        "type": "Sprite2D"
+       }
+      ],
+      "name": "Enemy2",
+      "path": "/root/Main/World/Enemy2",
+      "script": "res://scripts/enemy.gd",
+      "type": "CharacterBody2D"
+     },
+     {
+      "children": [
+       {
+        "name": "Body",
+        "path": "/root/Main/World/Enemy3/Body",
+        "type": "CollisionShape2D"
+       },
+       {
+        "name": "Art",
+        "path": "/root/Main/World/Enemy3/Art",
+        "type": "Sprite2D"
+       }
+      ],
+      "name": "Enemy3",
+      "path": "/root/Main/World/Enemy3",
+      "script": "res://scripts/enemy.gd",
+      "type": "CharacterBody2D"
+     },
+     {
+      "children": [
+       {
+        "name": "Body",
+        "path": "/root/Main/World/Coin1/Body",
+        "type": "CollisionShape2D"
+       },
+       {
+        "name": "Art",
+        "path": "/root/Main/World/Coin1/Art",
+        "type": "Sprite2D"
+       }
+      ],
+      "name": "Coin1",
+      "path": "/root/Main/World/Coin1",
+      "script": "res://scripts/coin.gd",
+      "type": "Area2D"
+     },
+     {
+      "children": [
+       {
+        "name": "Body",
+        "path": "/root/Main/World/Coin2/Body",
+        "type": "CollisionShape2D"
+       },
+       {
+        "name": "Art",
+        "path": "/root/Main/World/Coin2/Art",
+        "type": "Sprite2D"
+       }
+      ],
+      "name": "Coin2",
+      "path": "/root/Main/World/Coin2",
+      "script": "res://scripts/coin.gd",
+      "type": "Area2D"
+     },
+     {
+      "name": "Terrain",
+      "path": "/root/Main/World/Terrain",
+      "type": "TileMapLayer"
+     },
+     {
+      "name": "Dust",
+      "path": "/root/Main/World/Dust",
+      "type": "GPUParticles2D"
+     },
+     {
+      "children": [
+       {
+        "name": "Coin000",
+        "path": "/root/Main/World/CoinField/Coin000",
+        "type": "Node2D"
+       },
+       {
+        "name": "Coin001",
+        "path": "/root/Main/World/CoinField/Coin001",
+        "type": "Node2D"
+       },
+       {
+        "name": "Coin002",
+        "path": "/root/Main/World/CoinField/Coin002",
+        "type": "Node2D"
+       },
+       {
+        "name": "Coin003",
+        "path": "/root/Main/World/CoinField/Coin003",
+        "type": "Node2D"
+       },
+       {
+        "name": "Coin004",
+        "path": "/root/Main/World/CoinField/Coin004",
+        "type": "Node2D"
+       },
+       {
+        "name": "Coin005",
+        "path": "/root/Main/World/CoinField/Coin005",
+        "type": "Node2D"
+       },
+       {
+        "name": "Coin006",
+        "path": "/root/Main/World/CoinField/Coin006",
+        "type": "Node2D"
+       },
+       {
+        "name": "Coin007",
+        "path": "/root/Main/World/CoinFie
+===== main-tscn-script-count.txt =====
+script_ext_resource_occurrences=31
+
+===== coin002-block.txt =====
+[node name="Coin002" type="Node2D" parent="World/CoinField" unique_id=1347040841]
+position = Vector2(-200, 0)
+script = ExtResource("6_beafk")
+
+[node name="Body" type="CollisionShape2D" parent="World/CoinField/Coin002" unique_id=1116143780]
+shape = ExtResource("8_yigbt")
+
+has_script=True has_body=True
+
+===== CALL-COUNTS.txt =====
+editor_9888=198
+game_9889=34
+total=232
+
+===== ANCHOR.txt =====
+task=TASK-074 section A (developer)
+branch={0}
+head={1}
+engine=bin/godot.windows.editor.x86_64.mono.console.exe (4.8.dev.mono.custom_build.ff796dbf9)
+editor_port=9888 game_port=9889 user_port_9877=NEVER TOUCHED
+
+===== ports-final.txt =====
+port 9877 pid_after=-1
+port 9888 pid_after=-1
+port 9889 pid_after=-1

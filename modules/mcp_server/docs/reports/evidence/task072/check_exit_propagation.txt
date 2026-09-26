@@ -1,0 +1,16 @@
+DECLARED SHAPES    : 2 powershell + 1 python
+DECLARED GUARDS    : 10 powershell + 6 python
+PINNED             : 2 (file, shape) pair(s)
+
+UNDISCHARGED scripts\mcp072_anchor_counterexample_probe.ps1 ps_check_printer
+    the file carries this shape and no declared guard for it:
+    a red step or check can be reported and the process still exits 0
+UNDISCHARGED scripts\mcp072_anchor_judge_probe.ps1 ps_check_printer
+    the file carries this shape and no declared guard for it:
+    a red step or check can be reported and the process still exits 0
+PINNED OK scripts\mcp066b_env.ps1 ps_check_printer :: TASK-069 census: a DOT-SOURCED library. It defines Add-Check (the shared printer with the PASS/FAIL tag) and is loaded by scripts/mcp066b_run.ps1, which owns the verdict and does exit non-zero on a failed check. The file has no top-level check of its own, so there is nothing for it to exit on.
+PINNED OK scripts\mcp066b_finalize.ps1 ps_check_printer :: TASK-069 census: a DOT-SOURCED library, same as mcp066b_env.ps1. It defines Add-Row (the PASS/FAIL printer) for scripts/mcp066b_run.ps1's final table; the verdict is the caller's.
+PINNED (reconciled) scripts\mcp066b_env.ps1 ps_check_printer
+PINNED (reconciled) scripts\mcp066b_finalize.ps1 ps_check_printer
+
+EXIT-CODE PROPAGATION CHECK FAILED: 2 problem(s)

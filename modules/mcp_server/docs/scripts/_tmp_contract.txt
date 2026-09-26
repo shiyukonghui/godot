@@ -1,0 +1,226 @@
+{
+  "description": "向场景添加新节点",
+  "inputSchema": {
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "parent_path": {
+        "default": ".",
+        "type": "string"
+      },
+      "properties": {
+        "default": {},
+        "type": "object"
+      },
+      "type": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "type"
+    ],
+    "type": "object"
+  },
+  "name": "editor_add_node"
+}
+{
+  "description": "删除节点",
+  "inputSchema": {
+    "properties": {
+      "path": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "path"
+    ],
+    "type": "object"
+  },
+  "name": "editor_delete_node"
+}
+{
+  "description": "复制指定节点及其子节点",
+  "inputSchema": {
+    "properties": {
+      "new_name": {
+        "description": "新节点名称 (可选)",
+        "type": "string"
+      },
+      "path": {
+        "description": "源节点路径",
+        "type": "string"
+      }
+    },
+    "required": [
+      "path"
+    ],
+    "type": "object"
+  },
+  "name": "editor_duplicate_node"
+}
+{
+  "description": "重命名节点",
+  "inputSchema": {
+    "properties": {
+      "name": {
+        "type": "string"
+      },
+      "path": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "path",
+      "name"
+    ],
+    "type": "object"
+  },
+  "name": "editor_rename_node"
+}
+{
+  "description": "将节点移动到新的父节点下",
+  "inputSchema": {
+    "properties": {
+      "new_name": {
+        "description": "移动后的新名称 (可选)",
+        "type": "string"
+      },
+      "new_parent": {
+        "description": "目标父节点路径",
+        "type": "string"
+      },
+      "path": {
+        "description": "要移动的节点路径",
+        "type": "string"
+      }
+    },
+    "required": [
+      "path",
+      "new_parent"
+    ],
+    "type": "object"
+  },
+  "name": "editor_reparent_node"
+}
+{
+  "description": "修改属性",
+  "inputSchema": {
+    "properties": {
+      "path": {
+        "type": "string"
+      },
+      "property": {
+        "type": "string"
+      },
+      "value": {}
+    },
+    "required": [
+      "path",
+      "property",
+      "value"
+    ],
+    "type": "object"
+  },
+  "name": "editor_set_node_property"
+}
+{
+  "description": "设置节点的分组",
+  "inputSchema": {
+    "properties": {
+      "groups": {
+        "description": "目标分组列表",
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "node_path": {
+        "description": "节点路径",
+        "type": "string"
+      }
+    },
+    "required": [
+      "node_path",
+      "groups"
+    ],
+    "type": "object"
+  },
+  "name": "editor_set_node_groups"
+}
+{
+  "description": "连接节点的信号到目标方法",
+  "inputSchema": {
+    "properties": {
+      "method": {
+        "description": "目标方法名",
+        "type": "string"
+      },
+      "signal": {
+        "description": "信号名称",
+        "type": "string"
+      },
+      "source_path": {
+        "description": "源节点路径",
+        "type": "string"
+      },
+      "target_path": {
+        "description": "目标节点路径",
+        "type": "string"
+      }
+    },
+    "required": [
+      "source_path",
+      "signal",
+      "method"
+    ],
+    "type": "object"
+  },
+  "name": "editor_connect_signal"
+}
+{
+  "description": "断开节点的信号连接",
+  "inputSchema": {
+    "properties": {
+      "method": {
+        "description": "目标方法名",
+        "type": "string"
+      },
+      "signal": {
+        "description": "信号名称",
+        "type": "string"
+      },
+      "source_path": {
+        "description": "源节点路径",
+        "type": "string"
+      },
+      "target_path": {
+        "description": "目标节点路径",
+        "type": "string"
+      }
+    },
+    "required": [
+      "source_path",
+      "signal",
+      "method"
+    ],
+    "type": "object"
+  },
+  "name": "editor_disconnect_signal"
+}
+{
+  "description": "设置编辑器自动关闭对话框行为",
+  "inputSchema": {
+    "properties": {
+      "enabled": {
+        "description": "是否启用自动关闭",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "enabled"
+    ],
+    "type": "object"
+  },
+  "name": "editor_set_auto_dismiss_dialogs"
+}

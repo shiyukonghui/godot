@@ -1,0 +1,197 @@
+{
+  "_comment": "B3 group manifest for TASK-015. The unimplemented contract entries of docs/tools_list.renamed.json are partitioned into B3/B4/B5 so that each group is one tools/<group>.{h,cpp} file: one channel, one scope, one mutating value, at most 10 tools, every tool exactly once across the three files. The union of the three manifests is exactly the contract minus the 66 B1/B2 tools; docs/scripts/check_tool_groups.py --batch B3 and --check-completeness make that assertion executable.",
+  "batch": "B3",
+  "total": 40,
+  "source": {
+    "batch_list": "docs/DESIGN-DETAIL.md section 10 (B3)",
+    "names": "docs/tools_list.renamed.json (171 entries) minus the 66 tools of docs/tool-groups.json and docs/tool-groups-b2.json",
+    "map": "docs/tool-rename-map.json (v1.1, 174 entries; channel/scope/mutating are read from it, never invented)",
+    "excluded": "none: the two unregister_until_implemented entries are absent from the 171 entry contract already"
+  },
+  "counts": {
+    "unimplemented_contract_tools": 105,
+    "unimplemented_in_this_batch": 40,
+    "groups": 12
+  },
+  "notes": {
+    "partition_axis": "B3 is the write batch that the node/script/resource families of DESIGN-DETAIL.md section 10 name, plus the read tools that observe exactly the state those writes produce (the state-chain evidence of PLAYBOOK section 3 gate 2). Groups are split by channel + scope + mutating; a group is one tools/<group>.{h,cpp} file. Only editor_node_write is implemented by TASK-015.",
+    "fix_implementation_first": [
+      "editor_disconnect_signal",
+      "editor_set_auto_dismiss_dialogs"
+    ]
+  },
+  "groups": [
+    {
+      "name": "editor_node_write",
+      "batch": "B3",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_add_node",
+        "editor_delete_node",
+        "editor_duplicate_node",
+        "editor_rename_node",
+        "editor_reparent_node",
+        "editor_set_node_property",
+        "editor_set_node_groups",
+        "editor_connect_signal",
+        "editor_disconnect_signal",
+        "editor_set_auto_dismiss_dialogs"
+      ],
+      "notes": "TASK-015 section 2 - the first B3 group and the only one this task implements. The ten editor-process, in-memory scene writes that share one dependency surface (the edited scene root plus EditorInterface) and one property-write shape. It contains both of the batch's fix_implementation_first tools: editor_disconnect_signal (the migration source ignored target_path and used the scene root as the Callable) and editor_set_auto_dismiss_dialogs (the migration source wrote a static nobody reads - pure fake success). editor_set_auto_dismiss_dialogs is not a node write; it is here because TASK-015 section 2 names it as a member of this group and because its dependency surface (EditorInterface / EditorNode level editor state, no disk write, no frame clock) is this group's."
+    },
+    {
+      "name": "editor_node_instantiate",
+      "batch": "B3",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_add_scene_instance",
+        "editor_add_raycast",
+        "editor_add_mesh_instance",
+        "editor_add_gridmap"
+      ],
+      "notes": "Node creation of a specific engine type: an instance of another packed scene, a RayCast2D/3D, a MeshInstance3D and a GridMap. One dependency (ClassDB instantiation plus the node-add path of the group above) and one file."
+    },
+    {
+      "name": "editor_node_batch_write",
+      "batch": "B3",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_add_nodes_batch",
+        "editor_set_node_property_batch"
+      ],
+      "notes": "The two batch shapes: many nodes added with one call, and one property written across many nodes. They are together because both own the batch argument grammar (a JSON array of objects) and the partial-failure policy."
+    },
+    {
+      "name": "editor_control_layout_write",
+      "batch": "B3",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_set_anchor_preset"
+      ],
+      "notes": "editor_set_anchor_preset is alone: it is the one Control-layout write and needs scene/gui/control.h (LayoutPreset) that no other node write needs."
+    },
+    {
+      "name": "editor_node_setup",
+      "batch": "B3",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_setup_camera_3d",
+        "editor_setup_collision_shape",
+        "editor_setup_world_environment",
+        "editor_setup_lighting",
+        "editor_setup_navigation_agent",
+        "editor_setup_navigation_region",
+        "editor_setup_physics_body"
+      ],
+      "notes": "The setup_* family: one call that builds a configured subtree (camera, collision shape, world environment, lighting, navigation agent/region, physics body). One file, one shared 'instantiate + configure + add + set owner' path."
+    },
+    {
+      "name": "editor_script_write",
+      "batch": "B3",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_execute_gdscript",
+        "editor_set_node_script"
+      ],
+      "notes": "The two script writes that act on the editor's live scene: attaching a script to a node and executing a caller-supplied GDScript inside the editor process."
+    },
+    {
+      "name": "editor_node_read",
+      "batch": "B3",
+      "channel": "editor",
+      "scope": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_node_properties",
+        "editor_get_node_groups",
+        "editor_find_nodes_in_group",
+        "editor_find_nodes_by_type",
+        "editor_get_node_signals",
+        "editor_list_signal_connections"
+      ],
+      "notes": "The read tools of the node family. They are in B3 because they observe exactly the state the writes of this batch produce (PLAYBOOK section 3 gate 2 requires a read-back chain per group); they cannot share editor_node_write because mutating differs. They own the node-signal inspection too, which is the read half of connect/disconnect."
+    },
+    {
+      "name": "project_script_write",
+      "batch": "B3",
+      "channel": "project",
+      "scope": "both",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "project_create_script",
+        "project_edit_script"
+      ],
+      "notes": "Project-level script file writes (create / edit). They touch res:// through the shared atomic publish helper and share the GDScript validation step."
+    },
+    {
+      "name": "project_autoload_write",
+      "batch": "B3",
+      "channel": "project",
+      "scope": "both",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "project_add_autoload",
+        "project_remove_autoload"
+      ],
+      "notes": "The autoload pair: one project setting key (`autoload/<name>`), added and removed. One file, one key grammar."
+    },
+    {
+      "name": "project_setting_write",
+      "batch": "B3",
+      "channel": "project",
+      "scope": "both",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "project_set_setting"
+      ],
+      "notes": "editor_set_... the single general ProjectSettings write. Alone because it is the only tool that may write an arbitrary key, and that decision deserves its own file."
+    },
+    {
+      "name": "project_cross_scene_write",
+      "batch": "B3",
+      "channel": "project",
+      "scope": "both",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "project_set_node_property_across_scenes"
+      ],
+      "notes": "One property written into every scene that contains a node matching a name/path - the cross-scene shape of the node property write. Alone because it owns the multi-scene transaction (open, edit, save) policy."
+    },
+    {
+      "name": "project_resource_uid_read",
+      "batch": "B3",
+      "channel": "project",
+      "scope": "both",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_convert_path_to_uid",
+        "project_convert_uid_to_path"
+      ],
+      "notes": "The resource-identity reads (path <-> uid). They are the resource half of B3 and are read-only, so they cannot join a write group."
+    }
+  ]
+}

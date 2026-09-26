@@ -1,0 +1,42 @@
+TASK-020: close the two silent-wrong-value surfaces and unify the assertion field sets
+
+D-1 (high): a composite value's *components* bypassed the TASK-018 gate.
+`property_value_from_json` keeps a JSON object a Dictionary (its recursion is
+unchanged and deliberate: nothing is folded there), and the module's component
+mapping (`vector_from_dictionary`) then folded each member with a `(double)`
+cast, so `{"x":"abc"}` became `0.0`, `{"r":"abc"}` became black and
+`[{"x":"abc","y":1}]` for a packed vector array became `(0,0)` - all next to
+`code=0`. `shape_vector_from_json` now pushes every component through
+`coerce_to_property_type` with the type of the slot it fills (Vector2/Vector3
+x/y/z and Color r/g/b/a are FLOAT, Vector2i/Vector3i are INT), refuses a
+component that cannot fill its slot with `-32602` naming it (`value.x`,
+`value[0].x`), shapes array elements of the packed vector arrays, and leaves a
+member that is not a component alone. Every write path that reaches it refuses
+before the first write, so the batch transactions stay all-or-nothing.
+
+D-2 (high): `STRING -> FLOAT/INT` was converted by a pair `Variant::can_convert`
+declares convertible, and the parsers answer a default for garbage:
+`String::to_float("abc")` is `0`, `String::to_int("1e3")` is `1`. A string that
+does not, as a whole, spell the number its target type receives is now refused
+instead of written as `0` (the engine's own spelling test plus a whole-string
+parse plus a finiteness check; for an integer target a whole-integer spelling
+plus the int64 range guard). The `#rrggbb` colour string and the parseable
+spellings are untouched. `coerce_to_property_type` also gates a packed
+container's elements through the same function, so `["abc"]` for a
+`PackedFloat64Array` is refused rather than zeroed.
+
+D-3 (medium): the same failing assertion answered two shapes - the standalone
+tools had no `reason`, the scenario runner had one. The whole assertion verdict
+is now one shared field set (`node_state_assertion_fields` /
+`screen_text_assertion_fields`) that both entries merge, and the scenario adds
+only its `type`/`step` envelope.
+
+Also: DESIGN-DETAIL section 17.3's endpoint expectation wording now states the
+symmetric rule the scripts and the live endpoints actually use (wording only),
+and `scripts/mcp020_m4_defect_fixes_evidence.ps1` is the phase pre/post evidence
+run for both defects plus the two verifications the M4 acceptance left open
+(the cross-scene transaction with a broken file, and the screenshot diff).
+
+Tests: four new doctest cases (component gate, packed-array gate, string gate,
+shared assertion field set), red before and green after (179/179 module cases,
+1605/1605 full suite).

@@ -1,0 +1,24 @@
+SHA256 tools_list.renamed.json                                                  a5c59853c1e5a4913d600c663c8e972f058f7144869ec20337ab41b7a7bb17ea (163520 bytes)
+SHA256 tool-rename-map.json                                                     2f552719f6a23fe328df0a2944c6048824c1b2a750aebc0fe2cabbcd3529c2bd (70917 bytes)
+SHA256 tool-groups.json                                                         0cfcac80f0d999fa7db713ae48f43febe96ae52e2c93633257eeed00ffdfbfac (5682 bytes)
+SHA256 tool-groups-b2.json                                                      14eba00016c00bff914bb39aff9cfb5f01e375a43fa2ff5038d69bdedfc8b75d (11623 bytes)
+SHA256 tool-groups-b3.json                                                      d3422a6e3b1213a1fd356ce3dbae0e789200268b4d231337beb40ed5d25b956a (8526 bytes)
+SHA256 tool-groups-b4.json                                                      d95d7d9e793a11aa56ccb66513051ec446e94725316ef3f54dfc28cf4f40a708 (3060 bytes)
+SHA256 tool-groups-b5.json                                                      85bb783e29e6e02879e5c60769bdf0ffcc60a9fa2c9ad6cea8fde43acf2799fb (12209 bytes)
+SHA256 tool-groups-added.json                                                   72d0c8ae7589b401dd56e3147bdfbb51c677512372ea5832aafc6b2b18a56c8d (9478 bytes)
+SHA256 gen_renamed_contract.py                                                  e48b0cbfd632643f07110edf903387165791a131498b2379852369910e214620 (163303 bytes)
+SHA256 check_rename_map.py                                                      525798c76ece912787ef4efb0f343635b6bdfd0d462d4bad68cb3d8782e240fc (16500 bytes)
+
+contract entries      = 177
+_meta.count           = 177
+_meta.added_count     = 6
+_meta.generator_ver   = 1.22.0
+_meta.overrides       = 36
+_meta.order_normative = False
+added manifest genver = 1.22.0
+
+=== project_list_scripts.description ===
+列出所有脚本文件 会包含 .godot 下的生成脚本：本工具的 walk 从 res:// 起递归，只跳过 . 与 ..，因此引擎自己生成的文件也在答案里（真实 mono 工程会出现 res://.godot/mono/temp/obj/** 下的 .cs，例如 res://.godot/mono/temp/obj/Debug/*.AssemblyInfo.cs），调用方若要只看手写脚本请自行过滤这些路径。
+
+=== running_game_run_test_scenario.description ===
+运行测试场景并执行一系列测试步骤 wait 步骤的入参名是 seconds（steps[i].seconds，契约 schema 里唯一的等待时长成员），结果里每个 wait 条目的回显字段叫 waited_seconds（按时间等待的步骤回显的就是 seconds；按 node_path 等待的步骤回显 timeout，见 tools/running_game_test_execution.cpp:440 与:459）；两者在**不同的对象**里，waited_seconds 不是入参（把它写进请求的 step 不生效，seconds 才是入参），入参名与结果字段名都未改动、既有调用不受影响。

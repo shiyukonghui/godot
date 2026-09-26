@@ -1,0 +1,23 @@
+mcp_server: TASK-052 evidence script, mcp010 expectation source, and the report
+
+scripts/mcp052_added_tools_evidence.ps1 is gate 2 for this batch: 53 checks over
+four phases (plain editor on 9888 for the refusals and the capability chain, mono
+editor for the .csproj lookup, the write/broken-build/timeout-kill loop and a
+read-back through another tool, mono game on 9889 for the scope=both proof). The
+expected endpoint sizes are *derived* from the rename map plus the added
+manifest's group scopes (150/71), not written down.
+
+mcp010's evidence script derived its expectations from the five batch manifests
+and the rename map only, so the two added tools would have been foreign to it;
+it now reads the sixth manifest and falls back to an added group's declared
+scope for a name that has no map row - the same rule check_contract_subset.ps1
+and accept_m1.ps1 use, with no assertion relaxed.
+
+REPORT-052 has the mechanism, both tools, the red/green TDD record, all six gates
+with their real output and exit codes, the regression attribution, the decision
+record (including the three spec gaps for the decision maker) and an explicit
+list of what was not constructed. Running the TASK-050/051 regression batteries
+rewrites their own tracked evidence in place; those files were restored to their
+committed bytes, since they are those reports' artifacts and not this batch's.
+
+No compiled source changes in this commit: both binaries still report f38d240ab.

@@ -1,0 +1,118 @@
+{
+  "note": "Provenance and hashes for the TASK-060 section A (organiser) plan. Written by the section A organiser. This file carries the FINAL hash of the plan; the plan itself cannot quote its own final hash (any edit changes it), so the authoritative post-write hash lives here instead.",
+  "task": "TASK-060 breakout round 2, section A (organiser)",
+  "repo": "F:/RustProjects/godot-mcp-pro/code/godot",
+  "branch": "feature/mcp-server-module",
+  "head_sha": "4f99a4e37ac4160b5c9b98513068872521bee975",
+  "head_short": "4f99a4e37a",
+  "artifact": {
+    "path": "docs/reports/BREAKOUT-TEST-PLAN.md",
+    "sha256": "127a85ae91a5688746ebd52e5a2ad831b08d828b5f1eda28d1e890b1e391cd05",
+    "bytes": 61191,
+    "has_bom": false,
+    "crlf_bytes": 0,
+    "line_endings": "LF only",
+    "encoding": "UTF-8 without BOM"
+  },
+  "contract": {
+    "path": "modules/mcp_server/docs/tools_list.renamed.json",
+    "sha256": "c169bb676ec61c190a772b976bc8301aefc3c4b43c3545deae2cb931b6963334",
+    "bytes": 148333,
+    "tool_count": 175,
+    "meta_count": 175,
+    "meta_added_count": 4,
+    "meta_added_tools": [
+      "project_build_csharp",
+      "project_write_text_file",
+      "project_validate_scripts",
+      "editor_set_node_script_batch"
+    ],
+    "note": "meta.generated_from_sha256=8f8051c4... is the UPSTREAM fixture hash (F:/moonbit-hof-rs/tests/fixtures/mcp/tools_list.json), NOT this file's hash."
+  },
+  "contract_excerpt": {
+    "path": "docs/reports/evidence/task060/contract-excerpt-six-capabilities.json",
+    "sha256": "17184a4f2859c26a71a2846d118c80b719106d7b49af4a5325775964add4859a",
+    "bytes": 42380,
+    "contains": [
+      "project_set_setting",
+      "editor_add_input_action",
+      "project_validate_scripts",
+      "project_build_csharp",
+      "editor_add_nodes_batch",
+      "editor_set_node_script_batch",
+      "editor_list_signal_connections",
+      "project_write_text_file",
+      "project_remove_autoload"
+    ]
+  },
+  "editor_binaries": {
+    "console_wrapper": {
+      "path": "bin/godot.windows.editor.x86_64.mono.console.exe",
+      "bytes": 300544,
+      "sha256": "209ecca0a2876cc8f55d6f5a694e02e4a117237172b901ac30d37bb76d1d18d9"
+    },
+    "engine": {
+      "path": "bin/godot.windows.editor.x86_64.mono.exe",
+      "bytes": 196352512,
+      "sha256": "7fa4a11dffd44ff2463a9386b1695be147a7a1fe30bbe83d710b114643d3adac"
+    },
+    "self_reported_version": "4.8.dev.mono.custom_build.cd7224274",
+    "stale_binary_check": {
+      "built_commit": "cd7224274",
+      "head": "4f99a4e37a",
+      "is_ancestor_of_head": true,
+      "commits_between": ["4f99a4e3 docs(mcp_server): REPORT-059 completion report for the section-publish switch"],
+      "assessment": "INFERRED (not measured): the only commit between the built hash and HEAD is documentation-only, so tools/** behaviour is expected to match HEAD. Section B MUST confirm with: git diff --name-only cd7224274..HEAD -- modules/mcp_server/tools modules/mcp_server/tests modules/mcp_server/*.cpp modules/mcp_server/*.h modules/mono (must be empty; non-empty => rebuild first)."
+    }
+  },
+  "toolchain": {
+    "dotnet_version": "10.0.300-preview.0.26177.108",
+    "trace_analyzer": "modules/mcp_server/scripts/analyze_mcp_trace.py",
+    "trace_analyzer_path_in_task_brief": "scripts/analyze_mcp_trace.py",
+    "trace_analyzer_path_is_wrong": true,
+    "trace_analyzer_note": "The path written in TASK-060 section 0.5 does not exist; the real path is under modules/mcp_server/scripts/."
+  },
+  "port_guard_9877": {
+    "checked_before": "no listener, no godot process",
+    "checked_after": "no listener",
+    "verdict": "9877 was free during plan authoring; it was never occupied, killed or restarted."
+  },
+  "discipline": {
+    "modules_mcp_server_modified": false,
+    "modules_mono_modified": false,
+    "only_added": [
+      "docs/reports/BREAKOUT-TEST-PLAN.md",
+      "docs/reports/evidence/task060/contract-excerpt-six-capabilities.json",
+      "docs/reports/evidence/task060/PROVENANCE.json"
+    ],
+    "git_status_before_authoring": "only pre-existing untracked files: .graphifyignore, build-m0.cmd, graphify-out/, install-deps-m0.cmd, modules/mcp_server/docs/tasks/TASK-060-breakout-round-2.md"
+  },
+  "evidence_anchors_d86": {
+    "capability_1_comment_preservation": {
+      "source": "modules/mcp_server/docs/reports/REPORT-059-section-publish-switch.md",
+      "commit": "4f99a4e37ac4160b5c9b98513068872521bee975"
+    },
+    "capability_2_csharp_verdict": {
+      "source": "modules/mcp_server/docs/reports/REPORT-055-csharp-compile-verdict-patch.md",
+      "commit": "6fdb76af0fd012faa5a6d8711fbb8aad344e8085"
+    },
+    "capability_3_resolve_within_batch": {
+      "source": "modules/mcp_server/docs/reports/REPORT-051-b-tier-schemas.md (section 3, C-3)",
+      "commit": "9d5e409ae035ebb3018f96822cd646624ce69eb9"
+    },
+    "capability_4_set_node_script_batch_keep_existing": {
+      "source": "modules/mcp_server/docs/reports/REPORT-053-added-tools-2.md (5.4)",
+      "commit": "e33c5b4dc9a5776efef8d45aad73da0b48fc794f"
+    },
+    "capability_5_scope_narrowing": {
+      "source": "modules/mcp_server/docs/reports/REPORT-051-b-tier-schemas.md (2.2, O-9) + contract line 1748-1757",
+      "commit": "9d5e409ae035ebb3018f96822cd646624ce69eb9"
+    },
+    "capability_6_capture_honesty": {
+      "source": "modules/mcp_server/docs/DESIGN-DETAIL.md section 25 (GDR-27) items 10/11; implementation read at modules/mcp_server/mcp_capture.cpp:601-710",
+      "commit": "4f99a4e37ac4160b5c9b98513068872521bee975",
+      "baseline_commit_cited_in_spec": "0d405fa2a9"
+    }
+  },
+  "scope_statement": "Section A produces a plan plus observation rules only. NO game was built, NO tool was called, NO developer was waited for. Every 'current state' statement in the plan is a CITED claim from another report and is marked with its commit anchor and listed for D86 re-measurement."
+}

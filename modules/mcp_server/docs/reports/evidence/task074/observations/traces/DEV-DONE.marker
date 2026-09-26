@@ -1,0 +1,10 @@
+TASK-074 section A DEV DONE
+utc=2026-09-25 20:43:21
+branch=feature/mcp-server-module
+head=58becb2f33
+tool_calls=232 (editor9888=198 game9889=34)
+rollbacks=33 (30 non-ok calls + 3 semantic)
+report=docs/reports/PLATFORMER-DEV-LOG.md
+evidence=docs/reports/evidence/task074/
+project=%TEMP%\mcp-platformer\proj
+eleven=1 pass 2 partial(capability gap, D5) 3 pass 4 pass 5 pass(no audio asset) 6 pass 7 pass 8 pass 9 pass 10 pass 11 pass

@@ -1,0 +1,12 @@
+# TASK-043 evidence subtree: keep the raw bytes.
+#
+# The repository root `.gitattributes` says `* text=auto eol=lf`, which rewrites
+# CRLF files on the way into the index - so a file whose sha256 is written down
+# in `INDEX.md` would not be the file the commit actually carries (TASK-042 hit
+# exactly this and fixed it the same way). `-text` disables every EOL and
+# charset translation for this subtree, so "the committed blob is the bytes
+# INDEX.md hashes" is a machine-checkable statement:
+#
+#   git cat-file blob HEAD:.../evidence/task043/<file> > scratch
+#   sha256(scratch) == INDEX.md's value
+* -text

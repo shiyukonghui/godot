@@ -1,0 +1,418 @@
+
+// ---------------------------------------------------------------------------
+// TASK-052 (C tier, batch 1 - "契约扩张：新增工具", DESIGN-DETAIL.md section 26 /
+// GDR-28): the two tools that are **not** ports of the frozen rename map -
+// `project_build_csharp` (the .NET SDK build) and `project_write_text_file` (the
+// plain project text writer).
+//
+// Every case below drives the tools through the registry, so a tree that has the
+// two contract entries but not the two registrations answers `-32601 Unknown
+// tool`: the red run of this batch fails for exactly the reason the batch exists.
+//
+// The scratch tree is `res://mcp_server_test_fixture_task052` (its own name, so
+// `ScratchProject`'s fixture is never clobbered) and it is removed at the start
+// and at the end of every case that creates it.
+// ---------------------------------------------------------------------------
+namespace Task052 {
+
+const String ROOT = String::utf8("res://mcp_server_test_fixture_task052");
+
+// The two contract entries' wording, character for character. The source is
+// `ADDED_TOOLS` of `scripts/gen_renamed_contract.py`, which is what
+// `docs/tools_list.renamed.json` was generated from.
+const char *const BUILD_CSHARP_DESCRIPTION =
+		"Build the project's C# solution by running the .NET SDK on its .csproj files, and answer the "
+		"exit code with the captured output. Requires a Godot build with C# support and a .NET SDK on "
+		"PATH; when either is missing the call is refused with the reason and what to install.";
+
+const char *const WRITE_TEXT_FILE_DESCRIPTION =
+		"Write a project text file such as a .csproj, .sln, NuGet.config or .cfg, and answer the "
+		"resulting size and sha256. Refuses scene, resource and script paths (use the dedicated tools "
+		"for those) and refuses project.godot (use project_set_setting).";
+
+// The registered `inputSchema` of `project_build_csharp`, as the contract's JSON.
+const char *const BUILD_CSHARP_SCHEMA =
+		R"schema({"properties":{"configuration":{"default":"Debug","enum":["Debug","Release"],"type":"string"},"extra_args":{"default":[],"items":{"type":"string"},"type":"array"},"rescan":{"default":true,"type":"boolean"},"timeout_ms":{"default":120000,"maximum":600000,"minimum":1000,"type":"integer"}},"required":[],"type":"object"})schema";
+
+// ... and of `project_write_text_file`.
+const char *const WRITE_TEXT_FILE_SCHEMA =
+		R"schema({"properties":{"content":{"type":"string"},"overwrite":{"default":false,"type":"boolean"},"path":{"type":"string"}},"required":["path","content"],"type":"object"})schema";
+
+Dictionary entry_of(const Array &p_list, const String &p_name) {
+	for (int i = 0; i < p_list.size(); i++) {
+		const Variant candidate = p_list[i];
+		if (candidate.get_type() != Variant::DICTIONARY) {
+			continue;
+		}
+		if (String(((Dictionary)candidate)["name"]) == p_name) {
+			return candidate;
+		}
+	}
+	return Dictionary();
+}
+
+// The canonical JSON of a live value, through the same round trip gate 1 uses:
+// the contract's text is JSON (where `120000` parses as FLOAT) while a hand-built
+// schema may hold an INT, and the wire is the JSON rendering of both.
+String wire_json(const Variant &p_value) {
+	return TestMCPServer::canonical(TestMCPServer::parse_json(JSON::stringify(p_value)));
+}
+
+String suggestion_of(const MCPToolError &p_error) {
+	if (p_error.data.get_type() != Variant::DICTIONARY) {
+		return String();
+	}
+	return String(((Dictionary)p_error.data).get("suggestion", Variant()));
+}
+
+} // namespace Task052
+
+TEST_CASE("[MCPServer] TASK-052 the two added tools are registered in both endpoints") {
+	MCPToolRegistry editor_registry;
+	TestMCPServer::build_editor_process_registry(editor_registry);
+	MCPToolRegistry game_registry;
+	TestMCPServer::build_all_tools_registry(game_registry);
+
+	// `scope = both` (docs/tool-groups-added.json): the toolchain is a property of
+	// the machine and of the engine build, not of the editor process, so both
+	// endpoints serve them and the live list has to carry them on both.
+	CHECK(editor_registry.has_tool("project_build_csharp"));
+	CHECK(editor_registry.has_tool("project_write_text_file"));
+	CHECK(editor_registry.is_tool_visible("project_build_csharp", true));
+	CHECK(editor_registry.is_tool_visible("project_build_csharp", false));
+	CHECK(game_registry.has_tool("project_build_csharp"));
+	CHECK(game_registry.has_tool("project_write_text_file"));
+
+	const Array editor_list = editor_registry.build_tools_list(true);
+	const Array game_list = game_registry.build_tools_list(false);
+	const char *const names[] = { "project_build_csharp", "project_write_text_file" };
+	for (int i = 0; i < 2; i++) {
+		const Dictionary in_editor = Task052::entry_of(editor_list, String::utf8(names[i]));
+		REQUIRE(in_editor.has("name"));
+		CHECK(String(in_editor["description"]) == String::utf8(i == 0 ? Task052::BUILD_CSHARP_DESCRIPTION : Task052::WRITE_TEXT_FILE_DESCRIPTION));
+		const char *const schema = i == 0 ? Task052::BUILD_CSHARP_SCHEMA : Task052::WRITE_TEXT_FILE_SCHEMA;
+		CHECK(Task052::wire_json(in_editor.get("inputSchema", Variant())) ==
+				Task052::wire_json(TestMCPServer::parse_json(String::utf8(schema))));
+
+		const Dictionary in_game = Task052::entry_of(game_list, String::utf8(names[i]));
+		CHECK(in_game.has("name"));
+		CHECK(String(in_game["description"]) == String(in_editor["description"]));
+	}
+
+	// GDR-20: the build is a subprocess that may run for minutes, so it answers
+	// across frames; the immediate channel refuses it rather than ticking once.
+	CHECK(editor_registry.is_deferred_tool("project_build_csharp"));
+	CHECK_FALSE(editor_registry.is_deferred_tool("project_write_text_file"));
+	{
+		MCPToolError error;
+		const Variant result = editor_registry.call_tool("project_build_csharp", Dictionary(), error);
+		CHECK(result.get_type() == Variant::NIL);
+		CHECK(error.code == -32603);
+		CHECK(error.message.contains("deferred"));
+	}
+}
+
+TEST_CASE("[MCPServer] TASK-052 project_write_text_file refuses the dedicated families") {
+	MCPToolRegistry registry;
+	TestMCPServer::build_editor_process_registry(registry);
+
+	const auto refuse = [&registry](const String &p_path, const char *p_must_name) -> void {
+		Dictionary args;
+		args["path"] = p_path;
+		args["content"] = "x";
+		MCPToolError error;
+		const Variant result = registry.call_tool("project_write_text_file", args, error);
+		CHECK_MESSAGE(result.get_type() == Variant::NIL, p_path);
+		CHECK_MESSAGE(error.code == -32602, p_path);
+		CHECK_MESSAGE(error.data.get_type() == Variant::DICTIONARY, p_path);
+		CHECK_MESSAGE(Task052::suggestion_of(error).contains(String::utf8(p_must_name)), p_path);
+	};
+
+	// The engine's own settings file: the dedicated tool is the one that publishes
+	// it through `ProjectSettings::save_custom()`.
+	refuse("res://project.godot", "project_set_setting");
+	// The four families that have dedicated writers. `.tscn` / `.tres` are the
+	// resource family, `.gd` / `.cs` the script family.
+	refuse("res://scene.tscn", "project_create_scene_file");
+	refuse("res://thing.tres", "project_create_resource");
+	refuse("res://script.gd", "project_create_script");
+	refuse("res://Script.cs", "project_create_script");
+	// Case insensitively: `PROJECT.GODOT` is the same file on Windows.
+	refuse("res://PROJECT.GODOT", "project_set_setting");
+	refuse("res://Scene.TSCN", "project_create_scene_file");
+
+	// Paths outside the project, and any `..` segment, are refused before the
+	// destination is looked at (`normalize_project_path`'s rule, the same family
+	// `normalize_screenshot_path` documents).
+	const auto refuse_path = [&registry](const String &p_path) -> void {
+		Dictionary args;
+		args["path"] = p_path;
+		args["content"] = "x";
+		MCPToolError error;
+		const Variant result = registry.call_tool("project_write_text_file", args, error);
+		CHECK_MESSAGE(result.get_type() == Variant::NIL, p_path);
+		CHECK_MESSAGE(error.code == -32602, p_path);
+		CHECK_MESSAGE(error.data.get_type() == Variant::DICTIONARY, p_path);
+	};
+	refuse_path("user://outside.cfg");
+	refuse_path("C:/absolute.cfg");
+	refuse_path("res://../escape.cfg");
+	refuse_path("res://dir/../../escape.cfg");
+	refuse_path("res://");
+	refuse_path("res://dir/");
+
+	// The two required members.
+	{
+		Dictionary args;
+		args["content"] = "x";
+		MCPToolError error;
+		registry.call_tool("project_write_text_file", args, error);
+		CHECK(error.code == -32602);
+		CHECK(error.message == "Missing required parameter: path");
+	}
+	{
+		Dictionary args;
+		args["path"] = "res://ok.cfg";
+		MCPToolError error;
+		registry.call_tool("project_write_text_file", args, error);
+		CHECK(error.code == -32602);
+		CHECK(error.message == "Missing required parameter: content");
+	}
+	// An empty `content` is legal (an empty config file is a file), an empty
+	// `path` is not.
+	{
+		Dictionary args;
+		args["path"] = "   ";
+		args["content"] = "";
+		MCPToolError error;
+		registry.call_tool("project_write_text_file", args, error);
+		CHECK(error.code == -32602);
+	}
+}
+
+TEST_CASE("[MCPServer] TASK-052 project_write_text_file writes, reads back and never silently overwrites") {
+	TestMCPServer::remove_tree(Task052::ROOT);
+	MCPToolRegistry registry;
+	TestMCPServer::build_editor_process_registry(registry);
+
+	const String target = Task052::ROOT.path_join("Mcp052.csproj");
+	const String content = String::utf8("<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <TargetFramework>net8.0</TargetFramework>\n  </PropertyGroup>\n</Project>\n");
+
+	// (1) A fresh write. `bytes` is the UTF-8 size of what is on disk and `sha256`
+	// is the engine's own hash of that file - not of the string in memory.
+	{
+		Dictionary args;
+		args["path"] = target;
+		args["content"] = content;
+		MCPToolError error;
+		const Variant result = registry.call_tool("project_write_text_file", args, error);
+		REQUIRE_FALSE(error.is_error());
+		REQUIRE(result.get_type() == Variant::DICTIONARY);
+		const Dictionary out = result;
+		CHECK(String(out["path"]) == target);
+		CHECK((int64_t)out["bytes"] == (int64_t)TestMCPServer::to_bytes(content).size());
+		CHECK(String(out["sha256"]) == FileAccess::get_sha256(target));
+		CHECK((bool)out["created"] == true);
+
+		// The read-back is real: the bytes on disk are the bytes that were asked
+		// for, and no BOM was prepended.
+		Error read_error = OK;
+		const Vector<uint8_t> on_disk = FileAccess::get_file_as_bytes(target, &read_error);
+		REQUIRE(read_error == OK);
+		const Vector<uint8_t> expected = TestMCPServer::to_bytes(content);
+		REQUIRE(on_disk.size() == expected.size());
+		bool same = true;
+		for (int i = 0; i < on_disk.size(); i++) {
+			if (on_disk[i] != expected[i]) {
+				same = false;
+			}
+		}
+		CHECK(same);
+	}
+
+	// (2) `overwrite` defaults to false and an occupied destination is a refusal
+	// whose suggestion names the way past it - and the file does not move.
+	const String before_sha = FileAccess::get_sha256(target);
+	{
+		Dictionary args;
+		args["path"] = target;
+		args["content"] = "replacement";
+		MCPToolError error;
+		const Variant result = registry.call_tool("project_write_text_file", args, error);
+		CHECK(result.get_type() == Variant::NIL);
+		CHECK(error.code == -32001);
+		CHECK(Task052::suggestion_of(error).contains("overwrite"));
+	}
+	CHECK(FileAccess::get_sha256(target) == before_sha);
+
+	// (3) `overwrite: true` replaces it and says the file already existed.
+	{
+		Dictionary args;
+		args["path"] = target;
+		args["content"] = "replacement";
+		args["overwrite"] = true;
+		MCPToolError error;
+		const Variant result = registry.call_tool("project_write_text_file", args, error);
+		REQUIRE_FALSE(error.is_error());
+		const Dictionary out = result;
+		CHECK((bool)out["created"] == false);
+		CHECK((int64_t)out["bytes"] == 11);
+		CHECK(FileAccess::get_sha256(target) == String(out["sha256"]));
+
+		Error read_error = OK;
+		const Vector<uint8_t> on_disk = FileAccess::get_file_as_bytes(target, &read_error);
+		REQUIRE(read_error == OK);
+		CHECK(String::utf8((const char *)on_disk.ptr(), on_disk.size()) == "replacement");
+	}
+
+	// (4) A path whose parent directory does not exist yet is created by the
+	// atomic publish, and the answer still reports the file it really wrote.
+	{
+		Dictionary args;
+		args["path"] = Task052::ROOT.path_join("sub").path_join("NuGet.config");
+		args["content"] = String::utf8("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<configuration></configuration>\n");
+		MCPToolError error;
+		const Variant result = registry.call_tool("project_write_text_file", args, error);
+		REQUIRE_FALSE(error.is_error());
+		const Dictionary out = result;
+		CHECK(FileAccess::exists(String(out["path"])));
+		CHECK((bool)out["created"] == true);
+	}
+
+	TestMCPServer::remove_tree(Task052::ROOT);
+}
+
+TEST_CASE("[MCPServer] TASK-052 project_write_text_file has no delete path") {
+	MCPToolRegistry registry;
+	TestMCPServer::build_editor_process_registry(registry);
+
+	// The schema is the whole argument surface, so "the tool cannot delete" is a
+	// property of two objects a machine can read: the registered schema, and the
+	// registry's unknown-argument gate.
+	Array properties;
+	{
+		const Array list = registry.build_tools_list(true);
+		const Dictionary entry = Task052::entry_of(list, "project_write_text_file");
+		REQUIRE(entry.has("inputSchema"));
+		const Dictionary schema = entry["inputSchema"];
+		REQUIRE(schema.has("properties"));
+		const Dictionary declared = schema["properties"];
+		const Array keys = declared.keys();
+		for (int i = 0; i < keys.size(); i++) {
+			properties.push_back(keys[i]);
+		}
+		properties.sort();
+	}
+	REQUIRE(properties.size() == 3);
+	CHECK(String(properties[0]) == "content");
+	CHECK(String(properties[1]) == "overwrite");
+	CHECK(String(properties[2]) == "path");
+
+	// ... and a delete-shaped argument is not silently ignored.
+	const char *const not_a_parameter[] = { "remove", "delete", "unlink" };
+	for (int i = 0; i < 3; i++) {
+		Dictionary args;
+		args["path"] = "res://x.cfg";
+		args["content"] = "x";
+		args[String::utf8(not_a_parameter[i])] = true;
+		MCPToolError error;
+		const Variant result = registry.call_tool("project_write_text_file", args, error);
+		CHECK_MESSAGE(result.get_type() == Variant::NIL, String::utf8(not_a_parameter[i]));
+		CHECK_MESSAGE(error.code == -32602, String::utf8(not_a_parameter[i]));
+		CHECK_MESSAGE(error.message.contains("Unknown parameter"), String::utf8(not_a_parameter[i]));
+	}
+}
+
+TEST_CASE("[MCPServer] TASK-052 project_build_csharp validates its arguments first") {
+	// The registry cannot answer this tool (it is deferred), so the argument rules
+	// are reached through `call_deferred_tool()`: a call that is refused there
+	// never creates a task, which is exactly what "validated first" means.
+	MCPToolRegistry registry;
+	TestMCPServer::build_editor_process_registry(registry);
+
+	const auto refuse = [&registry](const Dictionary &p_args, const char *p_must_contain, const String &p_label) -> void {
+		MCPToolError error;
+		MCPDeferred::Task *task = registry.call_deferred_tool("project_build_csharp", p_args, error);
+		CHECK_MESSAGE(task == nullptr, p_label);
+		if (task != nullptr) {
+			memdelete(task);
+		}
+		CHECK_MESSAGE(error.code == -32602, p_label);
+		CHECK_MESSAGE(error.message.contains(String::utf8(p_must_contain)), p_label);
+		CHECK_MESSAGE(Task052::suggestion_of(error) != String(), p_label);
+	};
+
+	{
+		Dictionary args;
+		args["configuration"] = "Fast";
+		refuse(args, "Debug", "configuration");
+	}
+	{
+		Dictionary args;
+		args["configuration"] = 7;
+		refuse(args, "'configuration' must be a string", "configuration type");
+	}
+	{
+		Dictionary args;
+		args["timeout_ms"] = 500;
+		refuse(args, "1000", "timeout_ms low");
+	}
+	{
+		Dictionary args;
+		args["timeout_ms"] = 600001;
+		refuse(args, "600000", "timeout_ms high");
+	}
+	{
+		Dictionary args;
+		args["timeout_ms"] = 1.5;
+		refuse(args, "'timeout_ms' must be an integer", "timeout_ms type");
+	}
+	{
+		Dictionary args;
+		args["timeout_ms"] = 60000;
+		refuse(args, "1000", "timeout_ms bounds in the message");
+	}
+	{
+		Dictionary args;
+		args["extra_args"] = 7;
+		refuse(args, "'extra_args' must be an array of strings", "extra_args type");
+	}
+	{
+		Dictionary args;
+		Array extra;
+		extra.push_back("--nologo");
+		extra.push_back(7);
+		args["extra_args"] = extra;
+		refuse(args, "extra_args[1]", "extra_args element");
+	}
+	{
+		Dictionary args;
+		args["extra_args"] = Array();
+		Array extra;
+		extra.push_back("");
+		args["extra_args"] = extra;
+		refuse(args, "extra_args[0]", "extra_args empty element");
+	}
+	{
+		Dictionary args;
+		args["rescan"] = "yes";
+		refuse(args, "'rescan' must be a boolean", "rescan type");
+	}
+
+	// A well-formed request passes the argument gate: in this (non-mono) doctest
+	// build the next thing that happens is the capability refusal, which is the
+	// subject of the case below. A task is created only when a capability check
+	// said yes, so -32000 here means "arguments accepted".
+	{
+		Dictionary args;
+		args["configuration"] = "Release";
+		args["timeout_ms"] = 1000;
+		MCPToolError error;
+		MCPDeferred::Task *task = registry.call_deferred_tool("project_build_csharp", args, error);
+		if (task != nullptr) {
+			memdelete(task);
+		}
+		CHECK(error.code == -32000);
+		CHECK(Task052::suggestion_of(error) != String());
+	}
+}

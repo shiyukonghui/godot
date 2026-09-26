@@ -1,0 +1,447 @@
+== FILE INVENTORY ==
+  trace-editor.jsonl     lines=398  calls=198  captures=198  opens=1 
+  trace-game.jsonl       lines=18   calls=8    captures=8    opens=1 
+  trace-game2.jsonl      lines=21   calls=10   captures=10   opens=1 
+  trace-game3.jsonl      lines=19   calls=9    captures=9    opens=1 
+  trace-game4.jsonl      lines=15   calls=7    captures=7    opens=1 
+
+== GENERATIONS (trace_opened) ==
+  trace-editor.jsonl line=1 pid=92828 port=9888 role=editor version=4.8.dev.mono.custom_build.ff796dbf9 started_ms=1790339485071
+
+== EDITOR SUMMARY ==
+  tools/call=198  tools/list=1  capture-lines=198  total-lines=398
+  tools/list -> tools=153 result_bytes=61863 ok=True
+  connections: 198 distinct; max=200
+
+== ALL NON-OK CALLS (editor, in seq order) ==
+  seq  line conn tool                              code      message
+  2    3    3    project_create_scene_file         -32000    Scene file already exists: res://scenes/main.tscn
+  4    7    5    project_create_scene_file         -32000    Scene file already exists: res://scenes/player.tscn
+  7    13   8    project_write_text_file           -32602    Parameter 'path' names a '.cs' file ('res://scripts/Player.cs'), which has a dedicated tool
+  8    15   9    editor_set_node_script            -32001    Script 'res://scripts/Player.cs' not found
+  10   19   11   project_create_scene_file         -32000    Scene file already exists: res://scenes/enemy.tscn
+  27   53   28   editor_get_node_properties        -32001    Property 'script' on node 'Enemy' is not readable by name not found
+  29   57   30   editor_get_node_properties        -32001    Property 'script' on node 'Coin' is not readable by name not found
+  53   105  54   editor_set_tilemap_cell           -32602    Unknown parameters atlas_y, atlas_x for tool 'editor_set_tilemap_cell'
+  54   107  55   editor_set_tilemap_cells_in_rect  -32602    Unknown parameters atlas_y, atlas_x, width, y, height, x for tool 'editor_set_tilemap_cells_in_rect'
+  61   121  62   editor_create_particles           -32602    particle_type must be GPUParticles2D or GPUParticles3D: this family writes the node's particle properties and 
+  62   123  63   editor_set_particle_preset        -32001    Node 'World/Dust' in the edited scene not found
+  63   125  64   editor_get_particle_info          -32001    Node 'World/Dust' in the edited scene not found
+  66   131  67   editor_add_resource_to_node_property -32602    Unknown resource type: Vector2
+  68   135  69   editor_add_nodes_batch            -32001    nodes[1]: parent 'HUD/HudRoot' not found
+  72   143  73   editor_set_control_theme          -32001    Node 'HUD/HudRoot/ScoreLabel' in the edited scene not found
+  73   145  74   project_get_theme_info            -32602    Unknown parameter 'path' for tool 'project_get_theme_info'
+  89   176  90   editor_set_node_property          -32602    Parameter 'value' is the empty object {} and an Object-valued property cannot take it: {} names no resource, s
+  90   178  91   editor_add_resource_to_node_property -32602    Parameter 'resource_properties' cannot be written to a Vector2i property: the value is a Dictionary ({"y":32.0
+  91   180  92   editor_set_tilemap_cell           -32000    TileMapLayer 'World/Terrain' has no TileSet, so it has no source or atlas to name
+  93   184  94   editor_set_node_properties_batch  -32601    Method not found: editor_set_node_properties_batch
+  99   197  100  editor_set_tilemap_cells_in_rect  -32602    The TileSet of this TileMapLayer has no source 0; it has: no source at all (add a TileSetAtlasSource first)
+  102  203  103  editor_get_node_properties        -32001    Property 'playback_speed' on node 'Anim' not found
+  126  251  127  editor_get_node_properties        -32001    Property 'script' on node 'Coin1' is not readable by name not found
+  136  271  137  editor_get_node_properties        -32001    Property 'script' on node 'Coin000' is not readable by name not found
+  142  283  143  editor_connect_signal             -32001    Node 'World/Player/Anim' not found
+  150  299  151  project_read_file                 -32601    Method not found: project_read_file
+  151  301  152  project_read_text_file            -32601    Method not found: project_read_text_file
+  198  394  199  editor_connect_signal             -32001    Signal 'body_entered' on node 'Coin002' not found
+  count=28
+
+== -32601 (tool name does not exist) ==
+  seq=93   line=184  tool=editor_set_node_properties_batch args={"updates":[{"path":"HUD/HudRoot/MenuTitle","property":"visible","value":false}]}
+  seq=150  line=299  tool=project_read_file args={"path":"res://save/slot1.json"}
+  seq=151  line=301  tool=project_read_text_file args={"path":"res://save/slot1.json"}
+
+== ERROR CODE DISTRIBUTION ==
+  5    editor_get_node_properties         -32001
+  3    project_create_scene_file          -32000
+  2    editor_set_tilemap_cells_in_rect   -32602
+  2    editor_connect_signal              -32001
+  2    editor_add_resource_to_node_property -32602
+  1    project_write_text_file            -32602
+  1    project_read_text_file             -32601
+  1    project_read_file                  -32601
+  1    project_get_theme_info             -32602
+  1    editor_set_tilemap_cell            -32000
+  1    editor_set_tilemap_cell            -32602
+  1    editor_set_particle_preset         -32001
+  1    editor_set_node_script             -32001
+  1    editor_set_node_property           -32602
+  1    editor_set_node_properties_batch   -32601
+  1    editor_set_control_theme           -32001
+  1    editor_get_particle_info           -32001
+  1    editor_create_particles            -32602
+  1    editor_add_nodes_batch             -32001
+
+== REPEATED IDENTICAL (tool,args) CALLS ==
+  x11 editor_open_scene                 codes=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] seqs=[3, 31, 48, 76, 96, 125, 134, 155, 180, 187, 195]
+      args={"path":"res://scenes/main.tscn"}
+  x9  editor_save_scene                 codes=[0, 0, 0, 0, 0, 0, 0, 0, 0] seqs=[45, 74, 94, 133, 148, 160, 185, 189, 199]
+      args={"path":"res://scenes/main.tscn"}
+  x4  editor_open_scene                 codes=[0, 0, 0, 0] seqs=[5, 23, 101, 165]
+      args={"path":"res://scenes/player.tscn"}
+  x4  editor_save_scene                 codes=[0, 0, 0, 0] seqs=[9, 25, 124, 169]
+      args={"path":"res://scenes/player.tscn"}
+  x4  editor_get_scene_tree             codes=[0, 0, 0, 0] seqs=[44, 75, 77, 95]
+      args={}
+  x4  editor_get_tilemap_info           codes=[0, 0, 0, 0] seqs=[50, 55, 92, 98]
+      args={"node_path":"World/Terrain"}
+  x3  editor_open_scene                 codes=[0, 0, 0] seqs=[11, 26, 170]
+      args={"path":"res://scenes/enemy.tscn"}
+  x3  editor_open_scene                 codes=[0, 0, 0] seqs=[17, 28, 175]
+      args={"path":"res://scenes/coin.tscn"}
+  x3  editor_set_node_script            codes=[0, 0, 0] seqs=[158, 188, 197]
+      args={"node_path":"World/CoinField/Coin002","script_path":"res://scripts/coin.gd"}
+  x2  editor_set_node_script            codes=[-32001, 0] seqs=[8, 24]
+      args={"node_path":".","script_path":"res://scripts/Player.cs"}
+  x2  editor_save_scene                 codes=[0, 0] seqs=[15, 174]
+      args={"path":"res://scenes/enemy.tscn"}
+  x2  editor_save_scene                 codes=[0, 0] seqs=[21, 179]
+      args={"path":"res://scenes/coin.tscn"}
+  x2  editor_get_node_properties        codes=[-32001, -32001] seqs=[27, 29]
+      args={"path":".","properties":["script"]}
+  x2  editor_set_particle_preset        codes=[-32001, 0] seqs=[62, 80]
+      args={"node_path":"World/Dust","preset":"snow"}
+  x2  editor_get_particle_info          codes=[-32001, 0] seqs=[63, 82]
+      args={"node_path":"World/Dust"}
+  x2  editor_set_control_theme          codes=[-32001, 0] seqs=[72, 85]
+      args={"node_path":"HUD/HudRoot/ScoreLabel","theme_path":"res://ui/platformer_theme.tres"}
+  x2  editor_list_signal_connections    codes=[0, 0] seqs=[145, 157]
+      args={"scope":"user"}
+  x2  editor_set_node_property          codes=[0, 0] seqs=[168, 173]
+      args={"path":".","property":"collision_mask","value":1.0}
+  x2  editor_get_output_log             codes=[0, 0] seqs=[186, 190]
+      args={}
+
+== CAPTURE LINES: status / changed ==
+  status=done       changed=False x111
+  status=done       changed=True  x86
+  status=unavailable changed=None  x1
+  captures with a reason (degraded):
+    seq=152 tool=project_build_csharp status=unavailable reason=the call is answered across frames (deferred), which the capture does not cover
+
+== CAPTURE: ok=true calls whose viewport did NOT change ==
+  (a signal only: a write can be real and still invisible in the 2d viewport)
+  editor_set_animation_keyframe      x12
+  editor_open_scene                  x10
+  editor_save_scene                  x10
+  editor_set_node_property           x8
+  editor_add_node                    x6
+  editor_add_scene_instance          x6
+  project_create_script              x5
+  editor_set_node_script             x4
+  editor_add_nodes_batch             x3
+  editor_get_scene_tree              x3
+  editor_add_animation_track         x3
+  editor_get_tilemap_info            x2
+  editor_create_animation            x2
+  editor_get_animation_info          x2
+  project_create_scene_file          x1
+  project_write_text_file            x1
+  editor_set_node_property_updates   x1
+  project_validate_script            x1
+  project_validate_scripts           x1
+  editor_get_node_properties         x1
+  editor_get_tilemap_cell            x1
+  editor_get_tilemap_used_cells      x1
+  editor_add_audio_player            x1
+  editor_get_audio_info              x1
+  editor_get_audio_bus_layout        x1
+  project_create_resource            x1
+  project_set_theme_font_size        x1
+  project_set_theme_color            x1
+  editor_create_particles            x1
+  editor_set_particle_preset         x1
+  editor_set_particle_color_gradient x1
+  editor_list_animations             x1
+  total=94 of 170 ok-calls-with-capture
+
+== CAPTURE: changed=true (these prove the write reached the screen) ==
+  seq=78   tool=editor_add_nodes_batch            pixels=402      ratio=0.000301316799385973 sha_before=ea4519e93527 sha_after=1ccc4f5403fa
+  seq=82   tool=editor_get_particle_info          pixels=1        ratio=7.49544277079536e-07 sha_before=1ccc4f5403fa sha_after=bb0e22a3677a
+  seq=83   tool=editor_set_node_property          pixels=1        ratio=7.49544277079536e-07 sha_before=bb0e22a3677a sha_after=1ccc4f5403fa
+  seq=84   tool=editor_set_node_property          pixels=1        ratio=7.49544277079536e-07 sha_before=1ccc4f5403fa sha_after=d7b5c13c6167
+  seq=85   tool=editor_set_control_theme          pixels=220      ratio=0.000164899740957498 sha_before=d7b5c13c6167 sha_after=f832018a6129
+  seq=86   tool=project_get_theme_info            pixels=5        ratio=3.74772138539768e-06 sha_before=f832018a6129 sha_after=3268ddc7d6c7
+  seq=87   tool=editor_get_node_properties        pixels=4        ratio=2.99817710831814e-06 sha_before=3268ddc7d6c7 sha_after=23a4a040c952
+  seq=88   tool=project_create_resource           pixels=2        ratio=1.49908855415907e-06 sha_before=23a4a040c952 sha_after=311e1e0e6cdb
+  seq=89   tool=editor_set_node_property          pixels=3        ratio=2.24863283123861e-06 sha_before=311e1e0e6cdb sha_after=870adbcaad81
+  seq=90   tool=editor_add_resource_to_node_property pixels=4        ratio=2.99817710831814e-06 sha_before=870adbcaad81 sha_after=c448765ef26e
+  seq=91   tool=editor_set_tilemap_cell           pixels=6        ratio=4.49726566247721e-06 sha_before=c448765ef26e sha_after=dd91a26a307d
+  seq=92   tool=editor_get_tilemap_info           pixels=7        ratio=5.24680993955675e-06 sha_before=dd91a26a307d sha_after=5413a263e714
+  seq=93   tool=editor_set_node_properties_batch  pixels=4        ratio=2.99817710831814e-06 sha_before=5413a263e714 sha_after=53932e9f576a
+  seq=94   tool=editor_save_scene                 pixels=2        ratio=1.49908855415907e-06 sha_before=53932e9f576a sha_after=9ec2f2305b29
+  seq=95   tool=editor_get_scene_tree             pixels=4        ratio=2.99817710831814e-06 sha_before=9ec2f2305b29 sha_after=beb907a30a1c
+  seq=96   tool=editor_open_scene                 pixels=12       ratio=8.99453132495443e-06 sha_before=45eb5c5ca242 sha_after=c740fd5a27b3
+  seq=97   tool=editor_set_node_property          pixels=8        ratio=5.99635421663629e-06 sha_before=55f31ec537ba sha_after=c1119f24503e
+  seq=98   tool=editor_get_tilemap_info           pixels=9        ratio=6.74589849371582e-06 sha_before=a832ca5c7381 sha_after=14a6e99e8608
+  seq=99   tool=editor_set_tilemap_cells_in_rect  pixels=12       ratio=8.99453132495443e-06 sha_before=ccb3daa6827b sha_after=70408107dcbf
+  seq=100  tool=editor_set_node_property          pixels=84       ratio=6.2961719274681e-05 sha_before=b7a694d9e82e sha_after=205969e11be7
+  seq=101  tool=editor_open_scene                 pixels=453      ratio=0.00033954355751703 sha_before=1f1d0ba4b06b sha_after=ea4519e93527
+  seq=125  tool=editor_open_scene                 pixels=451      ratio=0.000338044468962871 sha_before=ea4519e93527 sha_after=9a4eaaea0526
+  seq=126  tool=editor_get_node_properties        pixels=8        ratio=5.99635421663629e-06 sha_before=4e998a585622 sha_after=723d8cb22792
+  seq=127  tool=editor_add_node                   pixels=12       ratio=8.99453132495443e-06 sha_before=897f54923dc4 sha_after=b7500eda9080
+  seq=128  tool=editor_add_nodes_batch            pixels=8        ratio=5.99635421663629e-06 sha_before=ecd08caac1f2 sha_after=ce054b9bb345
+  seq=129  tool=editor_set_node_property_updates  pixels=10       ratio=7.49544277079536e-06 sha_before=f982ef1e524f sha_after=e10e10e2d032
+  seq=130  tool=editor_get_node_properties        pixels=11       ratio=8.24498704787489e-06 sha_before=fe47cc53bac9 sha_after=c86f30153102
+  seq=131  tool=editor_get_node_properties        pixels=4        ratio=2.99817710831814e-06 sha_before=9d6af4e3d4d9 sha_after=257640e9a3c6
+  seq=132  tool=project_analyze_scene_complexity  pixels=9        ratio=6.74589849371582e-06 sha_before=610b36a95e7a sha_after=ca1030ea7c42
+  seq=133  tool=editor_save_scene                 pixels=13       ratio=9.74407560203396e-06 sha_before=2fec3b4b22e2 sha_after=715270d587cf
+  seq=134  tool=editor_open_scene                 pixels=9        ratio=6.74589849371582e-06 sha_before=08f514b6a8a2 sha_after=a9a63616bb94
+  seq=135  tool=editor_set_node_script_batch      pixels=9        ratio=6.74589849371582e-06 sha_before=6db61a9eb222 sha_after=8b20d2507a04
+  seq=136  tool=editor_get_node_properties        pixels=12       ratio=8.99453132495443e-06 sha_before=d4cfa728e17d sha_after=ceb4fd4e4a94
+  seq=137  tool=editor_get_node_signals           pixels=8        ratio=5.99635421663629e-06 sha_before=eabd289ca4b9 sha_after=e015430ab4af
+  seq=138  tool=editor_get_node_signals           pixels=10       ratio=7.49544277079536e-06 sha_before=be6118620a24 sha_after=793706f1018e
+  seq=139  tool=editor_get_node_signals           pixels=9        ratio=6.74589849371582e-06 sha_before=2b8210ead7c4 sha_after=597fe86737c8
+  seq=140  tool=editor_connect_signal             pixels=10       ratio=7.49544277079536e-06 sha_before=2c3824f8db49 sha_after=37d99a017d07
+  seq=141  tool=editor_connect_signal             pixels=8        ratio=5.99635421663629e-06 sha_before=d73b97b02ba4 sha_after=e45a09460019
+  seq=142  tool=editor_connect_signal             pixels=6        ratio=4.49726566247721e-06 sha_before=b47d8736dae6 sha_after=7b876245f1fa
+  seq=143  tool=editor_connect_signal             pixels=10       ratio=7.49544277079536e-06 sha_before=cb4032a06c34 sha_after=d0eb51d06b5a
+  seq=144  tool=editor_connect_signal             pixels=11       ratio=8.24498704787489e-06 sha_before=ab95aff3c90f sha_after=06741c381f53
+  seq=145  tool=editor_list_signal_connections    pixels=6        ratio=4.49726566247721e-06 sha_before=1ceaf6b556ea sha_after=20da21875ba1
+  seq=146  tool=editor_list_signal_connections    pixels=4        ratio=2.99817710831814e-06 sha_before=eb756a9e3d7a sha_after=501ebd82a8ed
+  seq=147  tool=project_create_script             pixels=9        ratio=6.74589849371582e-06 sha_before=ed912de16484 sha_after=54e74b9428ec
+  seq=148  tool=editor_save_scene                 pixels=12       ratio=8.99453132495443e-06 sha_before=a2788ea19bce sha_after=fbb5ee0f10f6
+  seq=149  tool=project_write_text_file           pixels=12       ratio=8.99453132495443e-06 sha_before=d5a014db6ac3 sha_after=c8c85c936204
+  seq=150  tool=project_read_file                 pixels=9        ratio=6.74589849371582e-06 sha_before=1db7893fbb87 sha_after=193f23e59c06
+  seq=151  tool=project_read_text_file            pixels=9        ratio=6.74589849371582e-06 sha_before=4d0c355a139f sha_after=a1f12e796d0a
+  seq=153  tool=project_validate_scripts          pixels=12       ratio=8.99453132495443e-06 sha_before=30d7b835e287 sha_after=a380af14c150
+  seq=154  tool=project_validate_script           pixels=11       ratio=8.24498704787489e-06 sha_before=f91a9bad2924 sha_after=ec8147715102
+  seq=155  tool=editor_open_scene                 pixels=10       ratio=7.49544277079536e-06 sha_before=8ed6e77f512b sha_after=be78186cee1b
+  seq=156  tool=editor_connect_signal             pixels=16       ratio=1.19927084332726e-05 sha_before=256ef6686951 sha_after=da5a44d632d1
+  seq=157  tool=editor_list_signal_connections    pixels=13       ratio=9.74407560203396e-06 sha_before=0efee2e5f7ea sha_after=1d1087c00726
+  seq=158  tool=editor_set_node_script            pixels=12       ratio=8.99453132495443e-06 sha_before=bc04d8950d12 sha_after=745a16d92168
+  seq=159  tool=editor_set_node_script_batch      pixels=8        ratio=5.99635421663629e-06 sha_before=d326a52f7e14 sha_after=4f5e80ee3e0d
+  seq=160  tool=editor_save_scene                 pixels=7        ratio=5.24680993955675e-06 sha_before=c1cd5b3d4673 sha_after=1dbc30c61cfd
+  seq=161  tool=project_create_resource           pixels=11       ratio=8.24498704787489e-06 sha_before=a7dc93583044 sha_after=5b1fd906b865
+  seq=162  tool=project_create_resource           pixels=13       ratio=9.74407560203396e-06 sha_before=77d74552d46b sha_after=66ab4d34dc40
+  seq=163  tool=project_create_resource           pixels=11       ratio=8.24498704787489e-06 sha_before=66ab4d34dc40 sha_after=cb440a6b8c37
+  seq=164  tool=project_create_resource           pixels=9        ratio=6.74589849371582e-06 sha_before=cb440a6b8c37 sha_after=b145e4530f67
+  seq=165  tool=editor_open_scene                 pixels=451      ratio=0.000338044468962871 sha_before=b145e4530f67 sha_after=ea4519e93527
+  seq=166  tool=editor_set_node_property          pixels=150      ratio=0.00011243164156193 sha_before=ea4519e93527 sha_after=b4edf10c6633
+  seq=170  tool=editor_open_scene                 pixels=150      ratio=0.00011243164156193 sha_before=b4edf10c6633 sha_after=ea4519e93527
+  seq=171  tool=editor_set_node_property          pixels=110      ratio=8.24498704787489e-05 sha_before=ea4519e93527 sha_after=64ab4daf6bb5
+  seq=175  tool=editor_open_scene                 pixels=110      ratio=8.24498704787489e-05 sha_before=64ab4daf6bb5 sha_after=ea4519e93527
+  seq=176  tool=editor_set_node_property          pixels=56       ratio=4.1974479516454e-05 sha_before=ea4519e93527 sha_after=1d8a4d6bb89a
+  seq=180  tool=editor_open_scene                 pixels=510      ratio=0.000382267581310563 sha_before=1d8a4d6bb89a sha_after=730c3bd2ced5
+  seq=181  tool=editor_add_node                   pixels=10115    ratio=0.0075816403626595 sha_before=730c3bd2ced5 sha_after=0a8d2c77a423
+  seq=182  tool=editor_set_node_property          pixels=8        ratio=5.99635421663629e-06 sha_before=0a8d2c77a423 sha_after=b7439e88f7c0
+  seq=183  tool=editor_set_node_property_updates  pixels=8        ratio=5.99635421663629e-06 sha_before=b7439e88f7c0 sha_after=1ea88332ccf4
+  seq=184  tool=editor_set_node_property_updates  pixels=12       ratio=8.99453132495443e-06 sha_before=1ea88332ccf4 sha_after=52808491386d
+  seq=185  tool=editor_save_scene                 pixels=12       ratio=8.99453132495443e-06 sha_before=52808491386d sha_after=6a7615e27ea3
+  seq=186  tool=editor_get_output_log             pixels=12       ratio=8.99453132495443e-06 sha_before=b2b390daac43 sha_after=516e72c05881
+  seq=187  tool=editor_open_scene                 pixels=7        ratio=5.24680993955675e-06 sha_before=b2c25bc839a0 sha_after=a4eb60a884cf
+  seq=188  tool=editor_set_node_script            pixels=7        ratio=5.24680993955675e-06 sha_before=4388f2975245 sha_after=2a278b57b4f3
+  seq=189  tool=editor_save_scene                 pixels=7        ratio=5.24680993955675e-06 sha_before=2a278b57b4f3 sha_after=bad4fb927f1d
+  seq=190  tool=editor_get_output_log             pixels=10       ratio=7.49544277079536e-06 sha_before=a8975c583c85 sha_after=7706a68147d1
+  seq=191  tool=editor_get_errors                 pixels=9        ratio=6.74589849371582e-06 sha_before=080e21afaea3 sha_after=ebd27bd0a352
+  seq=192  tool=editor_capture_screenshot         pixels=10       ratio=7.49544277079536e-06 sha_before=ebd27bd0a352 sha_after=4b9a2c1751be
+  seq=193  tool=project_read_scene_file_content   pixels=9        ratio=6.74589849371582e-06 sha_before=4b9a2c1751be sha_after=371c85fa203b
+  seq=194  tool=project_get_statistics            pixels=5        ratio=3.74772138539768e-06 sha_before=371c85fa203b sha_after=239172fd26a2
+  seq=195  tool=editor_open_scene                 pixels=6        ratio=4.49726566247721e-06 sha_before=4942805f9e7d sha_after=63e765e3ef59
+  seq=196  tool=editor_add_node                   pixels=6        ratio=4.49726566247721e-06 sha_before=50018be8fa5d sha_after=4cc0eab030cf
+  seq=197  tool=editor_set_node_script            pixels=9        ratio=6.74589849371582e-06 sha_before=4cc0eab030cf sha_after=19e2c8a3aa21
+  seq=198  tool=editor_connect_signal             pixels=10       ratio=7.49544277079536e-06 sha_before=19e2c8a3aa21 sha_after=3a9dd29bca58
+  seq=199  tool=editor_save_scene                 pixels=9        ratio=6.74589849371582e-06 sha_before=3a9dd29bca58 sha_after=deae8c8c7915
+
+== PER-TOOL CALLS (editor) ==
+  editor_open_scene                  calls=21   failed=0   share=10.6%
+  editor_save_scene                  calls=17   failed=0   share=8.6%
+  editor_set_node_property           calls=17   failed=1   share=8.6%
+  editor_set_animation_keyframe      calls=12   failed=0   share=6.1%
+  editor_get_node_properties         calls=9    failed=5   share=4.5%
+  editor_add_node                    calls=9    failed=0   share=4.5%
+  editor_set_node_script             calls=8    failed=1   share=4.0%
+  editor_connect_signal              calls=7    failed=2   share=3.5%
+  editor_add_nodes_batch             calls=6    failed=1   share=3.0%
+  project_create_script              calls=6    failed=0   share=3.0%
+  editor_add_scene_instance          calls=6    failed=0   share=3.0%
+  project_create_resource            calls=6    failed=0   share=3.0%
+  project_create_scene_file          calls=4    failed=3   share=2.0%
+  editor_set_node_property_updates   calls=4    failed=0   share=2.0%
+  editor_get_scene_tree              calls=4    failed=0   share=2.0%
+  editor_get_tilemap_info            calls=4    failed=0   share=2.0%
+  project_write_text_file            calls=3    failed=1   share=1.5%
+  editor_add_animation_track         calls=3    failed=0   share=1.5%
+  editor_get_node_signals            calls=3    failed=0   share=1.5%
+  editor_list_signal_connections     calls=3    failed=0   share=1.5%
+  project_validate_script            calls=2    failed=0   share=1.0%
+  project_validate_scripts           calls=2    failed=0   share=1.0%
+  editor_set_tilemap_cell            calls=2    failed=2   share=1.0%
+  editor_set_tilemap_cells_in_rect   calls=2    failed=2   share=1.0%
+  editor_create_particles            calls=2    failed=1   share=1.0%
+  editor_set_particle_preset         calls=2    failed=1   share=1.0%
+  editor_get_particle_info           calls=2    failed=1   share=1.0%
+  editor_add_resource_to_node_property calls=2    failed=2   share=1.0%
+  editor_set_control_theme           calls=2    failed=1   share=1.0%
+  project_get_theme_info             calls=2    failed=1   share=1.0%
+  editor_create_animation            calls=2    failed=0   share=1.0%
+  editor_get_animation_info          calls=2    failed=0   share=1.0%
+  editor_set_node_script_batch       calls=2    failed=0   share=1.0%
+  editor_get_output_log              calls=2    failed=0   share=1.0%
+  editor_get_tilemap_cell            calls=1    failed=0   share=0.5%
+  editor_get_tilemap_used_cells      calls=1    failed=0   share=0.5%
+  editor_add_audio_player            calls=1    failed=0   share=0.5%
+  editor_get_audio_info              calls=1    failed=0   share=0.5%
+  editor_get_audio_bus_layout        calls=1    failed=0   share=0.5%
+  project_set_theme_font_size        calls=1    failed=0   share=0.5%
+  project_set_theme_color            calls=1    failed=0   share=0.5%
+  editor_set_particle_color_gradient calls=1    failed=0   share=0.5%
+  editor_set_node_properties_batch   calls=1    failed=1   share=0.5%
+  editor_list_animations             calls=1    failed=0   share=0.5%
+  project_analyze_scene_complexity   calls=1    failed=0   share=0.5%
+  project_read_file                  calls=1    failed=1   share=0.5%
+  project_read_text_file             calls=1    failed=1   share=0.5%
+  project_build_csharp               calls=1    failed=0   share=0.5%
+  editor_get_errors                  calls=1    failed=0   share=0.5%
+  editor_capture_screenshot          calls=1    failed=0   share=0.5%
+  project_read_scene_file_content    calls=1    failed=0   share=0.5%
+  project_get_statistics             calls=1    failed=0   share=0.5%
+
+== SLOWEST CALLS (top 12 by duration_ms) ==
+  4759     ms  seq=152  project_build_csharp              bytes=1495 ok=True
+  248      ms  seq=192  editor_capture_screenshot         bytes=147 ok=True
+  47       ms  seq=185  editor_save_scene                 bytes=126 ok=True
+  47       ms  seq=199  editor_save_scene                 bytes=125 ok=True
+  45       ms  seq=21   editor_save_scene                 bytes=126 ok=True
+  45       ms  seq=189  editor_save_scene                 bytes=125 ok=True
+  43       ms  seq=160  editor_save_scene                 bytes=125 ok=True
+  42       ms  seq=79   editor_create_particles           bytes=438 ok=True
+  42       ms  seq=133  editor_save_scene                 bytes=125 ok=True
+  42       ms  seq=148  editor_save_scene                 bytes=126 ok=True
+  40       ms  seq=124  editor_save_scene                 bytes=128 ok=True
+  40       ms  seq=169  editor_save_scene                 bytes=127 ok=True
+
+== DEFERRED / pending fields ==
+  {"__file": "trace-editor.jsonl", "__line": 304, "seq": 152, "tool": "project_build_csharp", "ok": true, "error_code": 0, "error_message": "", "pending_ms": 4759, "timeout_ms": 30000, "duration_ms": 4759}
+
+== N-GRAMS (editor, same generation) ==
+  -- 2-grams with count >= 2 --
+    x10 editor_set_animation_keyframe -> editor_set_animation_keyframe
+    x7  editor_set_node_property -> editor_set_node_property
+    x6  editor_save_scene -> editor_open_scene
+    x5  editor_set_node_script -> editor_save_scene
+    x5  editor_add_scene_instance -> editor_add_scene_instance
+    x4  project_create_scene_file -> editor_open_scene
+    x4  editor_open_scene -> editor_get_node_properties
+    x4  editor_open_scene -> editor_set_node_property
+    x4  editor_set_node_property -> editor_save_scene
+    x4  editor_connect_signal -> editor_connect_signal
+    x3  editor_open_scene -> editor_add_nodes_batch
+    x3  editor_open_scene -> editor_add_node
+    x3  project_create_resource -> project_create_resource
+    x2  editor_save_scene -> project_create_scene_file
+    x2  editor_add_nodes_batch -> project_create_script
+    x2  project_create_script -> editor_set_node_script
+    x2  editor_open_scene -> editor_set_node_script
+    x2  editor_add_node -> editor_add_node
+    x2  editor_create_particles -> editor_set_particle_preset
+    x2  editor_add_node -> editor_add_nodes_batch
+    x2  editor_set_control_theme -> project_get_theme_info
+    x2  editor_save_scene -> editor_get_scene_tree
+    x2  editor_get_scene_tree -> editor_open_scene
+    x2  editor_create_animation -> editor_add_animation_track
+    x2  editor_add_animation_track -> editor_set_animation_keyframe
+    x2  editor_get_node_signals -> editor_get_node_signals
+    x2  editor_connect_signal -> editor_list_signal_connections
+    x2  editor_save_scene -> editor_get_output_log
+  -- 3-grams with count >= 2 --
+    x8  editor_set_animation_keyframe -> editor_set_animation_keyframe -> editor_set_animation_keyframe
+    x4  editor_add_scene_instance -> editor_add_scene_instance -> editor_add_scene_instance
+    x4  editor_set_node_property -> editor_save_scene -> editor_open_scene
+    x3  project_create_scene_file -> editor_open_scene -> editor_add_nodes_batch
+    x3  editor_connect_signal -> editor_connect_signal -> editor_connect_signal
+    x3  editor_open_scene -> editor_set_node_property -> editor_set_node_property
+    x3  editor_set_node_property -> editor_set_node_property -> editor_set_node_property
+    x3  editor_set_node_property -> editor_set_node_property -> editor_save_scene
+    x2  editor_set_node_script -> editor_save_scene -> project_create_scene_file
+    x2  editor_save_scene -> project_create_scene_file -> editor_open_scene
+    x2  editor_open_scene -> editor_add_nodes_batch -> project_create_script
+    x2  editor_add_nodes_batch -> project_create_script -> editor_set_node_script
+    x2  project_create_script -> editor_set_node_script -> editor_save_scene
+    x2  editor_open_scene -> editor_set_node_script -> editor_save_scene
+    x2  editor_save_scene -> editor_open_scene -> editor_get_node_properties
+    x2  editor_save_scene -> editor_get_scene_tree -> editor_open_scene
+    x2  editor_add_animation_track -> editor_set_animation_keyframe -> editor_set_animation_keyframe
+    x2  project_create_resource -> project_create_resource -> project_create_resource
+    x2  editor_save_scene -> editor_open_scene -> editor_set_node_property
+
+== GAME TRACES ==
+  -- trace-game.jsonl: lines=18 --
+     OPEN pid=87352 port=9889 role=game version=4.8.dev.mono.custom_build.ff796dbf9
+     LIST tools=72 bytes=32973
+     seq=2    running_game_get_scene_tree       ok=True  code=0       ms=17    args={}
+     CAP  seq=2    running_game_get_scene_tree       status=done changed=True reason=None
+     seq=3    running_game_get_node_properties  ok=True  code=0       ms=19    args={"node_path":"World/Player","properties":["position","velocity","Speed","Jump","PlainField"]}
+     CAP  seq=3    running_game_get_node_properties  status=done changed=True reason=None
+     CAP  seq=4    running_game_play_input_recording status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=4    running_game_play_input_recording ok=True  code=0       ms=708   args={"events":[{"action":"move_right","pressed":true,"time_ms":0.0,"type":"action"},{"keycode":"D","pressed":true,"time_ms":5.0,"type":"key"},{"action":"j
+     CAP  seq=5    running_game_get_node_property_samples status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=5    running_game_get_node_property_samples ok=True  code=0       ms=750   args={"frame_count":45.0,"frame_interval":1.0,"node_path":"World/Player","properties":["position","velocity"],"sample_stride":3.0}
+     seq=6    running_game_get_node_properties  ok=True  code=0       ms=18    args={"node_path":".","properties":["Score","Lives","AnimFinished"]}
+     CAP  seq=6    running_game_get_node_properties  status=done changed=True reason=None
+     seq=7    running_game_assert_screen_text   ok=True  code=0       ms=18    args={"partial":true,"text":"SCORE"}
+     CAP  seq=7    running_game_assert_screen_text   status=done changed=True reason=None
+     seq=8    running_game_capture_screenshot   ok=True  code=0       ms=41    args={"save_path":"user://game_shot.png"}
+     CAP  seq=8    running_game_capture_screenshot   status=done changed=True reason=None
+     CAP  seq=9    running_game_run_test_scenario    status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=9    running_game_run_test_scenario    ok=True  code=0       ms=444   args={"steps":[{"action":"move_right","pressed":true,"type":"input"},{"action":"jump","pressed":true,"type":"input"},{"seconds":0.4,"type":"wait"},{"expect
+
+  -- trace-game2.jsonl: lines=21 --
+     OPEN pid=88676 port=9889 role=game version=4.8.dev.mono.custom_build.ff796dbf9
+     seq=1    running_game_get_node_properties  ok=True  code=0       ms=19    args={"node_path":"World/Player","properties":["position","velocity","Speed","Jump","PlainField"]}
+     CAP  seq=1    running_game_get_node_properties  status=done changed=True reason=None
+     seq=2    running_game_get_node_properties  ok=True  code=0       ms=15    args={"node_path":".","properties":["Score","Lives"]}
+     CAP  seq=2    running_game_get_node_properties  status=done changed=True reason=None
+     seq=3    running_game_get_scene_tree       ok=True  code=0       ms=16    args={}
+     CAP  seq=3    running_game_get_scene_tree       status=done changed=True reason=None
+     CAP  seq=4    running_game_play_input_recording status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=4    running_game_play_input_recording ok=True  code=0       ms=909   args={"events":[{"action":"move_right","pressed":true,"time_ms":0.0,"type":"action"},{"keycode":"D","pressed":true,"time_ms":5.0,"type":"key"},{"action":"j
+     CAP  seq=5    running_game_get_node_property_samples status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=5    running_game_get_node_property_samples ok=True  code=0       ms=1000  args={"frame_count":60.0,"frame_interval":1.0,"node_path":"World/Player","properties":["position"],"sample_stride":2.0}
+     seq=6    running_game_get_node_properties  ok=True  code=0       ms=16    args={"node_path":".","properties":["Score","Lives"]}
+     CAP  seq=6    running_game_get_node_properties  status=done changed=True reason=None
+     seq=7    running_game_get_node_properties  ok=True  code=0       ms=16    args={"node_path":"HUD/HudRoot/ScoreLabel","properties":["text"]}
+     CAP  seq=7    running_game_get_node_properties  status=done changed=True reason=None
+     CAP  seq=8    running_game_play_input_recording status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=8    running_game_play_input_recording ok=True  code=0       ms=125   args={"events":[{"action":"jump","pressed":true,"time_ms":0.0,"type":"action"},{"action":"jump","pressed":false,"time_ms":120.0,"type":"action"}],"speed":1
+     CAP  seq=9    running_game_get_node_property_samples status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=9    running_game_get_node_property_samples ok=True  code=0       ms=841   args={"frame_count":50.0,"frame_interval":1.0,"node_path":"World/Player","properties":["position","velocity"],"sample_stride":2.0}
+     seq=10   running_game_assert_screen_text   ok=True  code=0       ms=20    args={"partial":true,"text":"SCORE"}
+     CAP  seq=10   running_game_assert_screen_text   status=done changed=True reason=None
+
+  -- trace-game3.jsonl: lines=19 --
+     OPEN pid=55484 port=9889 role=game version=4.8.dev.mono.custom_build.ff796dbf9
+     seq=1    running_game_get_scene_tree       ok=True  code=0       ms=16    args={}
+     CAP  seq=1    running_game_get_scene_tree       status=done changed=True reason=None
+     seq=2    running_game_get_node_properties  ok=False code=-32001  ms=15    args={"node_path":"World/CoinField/Coin002","properties":["value","taken"]}
+     CAP  seq=2    running_game_get_node_properties  status=done changed=True reason=None
+     seq=3    running_game_get_node_properties  ok=True  code=0       ms=18    args={"node_path":".","properties":["Score"]}
+     CAP  seq=3    running_game_get_node_properties  status=done changed=True reason=None
+     CAP  seq=4    running_game_play_input_recording status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=4    running_game_play_input_recording ok=True  code=0       ms=507   args={"events":[{"action":"move_right","pressed":true,"time_ms":0.0,"type":"action"},{"keycode":"D","pressed":true,"time_ms":5.0,"type":"key"},{"action":"m
+     CAP  seq=5    running_game_get_node_property_samples status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=5    running_game_get_node_property_samples ok=True  code=0       ms=653   args={"frame_count":40.0,"frame_interval":1.0,"node_path":".","properties":["Score","Lives"],"sample_stride":4.0}
+     seq=6    running_game_get_node_properties  ok=True  code=0       ms=15    args={"node_path":".","properties":["Score"]}
+     CAP  seq=6    running_game_get_node_properties  status=done changed=True reason=None
+     seq=7    running_game_capture_signal_emissions ok=True  code=0       ms=20    args={"duration_ms":1500.0,"node_paths":["World/CoinField/Coin002"],"signal_filter":["coin_collected"]}
+     CAP  seq=7    running_game_capture_signal_emissions status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=8    running_game_get_node_properties  ok=True  code=0       ms=15    args={"node_path":"HUD/HudRoot/ScoreLabel","properties":["text"]}
+     CAP  seq=8    running_game_get_node_properties  status=done changed=True reason=None
+     seq=9    running_game_get_node_properties  ok=True  code=0       ms=18    args={"node_path":"World/Player","properties":["position"]}
+     CAP  seq=9    running_game_get_node_properties  status=done changed=True reason=None
+
+  -- trace-game4.jsonl: lines=15 --
+     OPEN pid=71292 port=9889 role=game version=4.8.dev.mono.custom_build.ff796dbf9
+     seq=1    running_game_get_node_properties  ok=False code=-32001  ms=15    args={"node_path":"World/CoinField/Coin002","properties":["value","taken","monitoring"]}
+     CAP  seq=1    running_game_get_node_properties  status=done changed=True reason=None
+     seq=2    running_game_get_node_properties  ok=True  code=0       ms=17    args={"node_path":".","properties":["Score"]}
+     CAP  seq=2    running_game_get_node_properties  status=done changed=True reason=None
+     CAP  seq=3    running_game_run_test_scenario    status=unavailable changed=None reason=the call is answered across frames (deferred), which the capture does not cover
+     seq=3    running_game_run_test_scenario    ok=True  code=0       ms=625   args={"steps":[{"action":"move_right","pressed":true,"type":"input"},{"seconds":0.6,"type":"wait"},{"action":"move_right","pressed":false,"type":"input"}]}
+     seq=4    running_game_get_node_properties  ok=True  code=0       ms=15    args={"node_path":".","properties":["Score"]}
+     CAP  seq=4    running_game_get_node_properties  status=done changed=True reason=None
+     seq=5    running_game_get_node_properties  ok=True  code=0       ms=3     args={"node_path":"World/Player","properties":["position"]}
+     CAP  seq=5    running_game_get_node_properties  status=done changed=True reason=None
+     seq=6    running_game_assert_screen_text   ok=True  code=0       ms=21    args={"partial":true,"text":"SCORE 1"}
+     CAP  seq=6    running_game_assert_screen_text   status=done changed=True reason=None
+     seq=7    running_game_capture_screenshot   ok=True  code=0       ms=37    args={"save_path":"user://game4_shot.png"}
+     CAP  seq=7    running_game_capture_screenshot   status=done changed=True reason=None

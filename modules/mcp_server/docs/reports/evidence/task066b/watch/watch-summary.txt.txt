@@ -1,0 +1,22 @@
+stop_reason=marker
+exit_code=0
+elapsed_sec=76
+polls=16
+last_seq=39
+trace_lines=203
+trace_files=6
+marker=C:\Users\wyl\AppData\Local\Temp\mcp066b\B066-DONE.marker
+marker_seen=1
+timeout_sec=2700
+stale_sec=0
+interval_sec=5
+activity_seen=1
+stale_age_sec=0
+observation_stopped_before_development_ended=0
+watch_log=C:\Users\wyl\AppData\Local\Temp\mcp066b\watch\watch.log
+trace=C:\Users\wyl\AppData\Local\Temp\mcp066b\PROGRESS.md lines=35 last_seq=0 missing=0
+trace=C:\Users\wyl\AppData\Local\Temp\mcp066b\trace-editor-a.jsonl lines=78 last_seq=39 missing=0
+trace=C:\Users\wyl\AppData\Local\Temp\mcp066b\trace-editor-b.jsonl lines=13 last_seq=6 missing=0
+trace=C:\Users\wyl\AppData\Local\Temp\mcp066b\trace-editor-c.jsonl lines=11 last_seq=5 missing=0
+trace=C:\Users\wyl\AppData\Local\Temp\mcp066b\trace-editor-d.jsonl lines=8 last_seq=6 missing=0
+trace=C:\Users\wyl\AppData\Local\Temp\mcp066b\trace-game.jsonl lines=58 last_seq=29 missing=0

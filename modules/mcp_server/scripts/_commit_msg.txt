@@ -1,0 +1,1 @@
+mcp_server: REPORT-017 (B3 batch write / control layout / setup family) (TASK-017 section 5)

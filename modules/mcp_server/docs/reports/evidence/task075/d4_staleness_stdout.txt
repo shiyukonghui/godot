@@ -1,0 +1,25 @@
+import[import-d4] attempt 1/3 exit=0 project=F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\d4_staleness\proj log=F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\d4_staleness\logs\import-d4.attempt1.log
+[PASS] S001_import_ok :: --import exit=0 after 1 attempt(s)
+[PASS] S002_editor_ready :: editor on 9888 answered GET /mcp with +20 frames
+  open_main_before                 code= {"opened":true,"path":"res://scenes/main.tscn"}
+  tree_before                      code= {"scene_path":"res://scenes/main.tscn","tree":{"absolute_path":"/root/@EditorNode@20539/@Panel@14/@VBoxContainer@16/Dock
+[FAIL] S003_instance_is_a_snapshot_before_the_subscene_grew :: main.tscn's World-less Player instance has 1 child(ren) while player.tscn has none
+  open_player                      code= {"opened":true,"path":"res://scenes/player.tscn"}
+  add_anim                         code= {"name":"Anim","node_path":"Anim","type":"AnimationPlayer"}
+  save_player                      code= {"path":"res://scenes/player.tscn","saved":true}
+  open_main_after                  code= {"opened":true,"path":"res://scenes/main.tscn"}
+  tree_after                       code= {"scene_path":"res://scenes/main.tscn","tree":{"absolute_path":"/root/@EditorNode@20539/@Panel@14/@VBoxContainer@16/Dock
+  connect_stale_anim               code=-32001 Node 'Player/Anim' not found
+[FAIL] S004_the_live_instance_did_not_grow_and_the_path_is_unaddressable :: after Anim was added to player.tscn and saved, the live instance still has 1 child(ren) and 'Player/Anim' is code=-32001 (Node 'Player/Anim' not found)
+  instance_fresh                   code= {"name":"Player2","node_path":"Player2","scene_path":"res://scenes/player.tscn"}
+  tree_fresh                       code= {"scene_path":"res://scenes/main.tscn","tree":{"absolute_path":"/root/@EditorNode@20539/@Panel@14/@VBoxContainer@16/Dock
+  connect_fresh_anim               code=-32001 Node 'Player2/Anim' not found
+[FAIL] S005_a_fresh_instance_carries_the_child_and_resolves :: a new instance of the same player.tscn has 1 child(ren) and 'Player2/Anim' resolves (code=-32001)
+  save_main                        code= {"path":"res://scenes/main.tscn","saved":true}
+  game_tree                        code= {"tree":{"children":[{"children":[{"name":"Anim","path":"/root/Main/Player/Anim","type":"AnimationPlayer"}],"name":"Play
+[PASS] S006_the_game_loads_the_current_subscene :: the running game's scene tree names 'Player/Anim': True
+[PASS] S007_user_port_9877_untouched :: environment_fact_no_listener_before_or_after: listening=False pid_before=-1 pid_after=-1 ours=False same_pid=True asked_by_us=False classification=environment_fact_no_listener_before_or_after our_pids=[68904,93568] our_ports=[0,9888,9889] our_command_lines=3
+
+--- checks: 7, failures: 3 ---
+--- evidence root: F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\d4_staleness\evidence ---
+MCP075 D4 STALENESS PROBE FAILED: 3

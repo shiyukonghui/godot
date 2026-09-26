@@ -1,0 +1,782 @@
+// ===========================================================================
+// TASK-044 - the optional before/after capture (GDR-27).
+//
+// The feature exists to turn "the call answered ok and the screen did not
+// change" from an inference into a mechanical fact, so the cases below pin the
+// three things that make that fact usable: the switch is **off by default**, the
+// verdict is written where the observer already looks (the trace's JSON Lines,
+// on the same `seq`), and the *after* picture is taken at least one whole
+// rendered frame after the call - otherwise the comparison would compare the
+// call against itself.
+//
+// The doctest binary has no display server and no SceneTree, so the snapshot is
+// behind a function pointer and the cases inject their own provider. Everything
+// after the snapshot - the PNG files, their sha256, the pixel comparison, the
+// JSON line, the byte counter - is the production code path.
+// ===========================================================================
+
+namespace Task044 {
+
+const char *const CAPTURE_ROOT = "res://mcp_server_test_fixture_capture";
+
+void reset_capture_dir() {
+	TestMCPServer::remove_tree(String::utf8(CAPTURE_ROOT));
+	DirAccess::make_dir_recursive_absolute(String::utf8(CAPTURE_ROOT));
+}
+
+String capture_path(const String &p_name) {
+	return String::utf8(CAPTURE_ROOT).path_join(p_name);
+}
+
+// A solid image of a known size, built through the engine's own image type.
+Ref<Image> solid(int p_width, int p_height, const Color &p_color) {
+	Ref<Image> image = Image::create_empty(p_width, p_height, false, Image::FORMAT_RGBA8);
+	image->fill(p_color);
+	return image;
+}
+
+// The injected viewport: the frames it will hand out, in order (the last one
+// repeats), or a refusal.
+struct FakeViewport {
+	int calls = 0;
+	bool fail = false;
+	String reason = "injected refusal";
+	Vector<Ref<Image>> frames;
+};
+
+Ref<Image> fake_snapshot(void *p_userdata, const String &p_viewport, bool p_is_editor, String &r_reason) {
+	FakeViewport *fake = static_cast<FakeViewport *>(p_userdata);
+	(void)p_viewport;
+	(void)p_is_editor;
+	if (fake->fail) {
+		r_reason = fake->reason;
+		return Ref<Image>();
+	}
+	if (fake->frames.is_empty()) {
+		r_reason = "no frames configured";
+		return Ref<Image>();
+	}
+	const int index = MIN(fake->calls, fake->frames.size() - 1);
+	fake->calls++;
+	return fake->frames[index];
+}
+
+// The two frames of the canonical pair: a black 8x4, and the same image with
+// exactly one pixel flipped to full red. One changed pixel of 32 -> 0.03125.
+struct Pair {
+	Ref<Image> before;
+	Ref<Image> after;
+};
+
+Pair one_changed_pixel_pair() {
+	Pair pair;
+	pair.before = solid(8, 4, Color(0.0, 0.0, 0.0, 1.0));
+	pair.after = solid(8, 4, Color(0.0, 0.0, 0.0, 1.0));
+	pair.after->set_pixel(0, 0, Color(1.0, 0.0, 0.0, 1.0));
+	return pair;
+}
+
+MCPCapture::Config every_call_config() {
+	MCPCapture::Config config;
+	config.mode = MCPCapture::Mode::EVERY_CALL;
+	config.dir = String::utf8(CAPTURE_ROOT);
+	config.viewport = "editor";
+	return config;
+}
+
+// One parsed log line, or `null` when there is no such line. `REQUIRE` does not
+// stop a case in this harness (PLAYBOOK section 7.6), so every index into the
+// line list goes through this: a red run has to fail an assertion, not crash the
+// runner and hide the cases behind it.
+Variant line_at(const Vector<String> &p_lines, int p_index) {
+	if (p_index < 0 || p_index >= p_lines.size()) {
+		return Variant();
+	}
+	return TestMCPServer::parse_json(p_lines[p_index]);
+}
+
+// The `event:"capture"` line of a log, as a Dictionary, or an empty Dictionary.
+Dictionary capture_event(const Vector<String> &p_lines, int p_index) {
+	const Variant value = line_at(p_lines, p_index);
+	if (value.get_type() != Variant::DICTIONARY) {
+		return Dictionary();
+	}
+	return value;
+}
+
+} // namespace Task044
+
+TEST_CASE("[MCPServer] TASK-044: the capture switch is off by default and follows the trace precedent") {
+	// No switch, no setting: off, and the default directory is the trace file's
+	// `shots/` sibling (there is no trace file here, so the bare relative name).
+	{
+		const MCPCapture::Config config = MCPCapture::parse(Vector<String>(), false, String(), String());
+		CHECK(config.mode == MCPCapture::Mode::OFF);
+		CHECK(String(MCPCapture::mode_name(config.mode)) == "off");
+		CHECK(config.dir == "shots");
+		CHECK(config.viewport == "editor");
+		CHECK_FALSE(config.diff_image);
+		CHECK_FALSE(config.explicit_cmdline);
+		CHECK_FALSE(config.from_project_setting);
+		CHECK(config.warning.is_empty());
+	}
+
+	// The spelling table, both directions.
+	{
+		MCPCapture::Mode mode = MCPCapture::Mode::OFF;
+		CHECK(MCPCapture::mode_from_name("on_error", mode));
+		CHECK(mode == MCPCapture::Mode::ON_ERROR);
+		CHECK(MCPCapture::mode_from_name("every_call", mode));
+		CHECK(mode == MCPCapture::Mode::EVERY_CALL);
+		CHECK(MCPCapture::mode_from_name("off", mode));
+		CHECK(mode == MCPCapture::Mode::OFF);
+		CHECK_FALSE(MCPCapture::mode_from_name("ON_ERROR", mode));
+		CHECK_FALSE(MCPCapture::mode_from_name("", mode));
+
+		CHECK(MCPCapture::viewport_is_valid("editor"));
+		CHECK(MCPCapture::viewport_is_valid("2d"));
+		CHECK(MCPCapture::viewport_is_valid("3d"));
+		CHECK_FALSE(MCPCapture::viewport_is_valid("window"));
+	}
+
+	// The default directory, for the three kinds of path the trace switch takes.
+	{
+		CHECK(MCPCapture::default_dir_for_trace("user://logs/calls.jsonl") == "user://logs/shots");
+		CHECK(MCPCapture::default_dir_for_trace("user://calls.jsonl") == "user://shots");
+		CHECK(MCPCapture::default_dir_for_trace("res://out/calls.jsonl") == "res://out/shots");
+		CHECK(MCPCapture::default_dir_for_trace("C:/tmp/calls.jsonl") == "C:/tmp/shots");
+		CHECK(MCPCapture::default_dir_for_trace(String()) == "shots");
+	}
+
+	// The project setting enables it when the command line says nothing, and the
+	// directory follows the *trace* file that was resolved.
+	{
+		const MCPCapture::Config config = MCPCapture::parse(Vector<String>(), true, "every_call", "user://logs/calls.jsonl");
+		CHECK(config.mode == MCPCapture::Mode::EVERY_CALL);
+		CHECK(config.from_project_setting);
+		CHECK_FALSE(config.explicit_cmdline);
+		CHECK(config.dir == "user://logs/shots");
+	}
+
+	// An unknown setting spelling is reported, not silently obeyed.
+	{
+		const MCPCapture::Config config = MCPCapture::parse(Vector<String>(), true, "sometimes", String());
+		CHECK(config.mode == MCPCapture::Mode::OFF);
+		CHECK(config.warning.contains("sometimes"));
+	}
+
+	// The command line wins over the setting, the last spelling wins over the
+	// earlier one (the port / trace precedent), and `--mcp-capture=off` really
+	// switches it off again.
+	{
+		Vector<String> args;
+		args.push_back("--mcp-capture=on_error");
+		args.push_back("--mcp-capture=every_call");
+		const MCPCapture::Config config = MCPCapture::parse(args, true, "on_error", String());
+		CHECK(config.mode == MCPCapture::Mode::EVERY_CALL);
+		CHECK(config.explicit_cmdline);
+		CHECK_FALSE(config.from_project_setting);
+
+		Vector<String> spaced;
+		spaced.push_back("--mcp-capture");
+		spaced.push_back("on_error");
+		CHECK(MCPCapture::parse(spaced, false, String(), String()).mode == MCPCapture::Mode::ON_ERROR);
+
+		Vector<String> off;
+		off.push_back("--mcp-capture=off");
+		CHECK(MCPCapture::parse(off, true, "every_call", String()).mode == MCPCapture::Mode::OFF);
+	}
+
+	// An unknown command line spelling is reported and leaves capture off.
+	{
+		Vector<String> args;
+		args.push_back("--mcp-capture=sometimes");
+		const MCPCapture::Config config = MCPCapture::parse(args, false, String(), String());
+		CHECK(config.mode == MCPCapture::Mode::OFF);
+		CHECK(config.warning.contains("sometimes"));
+	}
+
+	// The three companions. `--mcp-capture-dir` carries an OS path, the viewport
+	// is validated (and a wrong one keeps the documented default), and only `on`
+	// turns the difference picture on.
+	{
+		Vector<String> args;
+		args.push_back("--mcp-capture=every_call");
+		args.push_back("--mcp-capture-dir=C:/shots/here");
+		args.push_back("--mcp-capture-viewport=3d");
+		args.push_back("--mcp-capture-diff-image=on");
+		const MCPCapture::Config config = MCPCapture::parse(args, false, String(), "C:/tmp/calls.jsonl");
+		CHECK(config.mode == MCPCapture::Mode::EVERY_CALL);
+		CHECK(config.dir == "C:/shots/here");
+		CHECK(config.viewport == "3d");
+		CHECK(config.diff_image);
+
+		Vector<String> bad;
+		bad.push_back("--mcp-capture-viewport=9d");
+		const MCPCapture::Config bad_config = MCPCapture::parse(bad, false, String(), String());
+		CHECK(bad_config.viewport == "editor");
+		CHECK(bad_config.warning.contains("9d"));
+
+		Vector<String> off_diff;
+		off_diff.push_back("--mcp-capture-diff-image=off");
+		CHECK_FALSE(MCPCapture::parse(off_diff, false, String(), String()).diff_image);
+	}
+
+	// A `tools/call` payload is the only thing a capture is taken around.
+	{
+		String tool;
+		CHECK(MCPCapture::payload_calls_tool(R"body({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"editor_set_node_property","arguments":{}}})body", tool));
+		CHECK(tool == "editor_set_node_property");
+		CHECK_FALSE(MCPCapture::payload_calls_tool(R"body({"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}})body", tool));
+		CHECK_FALSE(MCPCapture::payload_calls_tool(R"body({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"arguments":{}}})body", tool));
+		CHECK_FALSE(MCPCapture::payload_calls_tool(R"body({"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":""}})body", tool));
+		CHECK_FALSE(MCPCapture::payload_calls_tool("{not json", tool));
+	}
+
+	// "Default off" is also a structural fact: a server that was never asked for
+	// a capture carries no capture engine at all, which is what makes the
+	// request path the one it was before this feature existed.
+	{
+		MCPServer *server = memnew(MCPServer);
+		CHECK_FALSE(server->is_capture_enabled());
+		CHECK(server->get_capture_config().mode == MCPCapture::Mode::OFF);
+		memdelete(server);
+	}
+}
+
+TEST_CASE("[MCPServer] TASK-044: the capture writes before/after PNGs and one verdict line on the same seq") {
+	Task044::reset_capture_dir();
+	const String trace = Task044::capture_path("capture.jsonl");
+	const Task044::Pair pair = Task044::one_changed_pixel_pair();
+
+	MCPTrace::Recorder recorder;
+	REQUIRE(recorder.open(trace));
+
+	MCPCapture::Engine engine;
+	Task044::FakeViewport fake;
+	fake.frames.push_back(pair.before);
+	fake.frames.push_back(pair.after);
+	REQUIRE(engine.start(Task044::every_call_config(), &recorder, true));
+	engine.set_snapshot_provider_for_tests(&Task044::fake_snapshot, &fake);
+	CHECK(engine.is_active());
+	CHECK(engine.get_viewport_name() == "editor");
+	CHECK(engine.get_dir() == String::utf8(Task044::CAPTURE_ROOT));
+
+	// One frame of the life of a request: the before picture is taken *now*, and
+	// the call line the transport is about to write carries the `capture` member.
+	engine.begin_frame(10);
+	const int token = engine.arm("editor_set_node_property");
+	REQUIRE(token >= 0);
+	CHECK(engine.get_pending_count() == 1);
+	CHECK(engine.call_line_status(token) == "pending");
+	CHECK(engine.call_line_reason(token).is_empty());
+
+	MCPTrace::Record call = Task038::call_record("editor_set_node_property");
+	call.capture_present = true;
+	call.capture_mode = MCPCapture::mode_name(MCPCapture::Mode::EVERY_CALL);
+	call.capture_viewport = engine.get_viewport_name();
+	call.capture_status = engine.call_line_status(token);
+	call.capture_token = token;
+
+	const int predicted_seq = recorder.get_seq() + 1;
+	CHECK(predicted_seq == 1);
+	REQUIRE(engine.finish(token, true, predicted_seq));
+	recorder.record(1, call, 3, 0);
+	CHECK(recorder.get_seq() == 1);
+	CHECK(recorder.get_event_lines_written() == 0);
+
+	// Everything below happens *after* the response. The same frame is not
+	// enough: the call has to have been rendered.
+	engine.begin_frame(10);
+	engine.tick(10);
+	CHECK(engine.get_pending_count() == 1);
+	CHECK(recorder.get_event_lines_written() == 0);
+
+	engine.begin_frame(11);
+	engine.tick(11);
+	CHECK(engine.get_pending_count() == 0);
+	CHECK(recorder.get_event_lines_written() == 1);
+
+	// The two pictures are on disk, and both are real PNGs of the viewport.
+	const String before_path = String::utf8(Task044::CAPTURE_ROOT) + "/0001_before.png";
+	const String after_path = String::utf8(Task044::CAPTURE_ROOT) + "/0001_after.png";
+	REQUIRE(FileAccess::exists(before_path));
+	REQUIRE(FileAccess::exists(after_path));
+
+	Ref<Image> before_png;
+	before_png.instantiate();
+	const Error before_load = before_png->load(before_path);
+	REQUIRE(before_load == OK);
+	Ref<Image> after_png;
+	after_png.instantiate();
+	const Error after_load = after_png->load(after_path);
+	REQUIRE(after_load == OK);
+	if (before_load == OK && after_load == OK) {
+		CHECK(before_png->get_width() == 8);
+		CHECK(before_png->get_height() == 4);
+		CHECK(before_png->get_pixel(0, 0).is_equal_approx(Color(0.0, 0.0, 0.0, 1.0)));
+		CHECK_FALSE(after_png->get_pixel(0, 0).is_equal_approx(before_png->get_pixel(0, 0)));
+	}
+
+	const Vector<String> lines = Task038::read_lines(trace);
+	REQUIRE(lines.size() == 2);
+
+	const Variant call_value = Task044::line_at(lines, 0);
+	const Variant event_value = Task044::line_at(lines, 1);
+	REQUIRE(call_value.get_type() == Variant::DICTIONARY);
+	REQUIRE(event_value.get_type() == Variant::DICTIONARY);
+	if (call_value.get_type() != Variant::DICTIONARY || event_value.get_type() != Variant::DICTIONARY) {
+		engine.stop();
+		recorder.close();
+		TestMCPServer::remove_tree(String::utf8(Task044::CAPTURE_ROOT));
+		return;
+	}
+
+	const Dictionary call_line = (Dictionary)call_value;
+	CHECK((int)call_line["seq"] == 1);
+	const Variant capture_value = call_line.get("capture", Variant());
+	REQUIRE(capture_value.get_type() == Variant::DICTIONARY);
+	if (capture_value.get_type() == Variant::DICTIONARY) {
+		const Dictionary capture = (Dictionary)capture_value;
+		CHECK(String(capture["mode"]) == "every_call");
+		CHECK(String(capture["viewport"]) == "editor");
+		CHECK(String(capture["status"]) == "pending");
+	}
+
+	const Dictionary event = (Dictionary)event_value;
+	CHECK(String(event["event"]) == "capture");
+	// The capture line carries the *call's* sequence number: it is the join key
+	// an observer has, and a capture line must not consume one of its own.
+	CHECK((int)event["seq"] == 1);
+	CHECK(String(event["tool"]) == "editor_set_node_property");
+	CHECK(String(event["status"]) == "done");
+	CHECK(String(event["mode"]) == "every_call");
+	CHECK(String(event["viewport"]) == "editor");
+	CHECK((int64_t)event["frames_waited"] == 1);
+
+	// **The verdict.** One pixel of 32 differs - the numbers are the comparison's
+	// own, not a summary of it.
+	CHECK((bool)event["changed"] == true);
+	CHECK((int64_t)event["changed_pixels"] == 1);
+	CHECK((int64_t)event["total_pixels"] == 32);
+	CHECK((double)event["changed_pixel_ratio"] == 1.0 / 32.0);
+
+	const Variant before_value = event.get("before", Variant());
+	REQUIRE(before_value.get_type() == Variant::DICTIONARY);
+	if (before_value.get_type() == Variant::DICTIONARY) {
+		const Dictionary before_fields = (Dictionary)before_value;
+		CHECK(String(before_fields["path"]) == before_path);
+		CHECK((int64_t)before_fields["bytes"] == FileAccess::get_size(before_path));
+		CHECK((int64_t)before_fields["bytes"] > 0);
+		CHECK(String(before_fields["sha256"]) == FileAccess::get_sha256(before_path));
+		CHECK((int)before_fields["width"] == 8);
+		CHECK((int)before_fields["height"] == 4);
+	}
+
+	const Variant after_value = event.get("after", Variant());
+	REQUIRE(after_value.get_type() == Variant::DICTIONARY);
+	if (before_value.get_type() == Variant::DICTIONARY && after_value.get_type() == Variant::DICTIONARY) {
+		const Dictionary before_fields = (Dictionary)before_value;
+		const Dictionary after_fields = (Dictionary)after_value;
+		CHECK(String(after_fields["path"]) == after_path);
+		CHECK(String(after_fields["sha256"]) == FileAccess::get_sha256(after_path));
+		CHECK_FALSE(String(after_fields["sha256"]) == String(before_fields["sha256"]));
+
+		// `total_bytes` is the cumulative figure of the *whole* capture
+		// directory, and the two PNGs are exactly what it counted.
+		CHECK((int64_t)event["total_bytes"] == engine.get_total_bytes());
+		CHECK(engine.get_total_bytes() == (int64_t)before_fields["bytes"] + (int64_t)after_fields["bytes"]);
+	}
+
+	// The difference picture is opt-in, and it was not asked for.
+	const Variant diff_value = event.get("diff", Variant());
+	REQUIRE(diff_value.get_type() == Variant::DICTIONARY);
+	if (diff_value.get_type() == Variant::DICTIONARY) {
+		CHECK(((Dictionary)diff_value).is_empty());
+	}
+	CHECK_FALSE(FileAccess::exists(String::utf8(Task044::CAPTURE_ROOT) + "/0001_diff.png"));
+
+	engine.stop();
+	recorder.close();
+	CHECK_FALSE(engine.is_active());
+
+	TestMCPServer::remove_tree(String::utf8(Task044::CAPTURE_ROOT));
+}
+
+TEST_CASE("[MCPServer] TASK-044: an unchanged screen answers changed:false") {
+	// **The existence proof of the whole feature**, in the smallest form a
+	// doctest can write it: the tool call is reported as a success, the two
+	// frames are identical, and the verdict is a machine-checkable `false`.
+	Task044::reset_capture_dir();
+	const String trace = Task044::capture_path("unchanged.jsonl");
+	const Ref<Image> frozen = Task044::solid(8, 4, Color(0.25, 0.5, 0.75, 1.0));
+
+	MCPTrace::Recorder recorder;
+	REQUIRE(recorder.open(trace));
+
+	MCPCapture::Engine engine;
+	Task044::FakeViewport fake;
+	// The same picture twice: "nothing happened" is what a read-back of the
+	// arguments could never prove.
+	fake.frames.push_back(frozen);
+	fake.frames.push_back(frozen);
+	REQUIRE(engine.start(Task044::every_call_config(), &recorder, true));
+	engine.set_snapshot_provider_for_tests(&Task044::fake_snapshot, &fake);
+
+	engine.begin_frame(4);
+	const int token = engine.arm("editor_set_node_property");
+	REQUIRE(token >= 0);
+	REQUIRE(engine.finish(token, true, 1));
+	recorder.record(1, Task038::call_record("editor_set_node_property"), 2, 0);
+	engine.begin_frame(5);
+	engine.tick(5);
+
+	const Vector<String> lines = Task038::read_lines(trace);
+	REQUIRE(lines.size() == 2);
+	const Dictionary event = Task044::capture_event(lines, 1);
+	REQUIRE_FALSE(event.is_empty());
+	if (!event.is_empty()) {
+		CHECK(String(event["event"]) == "capture");
+		CHECK(String(event["status"]) == "done");
+		CHECK((bool)event["changed"] == false);
+		CHECK((int64_t)event["changed_pixels"] == 0);
+		CHECK((double)event["changed_pixel_ratio"] == 0.0);
+	}
+	// Both pictures are still kept: an observer has to be able to look at what
+	// "unchanged" was measured on.
+	CHECK(FileAccess::exists(String::utf8(Task044::CAPTURE_ROOT) + "/0001_before.png"));
+	CHECK(FileAccess::exists(String::utf8(Task044::CAPTURE_ROOT) + "/0001_after.png"));
+
+	engine.stop();
+	recorder.close();
+	TestMCPServer::remove_tree(String::utf8(Task044::CAPTURE_ROOT));
+}
+
+TEST_CASE("[MCPServer] TASK-044: on_error captures a failed call and nothing else") {
+	Task044::reset_capture_dir();
+	const String trace = Task044::capture_path("on_error.jsonl");
+	const Task044::Pair pair = Task044::one_changed_pixel_pair();
+
+	MCPTrace::Recorder recorder;
+	REQUIRE(recorder.open(trace));
+
+	MCPCapture::Engine engine;
+	Task044::FakeViewport fake;
+	fake.frames.push_back(pair.before);
+	fake.frames.push_back(pair.after);
+	MCPCapture::Config config = Task044::every_call_config();
+	config.mode = MCPCapture::Mode::ON_ERROR;
+	REQUIRE(engine.start(config, &recorder, true));
+	engine.set_snapshot_provider_for_tests(&Task044::fake_snapshot, &fake);
+
+	// A call that succeeded: kept out of the log entirely - no `capture` member
+	// on the call line, no capture line, no file.
+	engine.begin_frame(1);
+	const int ok_token = engine.arm("editor_set_node_property");
+	REQUIRE(ok_token >= 0);
+	CHECK_FALSE(engine.finish(ok_token, true, 1));
+	CHECK(engine.get_pending_count() == 0);
+	CHECK(engine.call_line_status(ok_token).is_empty());
+	recorder.record(1, Task038::call_record("editor_set_node_property"), 2, 0);
+	engine.begin_frame(2);
+	engine.tick(2);
+	CHECK(recorder.get_event_lines_written() == 0);
+	CHECK_FALSE(FileAccess::exists(String::utf8(Task044::CAPTURE_ROOT) + "/0001_before.png"));
+
+	// A call that failed: captured, with the same before/after verdict. The
+	// provider is rewound so that this call gets the differing pair too.
+	fake.calls = 0;
+	engine.begin_frame(3);
+	const int failed_token = engine.arm("editor_set_node_property");
+	REQUIRE(failed_token >= 0);
+	CHECK(engine.call_line_status(failed_token) == "pending");
+	REQUIRE(engine.finish(failed_token, false, 2));
+	recorder.record(1, Task038::call_record("editor_set_node_property"), 2, 0);
+	CHECK(recorder.get_seq() == 2);
+
+	engine.begin_frame(4);
+	engine.tick(4);
+	CHECK(recorder.get_event_lines_written() == 1);
+
+	const Vector<String> lines = Task038::read_lines(trace);
+	REQUIRE(lines.size() == 3);
+	const Dictionary event = Task044::capture_event(lines, 2);
+	REQUIRE_FALSE(event.is_empty());
+	if (!event.is_empty()) {
+		CHECK(String(event["event"]) == "capture");
+		CHECK((int)event["seq"] == 2);
+		CHECK(String(event["status"]) == "done");
+		CHECK((bool)event["changed"] == true);
+		// The failed call's pair is `0002_*`, in the sequence of the call it
+		// belongs to - not in the sequence of the captures that were taken.
+		const Variant failed_before_value = event.get("before", Variant());
+		REQUIRE(failed_before_value.get_type() == Variant::DICTIONARY);
+		if (failed_before_value.get_type() == Variant::DICTIONARY) {
+			CHECK(String(((Dictionary)failed_before_value)["path"]) == String::utf8(Task044::CAPTURE_ROOT) + "/0002_before.png");
+		}
+	}
+
+	engine.stop();
+	recorder.close();
+	TestMCPServer::remove_tree(String::utf8(Task044::CAPTURE_ROOT));
+}
+
+TEST_CASE("[MCPServer] TASK-044: a process without a framebuffer says unavailable and writes no picture") {
+	Task044::reset_capture_dir();
+	const String trace = Task044::capture_path("headless.jsonl");
+
+	MCPTrace::Recorder recorder;
+	REQUIRE(recorder.open(trace));
+
+	MCPCapture::Engine engine;
+	Task044::FakeViewport fake;
+	fake.fail = true;
+	fake.reason = String::utf8("headless display server 没有纹理存储");
+	REQUIRE(engine.start(Task044::every_call_config(), &recorder, true));
+	engine.set_snapshot_provider_for_tests(&Task044::fake_snapshot, &fake);
+
+	engine.begin_frame(7);
+	const int token = engine.arm("editor_set_node_property");
+	REQUIRE(token >= 0);
+	// The verdict is on the call line *and* in the capture line: never silence,
+	// and never a blank picture.
+	CHECK(engine.call_line_status(token) == "unavailable");
+	CHECK(engine.call_line_reason(token) == fake.reason);
+
+	MCPTrace::Record call = Task038::call_record("editor_set_node_property");
+	call.capture_present = true;
+	call.capture_mode = MCPCapture::mode_name(MCPCapture::Mode::EVERY_CALL);
+	call.capture_viewport = engine.get_viewport_name();
+	call.capture_status = engine.call_line_status(token);
+	call.capture_reason = engine.call_line_reason(token);
+	REQUIRE(engine.finish(token, true, 1));
+	recorder.record(1, call, 1, 0);
+
+	engine.begin_frame(8);
+	engine.tick(8);
+
+	const Vector<String> lines = Task038::read_lines(trace);
+	REQUIRE(lines.size() == 2);
+	const Variant call_value = Task044::line_at(lines, 0);
+	REQUIRE(call_value.get_type() == Variant::DICTIONARY);
+	if (call_value.get_type() == Variant::DICTIONARY) {
+		const Variant capture_value = ((Dictionary)call_value).get("capture", Variant());
+		REQUIRE(capture_value.get_type() == Variant::DICTIONARY);
+		if (capture_value.get_type() == Variant::DICTIONARY) {
+			CHECK(String(((Dictionary)capture_value)["status"]) == "unavailable");
+			CHECK(String(((Dictionary)capture_value)["reason"]) == fake.reason);
+		}
+	}
+
+	const Dictionary event = Task044::capture_event(lines, 1);
+	REQUIRE_FALSE(event.is_empty());
+	if (!event.is_empty()) {
+		CHECK(String(event["event"]) == "capture");
+		CHECK(String(event["status"]) == "unavailable");
+		CHECK(String(event["reason"]) == fake.reason);
+		CHECK(event.get("before", Variant()).get_type() == Variant::NIL);
+		CHECK(event.get("after", Variant()).get_type() == Variant::NIL);
+		CHECK(event.get("changed", Variant()).get_type() == Variant::NIL);
+		CHECK((int64_t)event["total_bytes"] == 0);
+	}
+	// No file at all - not an empty one, not a blank one.
+	CHECK_FALSE(FileAccess::exists(String::utf8(Task044::CAPTURE_ROOT) + "/0001_before.png"));
+	CHECK_FALSE(FileAccess::exists(String::utf8(Task044::CAPTURE_ROOT) + "/0001_after.png"));
+
+	engine.stop();
+	recorder.close();
+
+	// The production snapshot, in *this* process. The doctest binary runs under
+	// the `--headless` display server (both gate commands pass `--headless`),
+	// which is exactly the process the verdict exists for.
+	if (!MCPCapture::framebuffer_available()) {
+		String reason;
+		CHECK(MCPCapture::snapshot("editor", true, reason).is_null());
+		CHECK(reason == String::utf8("headless display server 没有纹理存储"));
+	}
+
+	TestMCPServer::remove_tree(String::utf8(Task044::CAPTURE_ROOT));
+}
+
+TEST_CASE("[MCPServer] TASK-044: the 1 GB warning is announced once and deletes nothing") {
+	Task044::reset_capture_dir();
+	const String trace = Task044::capture_path("visible.jsonl");
+	const Task044::Pair pair = Task044::one_changed_pixel_pair();
+
+	MCPTrace::Recorder recorder;
+	REQUIRE(recorder.open(trace));
+
+	MCPCapture::Engine engine;
+	Task044::FakeViewport fake;
+	fake.frames.push_back(pair.before);
+	fake.frames.push_back(pair.after);
+	REQUIRE(engine.start(Task044::every_call_config(), &recorder, true));
+	engine.set_snapshot_provider_for_tests(&Task044::fake_snapshot, &fake);
+	// The threshold is lowered instead of writing a gigabyte of PNGs; the code
+	// path (compare, warn once, keep everything) is the production one.
+	engine.set_warn_total_bytes_for_tests(1);
+
+	engine.begin_frame(1);
+	const int first = engine.arm("editor_set_node_property");
+	REQUIRE(first >= 0);
+	REQUIRE(engine.finish(first, true, 1));
+	recorder.record(1, Task038::call_record("editor_set_node_property"), 1, 0);
+	engine.begin_frame(2);
+	engine.tick(2);
+	CHECK(engine.is_warned_over_threshold());
+	const int64_t after_first = engine.get_total_bytes();
+	CHECK(after_first > 1);
+
+	engine.begin_frame(3);
+	const int second = engine.arm("editor_set_node_property");
+	REQUIRE(second >= 0);
+	REQUIRE(engine.finish(second, true, 2));
+	recorder.record(1, Task038::call_record("editor_set_node_property"), 1, 0);
+	engine.begin_frame(4);
+	engine.tick(4);
+
+	// Monotone, and never reset.
+	CHECK(engine.get_total_bytes() > after_first);
+
+	const Vector<String> lines = Task038::read_lines(trace);
+	REQUIRE(lines.size() == 4);
+	const Variant first_event_value = Task044::line_at(lines, 1);
+	const Variant second_event_value = Task044::line_at(lines, 3);
+	REQUIRE(first_event_value.get_type() == Variant::DICTIONARY);
+	REQUIRE(second_event_value.get_type() == Variant::DICTIONARY);
+	if (first_event_value.get_type() == Variant::DICTIONARY && second_event_value.get_type() == Variant::DICTIONARY) {
+		const int64_t first_total = (int64_t)((Dictionary)first_event_value)["total_bytes"];
+		const int64_t second_total = (int64_t)((Dictionary)second_event_value)["total_bytes"];
+		CHECK(first_total > 0);
+		CHECK(second_total > first_total);
+		CHECK(second_total == engine.get_total_bytes());
+	}
+
+	// **Nothing is ever deleted**: after passing the threshold, both captures
+	// are still on disk, including the one that triggered it.
+	for (int seq = 1; seq <= 2; seq++) {
+		const String prefix = String::utf8(Task044::CAPTURE_ROOT) + "/" + String::num_int64(seq).pad_zeros(4);
+		CHECK(FileAccess::exists(prefix + "_before.png"));
+		CHECK(FileAccess::exists(prefix + "_after.png"));
+	}
+
+	engine.stop();
+	recorder.close();
+	TestMCPServer::remove_tree(String::utf8(Task044::CAPTURE_ROOT));
+}
+
+TEST_CASE("[MCPServer] TASK-044: an event line shares the file but not the request sequence") {
+	Task038::reset_trace_dir();
+	const String path = Task038::trace_path("event_lines.jsonl");
+
+	MCPTrace::Recorder recorder;
+	REQUIRE(recorder.open(path));
+
+	Dictionary probe;
+	probe["event"] = "capture";
+	probe["seq"] = 0;
+	CHECK(recorder.record_event_line(probe)); // active, so it appends
+	CHECK(recorder.get_lines_written() == 0);
+	CHECK(recorder.get_seq() == 0);
+	CHECK(recorder.get_event_lines_written() == 1);
+
+	recorder.record(1, Task038::call_record("project_get_info"), 1, 0);
+	CHECK(recorder.get_seq() == 1);
+	CHECK(recorder.get_lines_written() == 1);
+
+	Dictionary fields;
+	fields["event"] = "capture";
+	fields["seq"] = 1;
+	fields["status"] = "done";
+	CHECK(recorder.record_event_line(fields));
+	CHECK(recorder.get_seq() == 1); // unchanged: `seq` counts requests
+	CHECK(recorder.get_lines_written() == 1);
+	CHECK(recorder.get_event_lines_written() == 2);
+
+	recorder.record(1, Task038::call_record("project_get_info"), 1, 0);
+	CHECK(recorder.get_seq() == 2);
+	recorder.close();
+
+	// A recorder that was never opened writes no event line either.
+	MCPTrace::Recorder closed;
+	CHECK_FALSE(closed.record_event_line(fields));
+
+	const Vector<String> lines = Task038::read_lines(path);
+	REQUIRE(lines.size() == 4);
+	const Variant first_value = Task044::line_at(lines, 0);
+	const Variant third_value = Task044::line_at(lines, 2);
+	const Variant fourth_value = Task044::line_at(lines, 3);
+	REQUIRE(first_value.get_type() == Variant::DICTIONARY);
+	if (first_value.get_type() == Variant::DICTIONARY) {
+		// A side-channel line is a plain object: no `id` splice, no request
+		// fields.
+		CHECK(((Dictionary)first_value).has("event"));
+		CHECK_FALSE(((Dictionary)first_value).has("method"));
+		CHECK_FALSE(((Dictionary)first_value).has("id"));
+	}
+	REQUIRE(third_value.get_type() == Variant::DICTIONARY);
+	if (third_value.get_type() == Variant::DICTIONARY) {
+		CHECK(String(((Dictionary)third_value)["event"]) == "capture");
+		CHECK((int)((Dictionary)third_value)["seq"] == 1);
+	}
+	// The request lines keep their own numbering and their `id` splice.
+	REQUIRE(fourth_value.get_type() == Variant::DICTIONARY);
+	if (fourth_value.get_type() == Variant::DICTIONARY) {
+		CHECK((int)((Dictionary)fourth_value)["seq"] == 2);
+		CHECK(((Dictionary)fourth_value).has("id"));
+	}
+	CHECK(Task038::read_text(path).count("\n") == 4);
+
+	TestMCPServer::remove_tree(String::utf8(Task038::TRACE_ROOT));
+}
+
+TEST_CASE("[MCPServer] TASK-044: the capture uses the one pixel comparison of the module") {
+	// The comparison moved to `tool_helpers` (GDR-25) and both callers use it.
+	// The numbers here are the ones `editor_analyze_screenshot_diff`'s own
+	// doctest pins for the same pair of images, and the "no difference picture"
+	// mode - the capture's default - answers the same verdict with a null Ref.
+	const Task044::Pair pair = Task044::one_changed_pixel_pair();
+
+	MCPTools::ScreenshotDiff diff;
+	MCPToolError error;
+	REQUIRE(MCPTools::compare_screenshot_pixels(pair.before, pair.after, 10, true, "before", "after", diff, error));
+	CHECK_FALSE(error.is_error());
+	CHECK(diff.width == 8);
+	CHECK(diff.height == 4);
+	CHECK(diff.total_pixels == 32);
+	CHECK(diff.changed_pixels == 1);
+	CHECK_FALSE(diff.identical);
+	CHECK(diff.diff_percentage == Math::snapped(3.125, 0.01)); // two decimals, like the tool
+	REQUIRE(diff.diff_image.is_valid());
+	if (diff.diff_image.is_valid()) {
+		CHECK(diff.diff_image->get_width() == 8);
+		// The changed pixel is red; an unchanged one is the source scaled by 0.3.
+		CHECK(diff.diff_image->get_pixel(0, 0).is_equal_approx(Color(1.0, 0.0, 0.0, 1.0)));
+		CHECK(diff.diff_image->get_pixel(4, 3).is_equal_approx(Color(0.0, 0.0, 0.0, 1.0)));
+	}
+
+	MCPTools::ScreenshotDiff without_image;
+	REQUIRE(MCPTools::compare_screenshot_pixels(pair.before, pair.after, 10, false, "before", "after", without_image, error));
+	CHECK(without_image.changed_pixels == diff.changed_pixels);
+	CHECK(without_image.diff_percentage == diff.diff_percentage);
+	CHECK(without_image.diff_image.is_null());
+
+	// A threshold above the difference sees nothing; the tool's own rule is not
+	// re-implemented here.
+	MCPTools::ScreenshotDiff none;
+	REQUIRE(MCPTools::compare_screenshot_pixels(pair.before, pair.after, 255, false, "before", "after", none, error));
+	CHECK(none.changed_pixels == 0);
+	CHECK(none.identical);
+	CHECK(none.diff_percentage == 0.0);
+
+	// Two geometries cannot be walked per pixel: the refusal names the caller's
+	// own two sides (the tool's `image_a`/`image_b` wording lives at its call
+	// site, the capture's `before`/`after` here).
+	const Ref<Image> other = Task044::solid(4, 2, Color(0.0, 0.0, 0.0, 1.0));
+	MCPTools::ScreenshotDiff mismatch;
+	MCPToolError mismatch_error;
+	CHECK_FALSE(MCPTools::compare_screenshot_pixels(pair.before, other, 10, false, "before", "after", mismatch, mismatch_error));
+	CHECK(mismatch_error.code == -32602);
+	CHECK(mismatch_error.message.contains("before is 8x4"));
+	CHECK(mismatch_error.message.contains("after is 4x2"));
+}

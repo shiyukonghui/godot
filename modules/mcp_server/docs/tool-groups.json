@@ -1,0 +1,141 @@
+{
+  "_comment": "B1 group manifest for TASK-002 section 2.3.1. The 41 B1 tools (42 old tools of DESIGN-DETAIL.md section 10 minus get_editor_performance, which GDR-17 merged losslessly into editor_get_performance_monitors) are partitioned into 7 groups. Each group is one channel + one mutating value, so its tools fit one tools/<group>.{h,cpp} file and no two groups share a file. Every tool name is the frozen v1.1 contract name from docs/tools_list.renamed.json; every group is exactly one batch of parallel porting work.",
+  "batch": "B1",
+  "source": {
+    "batch_list": "docs/DESIGN-DETAIL.md section 10 (B1 = 42 old tools)",
+    "names": "docs/tools_list.renamed.json (v1.2, 171 entries)",
+    "map": "docs/tool-rename-map.json (v1.1, 174 entries)",
+    "excluded": "get_editor_performance (disposition=merge_into, GDR-17; the survivor editor_get_performance_monitors belongs to the profiling group of a later batch)"
+  },
+  "counts": {
+    "b1_old_tools": 42,
+    "excluded_merged": 1,
+    "b1_tools_to_port": 41,
+    "groups": 7
+  },
+  "alerts": {
+    "fix_implementation_first": [
+      "editor_remove_output_log"
+    ],
+    "conditional_write_mutating_true": [
+      "editor_capture_screenshot"
+    ],
+    "game_process_side": [
+      "running_game_find_nearby_nodes"
+    ],
+    "note": "editor_remove_output_log (old clear_output) is flagged fix_implementation_first in tool-rename-map.json: its implementation must be fixed first, driven by a red test, before it is registered. It sits in editor_write_scene_editor, which is not the template group, so TASK-002 does not implement it."
+  },
+  "groups": [
+    {
+      "name": "project_read_template",
+      "batch": "B1",
+      "channel": "project",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_get_info",
+        "project_get_settings",
+        "project_get_filesystem_tree",
+        "project_search_file_names",
+        "project_search_file_contents",
+        "project_find_files_referencing_symbol"
+      ],
+      "notes": "The TASK-002 template group: 2 migrated tools plus 4 new ones. Owns tools/project_read_template.{h,cpp}."
+    },
+    {
+      "name": "project_read_analysis",
+      "batch": "B1",
+      "channel": "project",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_get_statistics",
+        "project_analyze_scene_complexity",
+        "project_detect_circular_dependencies",
+        "project_find_unused_resources",
+        "project_find_script_references",
+        "project_get_scene_dependencies",
+        "project_get_scene_exports"
+      ],
+      "notes": "Read-only project analysis (migration source: commands/analysis.rs). No file is shared with the template group."
+    },
+    {
+      "name": "project_read_files",
+      "batch": "B1",
+      "channel": "project",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "project_list_scripts",
+        "project_read_script",
+        "project_validate_script",
+        "project_read_resource",
+        "project_get_resource_preview",
+        "project_read_scene_file_content"
+      ],
+      "notes": "Read-only project content (scripts / resources / scene text). Pure disk reads, no editor dependency."
+    },
+    {
+      "name": "project_write_resource_scene",
+      "batch": "B1",
+      "channel": "project",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "project_create_resource",
+        "project_create_scene_file",
+        "project_delete_scene_file",
+        "project_edit_resource"
+      ],
+      "notes": "The only mutating project group of B1: writes res:// and therefore needs the write-path evidence class (success / missing param / bottom layer failure)."
+    },
+    {
+      "name": "editor_read_scene_inspector",
+      "batch": "B1",
+      "channel": "editor",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "editor_get_errors",
+        "editor_get_output_log",
+        "editor_get_open_scripts",
+        "editor_get_scene_tree",
+        "editor_get_selection",
+        "editor_get_viewport_3d_camera",
+        "editor_analyze_signal_flow"
+      ],
+      "notes": "Editor-process reads; the group file guards editor-only APIs and registers every tool as scope=EDITOR. It is the first editor-scope group of the port, so the 'a game process must not expose editor tools' rule is pinned end to end: check_contract_subset.ps1 asserts the editor endpoint serves these seven and the game endpoint serves none of them."
+    },
+    {
+      "name": "editor_write_scene_editor",
+      "batch": "B1",
+      "channel": "editor",
+      "mutating": true,
+      "implemented": true,
+      "tools": [
+        "editor_open_scene",
+        "editor_save_scene",
+        "editor_reload_plugin",
+        "editor_rescan_project_filesystem",
+        "editor_set_node_selection",
+        "editor_remove_node_selection",
+        "editor_add_resource_to_node_property",
+        "editor_set_viewport_3d_camera",
+        "editor_capture_screenshot",
+        "editor_remove_output_log"
+      ],
+      "notes": "Editor-process writes. Contains editor_remove_output_log from the map's fix_implementation_first set: write the red test first, fix the implementation, then register."
+    },
+    {
+      "name": "running_game_read_scene",
+      "batch": "B1",
+      "channel": "running_game",
+      "mutating": false,
+      "implemented": true,
+      "tools": [
+        "running_game_find_nearby_nodes"
+      ],
+      "notes": "The single game-process tool of B1; scope=GAME, so it must not appear in the editor tools/list. Kept as its own one-tool group because a group has exactly one channel."
+    }
+  ]
+}

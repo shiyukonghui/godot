@@ -1,0 +1,347 @@
+{
+ "contract": {
+  "editor_bake_navigation_mesh": {
+   "description": "烘焙导航网格",
+   "inputSchema": {
+    "properties": {
+     "navigation_region_path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "navigation_region_path"
+    ],
+    "type": "object"
+   },
+   "name": "editor_bake_navigation_mesh"
+  },
+  "editor_set_navigation_layers": {
+   "description": "设置导航层",
+   "inputSchema": {
+    "properties": {
+     "layers": {
+      "type": "integer"
+     },
+     "node_path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "node_path",
+     "layers"
+    ],
+    "type": "object"
+   },
+   "name": "editor_set_navigation_layers"
+  },
+  "editor_get_navigation_info": {
+   "description": "获取导航信息",
+   "inputSchema": {
+    "properties": {
+     "node_path": {
+      "default": ".",
+      "type": "string"
+     }
+    },
+    "required": [],
+    "type": "object"
+   },
+   "name": "editor_get_navigation_info"
+  },
+  "running_game_move_player_to_target": {
+   "description": "控制游戏角色直接移动到目标位置",
+   "inputSchema": {
+    "properties": {
+     "arrival_radius": {
+      "description": "到达判定半径",
+      "type": "number"
+     },
+     "camera_path": {
+      "description": "相机节点路径",
+      "type": "string"
+     },
+     "look_at_target": {
+      "default": false,
+      "description": "是否面向目标",
+      "type": "boolean"
+     },
+     "player_path": {
+      "description": "玩家节点路径",
+      "type": "string"
+     },
+     "run": {
+      "default": false,
+      "description": "是否奔跑",
+      "type": "boolean"
+     },
+     "target": {
+      "description": "目标位置（字符串路径或坐标字典）"
+     },
+     "timeout": {
+      "default": 15.0,
+      "description": "超时时间（秒）",
+      "type": "number"
+     }
+    },
+    "required": [
+     "target"
+    ],
+    "type": "object"
+   },
+   "name": "running_game_move_player_to_target"
+  },
+  "project_create_theme": {
+   "description": "创建 Theme 资源",
+   "inputSchema": {
+    "properties": {
+     "name": {
+      "description": "主题名称",
+      "type": "string"
+     },
+     "path": {
+      "description": "保存路径 (res://)",
+      "type": "string"
+     }
+    },
+    "required": [
+     "path"
+    ],
+    "type": "object"
+   },
+   "name": "project_create_theme"
+  },
+  "project_set_theme_color": {
+   "description": "设置主题颜色",
+   "inputSchema": {
+    "properties": {
+     "color": {
+      "description": "包含 r,g,b,a 的字典",
+      "type": "object"
+     },
+     "color_name": {
+      "type": "string"
+     },
+     "node_type": {
+      "default": "Button",
+      "type": "string"
+     },
+     "theme_path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "theme_path",
+     "color_name",
+     "color"
+    ],
+    "type": "object"
+   },
+   "name": "project_set_theme_color"
+  },
+  "project_set_theme_constant": {
+   "description": "设置主题常量",
+   "inputSchema": {
+    "properties": {
+     "constant_name": {
+      "type": "string"
+     },
+     "node_type": {
+      "default": "Button",
+      "type": "string"
+     },
+     "theme_path": {
+      "type": "string"
+     },
+     "value": {
+      "type": "integer"
+     }
+    },
+    "required": [
+     "theme_path",
+     "constant_name",
+     "value"
+    ],
+    "type": "object"
+   },
+   "name": "project_set_theme_constant"
+  },
+  "project_set_theme_font_size": {
+   "description": "设置主题字体大小",
+   "inputSchema": {
+    "properties": {
+     "font_size_name": {
+      "type": "string"
+     },
+     "node_type": {
+      "default": "Button",
+      "type": "string"
+     },
+     "size": {
+      "type": "integer"
+     },
+     "theme_path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "theme_path",
+     "font_size_name",
+     "size"
+    ],
+    "type": "object"
+   },
+   "name": "project_set_theme_font_size"
+  },
+  "project_set_theme_stylebox": {
+   "description": "设置主题样式盒",
+   "inputSchema": {
+    "properties": {
+     "bg_color": {
+      "type": "string"
+     },
+     "border_color": {
+      "type": "string"
+     },
+     "border_width": {
+      "type": "integer"
+     },
+     "corner_radius": {
+      "type": "integer"
+     },
+     "node_type": {
+      "default": "Panel",
+      "type": "string"
+     },
+     "stylebox_name": {
+      "type": "string"
+     },
+     "theme_path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "theme_path",
+     "stylebox_name"
+    ],
+    "type": "object"
+   },
+   "name": "project_set_theme_stylebox"
+  },
+  "project_get_theme_info": {
+   "description": "获取主题信息",
+   "inputSchema": {
+    "properties": {
+     "theme_path": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "theme_path"
+    ],
+    "type": "object"
+   },
+   "name": "project_get_theme_info"
+  },
+  "project_get_export_info": {
+   "description": "获取导出信息",
+   "inputSchema": {
+    "properties": {},
+    "required": [],
+    "type": "object"
+   },
+   "name": "project_get_export_info"
+  },
+  "project_list_export_presets": {
+   "description": "列出所有导出预设",
+   "inputSchema": {
+    "properties": {},
+    "required": [],
+    "type": "object"
+   },
+   "name": "project_list_export_presets"
+  },
+  "project_get_android_preset_info": {
+   "description": "获取 Android 导出预设信息",
+   "inputSchema": {
+    "properties": {
+     "preset_index": {
+      "description": "预设索引（可选）",
+      "type": "integer"
+     },
+     "preset_name": {
+      "description": "预设名称（可选）",
+      "type": "string"
+     }
+    },
+    "required": [],
+    "type": "object"
+   },
+   "name": "project_get_android_preset_info"
+  },
+  "os_list_android_devices": {
+   "description": "列出已连接的 Android 设备",
+   "inputSchema": {
+    "properties": {},
+    "required": [],
+    "type": "object"
+   },
+   "name": "os_list_android_devices"
+  },
+  "os_deploy_to_android_device": {
+   "description": "将项目导出并部署到 Android 设备",
+   "inputSchema": {
+    "properties": {
+     "debug": {
+      "default": true,
+      "description": "是否以 debug 模式导出",
+      "type": "boolean"
+     },
+     "device_id": {
+      "description": "目标设备 serial（可选，部署到第一个可用设备）",
+      "type": "string"
+     },
+     "launch": {
+      "default": true,
+      "description": "安装后是否启动应用",
+      "type": "boolean"
+     },
+     "preset_name": {
+      "description": "Android 导出预设名称",
+      "type": "string"
+     },
+     "skip_export": {
+      "default": false,
+      "description": "是否跳过导出步骤（直接安装已有 APK）",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "preset_name"
+    ],
+    "type": "object"
+   },
+   "name": "os_deploy_to_android_device"
+  }
+ },
+ "map_type": "<class 'list'>",
+ "map": {
+  "editor_bake_navigation_mesh": null,
+  "editor_set_navigation_layers": null,
+  "editor_get_navigation_info": null,
+  "running_game_move_player_to_target": null,
+  "project_create_theme": null,
+  "project_set_theme_color": null,
+  "project_set_theme_constant": null,
+  "project_set_theme_font_size": null,
+  "project_set_theme_stylebox": null,
+  "project_get_theme_info": null,
+  "project_get_export_info": null,
+  "project_list_export_presets": null,
+  "project_get_android_preset_info": null,
+  "os_list_android_devices": null,
+  "os_deploy_to_android_device": null
+ },
+ "map_keys_sample": [
+  null
+ ]
+}

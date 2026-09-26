@@ -1,0 +1,18 @@
+red phase: base commit = bf9518c2b3; current HEAD = 8a7d96c861
+[PASS] R001_base_files_written :: reverted 4 file(s) to bf9518c2b3; missing at base: (none)
+scons: D:\Anaconda\Scripts\scons.exe  (from first `scons` on PATH)
+build_local: exit code = 0
+build_local: log = F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\red_phase\red_build.log
+[PASS] R002_red_build_ok :: pre-fix build exit=0; log=F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\red_phase\red_build.log
+[PASS] R003_the_two_cases_fail_before_the_fix :: exit=1; [doctest] test cases:   3 |  1 passed |  2 failed | 1774 skipped | [doctest] assertions: 129 | 75 passed | 54 failed | | [doctest] Status: FAILURE!
+[PASS] R004_red_run_reports_the_D2_and_read_tool_failures :: the red output names the missing eadable field and the missing read tool: readable=True, tool=True
+[PASS] R005_fixed_bytes_restored_byte_identical :: every reverted file is back to its pre-replay sha256 (4 file(s))
+scons: D:\Anaconda\Scripts\scons.exe  (from first `scons` on PATH)
+build_local: exit code = 0
+build_local: log = F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\red_phase\green_build.log
+[PASS] R006_green_build_ok :: fixed build exit=0
+[PASS] R007_the_same_cases_pass_after_the_fix :: exit=0; [doctest] test cases:   3 |   3 passed | 0 failed | 1774 skipped | [doctest] assertions: 137 | 137 passed | 0 failed | | [doctest] Status: SUCCESS!
+
+--- checks: 7, failures: 0 ---
+--- evidence root: F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\docs\reports\evidence\task075\red_phase ---
+TASK-075 RED PHASE REPLAY PASS (pre-fix bytes must fail, fixed bytes must pass, both on the same test file)

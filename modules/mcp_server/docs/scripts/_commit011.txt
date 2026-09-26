@@ -1,0 +1,21 @@
+mcp_server: the deferred response channel (GDR-20) and the frame/capture groups (TASK-011)
+
+- mcp_deferred.{h,cpp}: the framework state machine. Tasks are keyed by
+  (connection, request id), never by arrival order; the per-frame tick budget
+  bounds one frame; an expired wait ends as -32000 with data.suggestion and
+  data.timeout_ms; drop_connection() is the single place a dead connection's
+  pending entries are released.
+- MCPJsonRpc::dispatch() hands the transport a task instead of a body, and
+  MCPHttpServer owns the pending table, ticks it after the request phase and
+  writes every completion back to the connection the request came from.
+- tool_helpers: hoisted the running-game scene/node resolution, the framebuffer
+  helpers and the screenshot path/PNG writer (verbatim moves, shared with the B1
+  groups so two groups cannot disagree about one rule).
+- New groups running_game_frame_observation (3 deferred tools) and
+  running_game_capture (1 tool), both scope=game; the B2 manifest marks both
+  implemented and accept_m1 compares the four new names.
+- Six new doctest cases cover the five state-machine classes on a controlled
+  fake pending tool, the group shape and every argument refusal.
+
+Gates: module doctest 112/112 cases (2911 assertions) and the full engine suite
+1538/1538 cases (427192 assertions), both 0 failed.

@@ -1,0 +1,18 @@
+SURVEY root             = C:\Users\wyl\AppData\Local\Temp\mcp075base\modules\mcp_server
+SURVEY files scanned    = 164
+python : Traceback (most recent call last):
+At line:1 char:364
++ ... mcp_server; python scripts\check_hardcoded_counts.py --root "$env:TEM ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\scripts\check_hardcoded_counts.py", line 257, in <m
+odule>
+    sys.exit(main())
+  File "F:\RustProjects\godot-mcp-pro\code\godot\modules\mcp_server\scripts\check_hardcoded_counts.py", line 219, in ma
+in
+    print("SURVEY SKIPPED (self)   = %s" % os.path.relpath(self_path, root).replace("\\", "/"))
+  File "D:\Anaconda\lib\ntpath.py", line 703, in relpath
+    raise ValueError("path is on mount %r, start on mount %r" % (
+ValueError: path is on mount 'F:', start on mount 'C:'

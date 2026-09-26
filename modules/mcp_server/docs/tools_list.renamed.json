@@ -1,0 +1,4084 @@
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "tools": [
+      {
+        "description": "获取项目信息",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_get_info"
+      },
+      {
+        "description": "获取文件系统树状结构",
+        "inputSchema": {
+          "properties": {
+            "max_depth": {
+              "default": -1,
+              "type": "integer"
+            },
+            "path": {
+              "default": "res://",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_get_filesystem_tree"
+      },
+      {
+        "description": "搜索文件 判别点：只匹配文件名子串（大小写不敏感、上限 200），不读文件内容、不返回行号；要搜索文件内容请用 project_search_file_contents。",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "default": "res://",
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "pattern"
+          ],
+          "type": "object"
+        },
+        "name": "project_search_file_names"
+      },
+      {
+        "description": "在文件内容中搜索文本 判别点：逐行返回 {file,line,text}（大小写不敏感、上限 50，跳过 addons 与 .godot 目录）；要按文件聚合的 {file,lines[]}（大小写敏感、上限 100）请用 project_find_files_referencing_symbol。",
+        "inputSchema": {
+          "properties": {
+            "file_pattern": {
+              "default": "*",
+              "type": "string"
+            },
+            "path": {
+              "default": "res://",
+              "type": "string"
+            },
+            "pattern": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "pattern"
+          ],
+          "type": "object"
+        },
+        "name": "project_search_file_contents"
+      },
+      {
+        "description": "获取项目设置",
+        "inputSchema": {
+          "properties": {
+            "include_default": {
+              "default": false,
+              "type": "boolean"
+            },
+            "prefix": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_get_settings"
+      },
+      {
+        "description": "设置项目设置",
+        "inputSchema": {
+          "properties": {
+            "key": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "value": {
+              "description": "设置值"
+            }
+          },
+          "required": [
+            "key",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "project_set_setting"
+      },
+      {
+        "description": "将 UID 转换为项目路径 判别点：入参为字符串文本 UID（如 uid://...），返回 {uid,path}，UID 文本格式非法时报参数错误；反向转换请用 project_convert_path_to_uid。",
+        "inputSchema": {
+          "properties": {
+            "uid": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "uid"
+          ],
+          "type": "object"
+        },
+        "name": "project_convert_uid_to_path"
+      },
+      {
+        "description": "将项目路径转换为 UID 判别点：入参为项目路径（如 res://...），返回 {path,uid}，路径未注册时 uid 为空串且不报错；反向转换请用 project_convert_uid_to_path。",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_convert_path_to_uid"
+      },
+      {
+        "description": "获取当前编辑场景的完整场景树",
+        "inputSchema": {
+          "properties": {
+            "max_depth": {
+              "default": -1,
+              "description": "最大深度 (-1 无限)",
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_scene_tree"
+      },
+      {
+        "description": "读取 .tscn 场景文件内容",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "场景文件路径 (res://)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_read_scene_file_content"
+      },
+      {
+        "description": "在编辑器中打开场景",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "res:// 路径",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_open_scene"
+      },
+      {
+        "description": "删除场景文件",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "要删除的场景文件路径 (res://)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_delete_scene_file"
+      },
+      {
+        "description": "将外部场景作为实例添加到当前编辑场景",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "description": "实例节点名称 (可选)",
+              "type": "string"
+            },
+            "parent_path": {
+              "default": ".",
+              "description": "父节点路径, 默认 '.'",
+              "type": "string"
+            },
+            "scene_path": {
+              "description": "要实例化的场景路径 (res://)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "scene_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_scene_instance"
+      },
+      {
+        "description": "获取场景根节点的导出变量列表",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "场景文件路径 (res://)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_get_scene_exports"
+      },
+      {
+        "description": "运行场景 起游戏时经 EditorRunBar 注入 --mcp-port：缺省自动挑一个空闲端口（与编辑器自身端口不同），也可用 mcp_port 指定；响应在游戏真的起来后给出 mcp_port、mcp_port_source、endpoint 与 pid，使游戏子进程立刻可被 MCP 观察，无需改被测工程设置。",
+        "inputSchema": {
+          "properties": {
+            "extra_args": {
+              "default": [],
+              "description": "追加到游戏子进程命令行的额外参数（逐字追加，排在引擎自己构造的 --path/--remote-debug/--editor-pid/--scene 与固定注入的 --mcp-port=<端口> 之后，所以同名参数以这里的为准）；不得包含 --mcp-port（端口只由 mcp_port 参数注入：引擎的命令行解析取最后一次出现，重复注入会让响应里的 endpoint 指向游戏并未监听的端口，故被明确拒绝）；重复的 --headless 会被去重并在响应的 args_deduplicated 里列出；每个元素必须是非空字符串",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "headless": {
+              "default": false,
+              "description": "以 headless 模式启动游戏子进程（给子进程加一个 --headless，即引擎自己的“无音频、无渲染”别名）；默认 false，与旧行为逐字一致。注意 --headless 不会从编辑器继承（引擎的可转发参数表里没有它），所以在无显示环境里必须显式传 true",
+              "type": "boolean"
+            },
+            "mcp_port": {
+              "description": "游戏子进程监听的 TCP 端口（可选，1-65535）；缺省时自动挑一个空闲端口，且不与编辑器自身端口相同",
+              "type": "integer"
+            },
+            "mode": {
+              "default": "main",
+              "description": "main/current/路径",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_play_scene"
+      },
+      {
+        "description": "停止运行",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_stop_scene"
+      },
+      {
+        "description": "保存当前场景",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "保存路径 (可选)",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_save_scene"
+      },
+      {
+        "description": "创建新场景文件",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "保存路径 (res://)",
+              "type": "string"
+            },
+            "root_name": {
+              "description": "根节点名称 (可选)",
+              "type": "string"
+            },
+            "root_type": {
+              "default": "Node2D",
+              "description": "根节点类型",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_create_scene_file"
+      },
+      {
+        "description": "向场景添加新节点",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "parent_path": {
+              "default": ".",
+              "type": "string"
+            },
+            "properties": {
+              "default": {},
+              "type": "object"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_node"
+      },
+      {
+        "description": "删除节点",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_delete_node"
+      },
+      {
+        "description": "重命名节点",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "name"
+          ],
+          "type": "object"
+        },
+        "name": "editor_rename_node"
+      },
+      {
+        "description": "修改属性",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "property": {
+              "type": "string"
+            },
+            "value": {}
+          },
+          "required": [
+            "path",
+            "property",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_node_property"
+      },
+      {
+        "description": "获取节点属性",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "properties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_node_properties"
+      },
+      {
+        "description": "复制指定节点及其子节点",
+        "inputSchema": {
+          "properties": {
+            "new_name": {
+              "description": "新节点名称 (可选)",
+              "type": "string"
+            },
+            "path": {
+              "description": "源节点路径",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_duplicate_node"
+      },
+      {
+        "description": "连接节点的信号到目标方法",
+        "inputSchema": {
+          "properties": {
+            "method": {
+              "description": "目标方法名",
+              "type": "string"
+            },
+            "signal": {
+              "description": "信号名称",
+              "type": "string"
+            },
+            "source_path": {
+              "description": "源节点路径",
+              "type": "string"
+            },
+            "target_path": {
+              "description": "目标节点路径",
+              "type": "string"
+            }
+          },
+          "required": [
+            "source_path",
+            "signal",
+            "method"
+          ],
+          "type": "object"
+        },
+        "name": "editor_connect_signal"
+      },
+      {
+        "description": "断开节点的信号连接",
+        "inputSchema": {
+          "properties": {
+            "method": {
+              "description": "目标方法名",
+              "type": "string"
+            },
+            "signal": {
+              "description": "信号名称",
+              "type": "string"
+            },
+            "source_path": {
+              "description": "源节点路径",
+              "type": "string"
+            },
+            "target_path": {
+              "description": "目标节点路径",
+              "type": "string"
+            }
+          },
+          "required": [
+            "source_path",
+            "signal",
+            "method"
+          ],
+          "type": "object"
+        },
+        "name": "editor_disconnect_signal"
+      },
+      {
+        "description": "将节点移动到新的父节点下",
+        "inputSchema": {
+          "properties": {
+            "new_name": {
+              "description": "移动后的新名称 (可选)",
+              "type": "string"
+            },
+            "new_parent": {
+              "description": "目标父节点路径",
+              "type": "string"
+            },
+            "path": {
+              "description": "要移动的节点路径",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "new_parent"
+          ],
+          "type": "object"
+        },
+        "name": "editor_reparent_node"
+      },
+      {
+        "description": "创建资源并附加到节点属性",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "description": "节点路径",
+              "type": "string"
+            },
+            "property": {
+              "description": "属性名称",
+              "type": "string"
+            },
+            "resource_properties": {
+              "description": "要设置的资源属性 (可选)",
+              "type": "object"
+            },
+            "resource_type": {
+              "description": "资源类型 (如 GradientTexture1D, StyleBoxFlat)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "property",
+            "resource_type"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_resource_to_node_property"
+      },
+      {
+        "description": "设置 Control 节点的锚点预设",
+        "inputSchema": {
+          "properties": {
+            "keep_offsets": {
+              "description": "是否保持偏移量 (可选，默认 false)",
+              "type": "boolean"
+            },
+            "node_path": {
+              "description": "节点路径",
+              "type": "string"
+            },
+            "preset": {
+              "description": "预设名称 (top_left, top_right, bottom_left, bottom_right, center_left, center_top, center_right, center_bottom, center, left_wide, top_wide, right_wide, bottom_wide, vcenter_wide, hcenter_wide, full_rect)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "preset"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_anchor_preset"
+      },
+      {
+        "description": "获取节点所属的分组列表",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "description": "节点路径",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_node_groups"
+      },
+      {
+        "description": "设置节点的分组",
+        "inputSchema": {
+          "properties": {
+            "groups": {
+              "description": "目标分组列表",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "node_path": {
+              "description": "节点路径",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "groups"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_node_groups"
+      },
+      {
+        "description": "按组名查找所有节点",
+        "inputSchema": {
+          "properties": {
+            "group": {
+              "description": "组名",
+              "type": "string"
+            }
+          },
+          "required": [
+            "group"
+          ],
+          "type": "object"
+        },
+        "name": "editor_find_nodes_in_group"
+      },
+      {
+        "description": "获取编辑器当前选中的节点",
+        "inputSchema": {
+          "properties": {
+            "top_only": {
+              "description": "仅返回顶层选中节点 (可选，默认 false)",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "name": "editor_get_selection"
+      },
+      {
+        "description": "选中/取消选中场景中的节点",
+        "inputSchema": {
+          "properties": {
+            "focus": {
+              "description": "是否聚焦节点 (可选，默认同 inspect)",
+              "type": "boolean"
+            },
+            "inspect": {
+              "description": "是否在检查器中显示 (可选，默认 true)",
+              "type": "boolean"
+            },
+            "mode": {
+              "description": "模式: replace, add, remove (可选，默认 replace)",
+              "type": "string"
+            },
+            "node_path": {
+              "description": "单个节点路径 (与 node_paths 二选一)",
+              "type": "string"
+            },
+            "node_paths": {
+              "description": "节点路径数组",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "name": "editor_set_node_selection"
+      },
+      {
+        "description": "清除编辑器中的所有选中",
+        "inputSchema": {
+          "properties": {},
+          "type": "object"
+        },
+        "name": "editor_remove_node_selection"
+      },
+      {
+        "description": "在编辑器上下文中执行 GDScript 代码",
+        "inputSchema": {
+          "properties": {
+            "code": {
+              "description": "要执行的 GDScript 代码",
+              "type": "string"
+            }
+          },
+          "required": [
+            "code"
+          ],
+          "type": "object"
+        },
+        "name": "editor_execute_gdscript"
+      },
+      {
+        "description": "获取编辑器错误列表",
+        "inputSchema": {
+          "properties": {
+            "max_lines": {
+              "default": 50,
+              "description": "最大行数",
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_errors"
+      },
+      {
+        "description": "获取输出日志",
+        "inputSchema": {
+          "properties": {
+            "filter": {
+              "description": "过滤关键字",
+              "type": "string"
+            },
+            "max_lines": {
+              "default": 100,
+              "description": "最大行数",
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_output_log"
+      },
+      {
+        "description": "获取编辑器视口截图 (返回 base64 PNG 或保存到文件)",
+        "inputSchema": {
+          "properties": {
+            "save_path": {
+              "description": "保存路径 (res:// 或 user://, 可选)",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_capture_screenshot"
+      },
+      {
+        "description": "获取正在运行的游戏截图",
+        "inputSchema": {
+          "properties": {
+            "save_path": {
+              "description": "保存路径 (可选)",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "running_game_capture_screenshot"
+      },
+      {
+        "description": "清除编辑器输出面板",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_remove_output_log"
+      },
+      {
+        "description": "重新加载 MCP 插件",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_reload_plugin"
+      },
+      {
+        "description": "重新扫描项目文件系统",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_rescan_project_filesystem"
+      },
+      {
+        "description": "获取指定节点的信号列表及连接信息",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "description": "节点路径 (相对于场景根节点)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_node_signals"
+      },
+      {
+        "description": "比较两张截图并生成差异图",
+        "inputSchema": {
+          "properties": {
+            "image_a": {
+              "description": "第一张图片 (路径或 base64 PNG)",
+              "type": "string"
+            },
+            "image_b": {
+              "description": "第二张图片 (路径或 base64 PNG)",
+              "type": "string"
+            },
+            "threshold": {
+              "default": 10,
+              "description": "像素差异阈值 (0-255)",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "image_a",
+            "image_b"
+          ],
+          "type": "object"
+        },
+        "name": "editor_analyze_screenshot_diff"
+      },
+      {
+        "description": "设置编辑器自动关闭对话框行为",
+        "inputSchema": {
+          "properties": {
+            "enabled": {
+              "description": "是否启用自动关闭",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "enabled"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_auto_dismiss_dialogs"
+      },
+      {
+        "description": "获取编辑器 3D 视口相机信息",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_viewport_3d_camera"
+      },
+      {
+        "description": "设置编辑器 3D 视口相机参数",
+        "inputSchema": {
+          "properties": {
+            "fov": {
+              "description": "视场角 (度)",
+              "type": "number"
+            },
+            "look_at": {
+              "additionalProperties": true,
+              "description": "看向目标 {x, y, z}",
+              "type": "object"
+            },
+            "position": {
+              "additionalProperties": true,
+              "description": "位置 {x, y, z}",
+              "type": "object"
+            },
+            "rotation_degrees": {
+              "additionalProperties": true,
+              "description": "旋转角度 {x, y, z}",
+              "type": "object"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_set_viewport_3d_camera"
+      },
+      {
+        "description": "获取运行中游戏的场景树结构",
+        "inputSchema": {
+          "properties": {
+            "max_depth": {
+              "default": -1,
+              "description": "最大遍历深度，-1 表示无限",
+              "type": "integer"
+            },
+            "named_only": {
+              "default": false,
+              "description": "是否只返回有名称的节点",
+              "type": "boolean"
+            },
+            "script_filter": {
+              "description": "按脚本路径过滤节点",
+              "type": "string"
+            },
+            "type_filter": {
+              "description": "按节点类型过滤（如 Node2D, Control）",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "running_game_get_scene_tree"
+      },
+      {
+        "description": "获取运行中游戏指定节点的属性",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "description": "节点路径（相对于场景根节点）",
+              "type": "string"
+            },
+            "properties": {
+              "description": "要获取的属性列表（可选，不传则返回所有属性）",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_get_node_properties"
+      },
+      {
+        "description": "设置运行中游戏节点的属性值",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "description": "节点路径",
+              "type": "string"
+            },
+            "property": {
+              "description": "属性名称",
+              "type": "string"
+            },
+            "value": {
+              "description": "属性值（支持数字、字符串、布尔、数组、对象等类型）"
+            }
+          },
+          "required": [
+            "node_path",
+            "property",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_set_node_property"
+      },
+      {
+        "description": "连续截取运行中游戏的帧画面",
+        "inputSchema": {
+          "properties": {
+            "count": {
+              "default": 5,
+              "description": "截取帧数",
+              "type": "integer"
+            },
+            "frame_interval": {
+              "default": 10,
+              "description": "帧间隔",
+              "type": "integer"
+            },
+            "half_resolution": {
+              "default": true,
+              "description": "是否使用半分辨率",
+              "type": "boolean"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "running_game_capture_frames"
+      },
+      {
+        "description": "监控运行中游戏节点的属性随时间的变化",
+        "inputSchema": {
+          "properties": {
+            "frame_count": {
+              "default": 60,
+              "description": "采集帧数",
+              "type": "integer"
+            },
+            "frame_interval": {
+              "default": 1,
+              "description": "采集间隔帧数",
+              "type": "integer"
+            },
+            "node_path": {
+              "description": "节点路径",
+              "type": "string"
+            },
+            "properties": {
+              "description": "要监控的属性列表",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "sample_stride": {
+              "default": 1,
+              "description": "回传采样步长：仍然每 frame_interval 帧观察一次，但只回传每第 N 个观察点（第一个恒回传）；缺省 1 与旧行为逐字节一致，大于 1 时响应追加 sample_stride 与 observed_count 两个字段（观察点总数），frame_count 始终是回传的样本数",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "node_path",
+            "properties"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_get_node_property_samples"
+      },
+      {
+        "description": "在运行中的游戏内执行 GDScript 代码",
+        "inputSchema": {
+          "properties": {
+            "code": {
+              "description": "要执行的 GDScript 代码",
+              "type": "string"
+            }
+          },
+          "required": [
+            "code"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_execute_gdscript"
+      },
+      {
+        "description": "开始录制游戏中的输入事件（键盘、鼠标等）",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "running_game_create_input_recording"
+      },
+      {
+        "description": "停止录制并返回已录制的输入事件数据",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "running_game_stop_input_recording"
+      },
+      {
+        "description": "回放之前录制的输入事件序列 缺省 `events` 时，回放本游戏进程内最近一次 running_game_stop_input_recording 的录制；若本进程没有可用录制则返回 -32602。",
+        "inputSchema": {
+          "properties": {
+            "events": {
+              "description": "要回放的事件数组",
+              "type": "array"
+            },
+            "speed": {
+              "default": 1.0,
+              "description": "回放速度倍率",
+              "type": "number"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "running_game_play_input_recording"
+      },
+      {
+        "description": "在运行中的游戏中按脚本路径查找节点",
+        "inputSchema": {
+          "properties": {
+            "properties": {
+              "description": "需要同时获取的属性列表",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "script": {
+              "description": "脚本路径（如 res://enemy.gd）",
+              "type": "string"
+            }
+          },
+          "required": [
+            "script"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_find_nodes_by_script"
+      },
+      {
+        "description": "获取自动加载节点的信息",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "description": "自动加载节点名称",
+              "type": "string"
+            },
+            "properties": {
+              "description": "需要获取的属性列表",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_get_autoload_node"
+      },
+      {
+        "description": "批量获取多个节点的属性",
+        "inputSchema": {
+          "properties": {
+            "nodes": {
+              "description": "节点信息数组，每个元素包含 node_path 和可选的 properties",
+              "items": {
+                "properties": {
+                  "node_path": {
+                    "description": "节点路径",
+                    "type": "string"
+                  },
+                  "properties": {
+                    "description": "需要获取的属性",
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "node_path"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "nodes"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_get_node_properties_batch"
+      },
+      {
+        "description": "查找运行中游戏的所有 UI 元素",
+        "inputSchema": {
+          "properties": {
+            "type_filter": {
+              "description": "按控件类型过滤（如 Button, Label）",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "running_game_find_ui_elements"
+      },
+      {
+        "description": "通过按钮文本点击运行中游戏的按钮",
+        "inputSchema": {
+          "properties": {
+            "partial": {
+              "default": true,
+              "description": "是否使用部分匹配",
+              "type": "boolean"
+            },
+            "text": {
+              "description": "按钮上显示的文本",
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_simulate_button_click_by_text"
+      },
+      {
+        "description": "等待运行中游戏的指定节点出现",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "description": "要等待的节点路径",
+              "type": "string"
+            },
+            "poll_frames": {
+              "default": 5,
+              "description": "每隔多少帧检查一次",
+              "type": "integer"
+            },
+            "timeout": {
+              "default": 5.0,
+              "description": "超时时间（秒）",
+              "type": "number"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_find_node_when_available"
+      },
+      {
+        "description": "在运行中的游戏内查找指定位置附近的节点",
+        "inputSchema": {
+          "properties": {
+            "group_filter": {
+              "description": "节点组过滤",
+              "type": "string"
+            },
+            "max_results": {
+              "description": "最大返回结果数",
+              "type": "integer"
+            },
+            "position": {
+              "additionalProperties": true,
+              "description": "中心位置，如 {\"x\": 0, \"y\": 0}",
+              "type": "object"
+            },
+            "radius": {
+              "description": "搜索半径",
+              "type": "number"
+            },
+            "type_filter": {
+              "description": "节点类型过滤",
+              "type": "string"
+            }
+          },
+          "required": [
+            "position"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_find_nearby_nodes"
+      },
+      {
+        "description": "控制游戏角色直接移动到目标位置",
+        "inputSchema": {
+          "properties": {
+            "arrival_radius": {
+              "description": "到达判定半径",
+              "type": "number"
+            },
+            "camera_path": {
+              "description": "相机节点路径",
+              "type": "string"
+            },
+            "look_at_target": {
+              "default": false,
+              "description": "是否面向目标",
+              "type": "boolean"
+            },
+            "player_path": {
+              "description": "玩家节点路径",
+              "type": "string"
+            },
+            "run": {
+              "default": false,
+              "description": "是否奔跑",
+              "type": "boolean"
+            },
+            "target": {
+              "description": "目标位置（字符串路径或坐标字典）"
+            },
+            "timeout": {
+              "default": 15.0,
+              "description": "超时时间（秒）",
+              "type": "number"
+            }
+          },
+          "required": [
+            "target"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_move_player_to_target"
+      },
+      {
+        "description": "监听运行中游戏节点的信号发射",
+        "inputSchema": {
+          "properties": {
+            "duration_ms": {
+              "default": 5000,
+              "description": "监听持续时间（毫秒）",
+              "type": "integer"
+            },
+            "node_paths": {
+              "description": "要监听的节点路径列表",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "signal_filter": {
+              "description": "要监听的信号名称过滤列表（可选）",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "node_paths"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_capture_signal_emissions"
+      },
+      {
+        "description": "获取编辑器性能指标",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_performance_monitors"
+      },
+      {
+        "description": "列出所有脚本文件",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_list_scripts"
+      },
+      {
+        "description": "读取脚本文件",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_read_script"
+      },
+      {
+        "description": "创建脚本文件",
+        "inputSchema": {
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "template": {
+              "default": "Node",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_create_script"
+      },
+      {
+        "description": "编辑脚本文件",
+        "inputSchema": {
+          "properties": {
+            "content": {
+              "description": "直接替换整个内容",
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "replace": {
+              "type": "string"
+            },
+            "search": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_edit_script"
+      },
+      {
+        "description": "为节点附加脚本",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            },
+            "script_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "script_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_node_script"
+      },
+      {
+        "description": "获取编辑器中打开的所有脚本",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_open_scripts"
+      },
+      {
+        "description": "验证脚本语法",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_validate_script"
+      },
+      {
+        "description": "模拟键盘按键",
+        "inputSchema": {
+          "properties": {
+            "alt": {
+              "default": false,
+              "type": "boolean"
+            },
+            "ctrl": {
+              "default": false,
+              "type": "boolean"
+            },
+            "keycode": {
+              "type": "string"
+            },
+            "pressed": {
+              "default": true,
+              "type": "boolean"
+            },
+            "shift": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "keycode"
+          ],
+          "type": "object"
+        },
+        "name": "editor_simulate_key"
+      },
+      {
+        "description": "模拟鼠标点击",
+        "inputSchema": {
+          "properties": {
+            "button": {
+              "default": 1,
+              "type": "integer"
+            },
+            "pressed": {
+              "default": true,
+              "type": "boolean"
+            },
+            "x": {
+              "default": 0,
+              "type": "number"
+            },
+            "y": {
+              "default": 0,
+              "type": "number"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_simulate_mouse_click"
+      },
+      {
+        "description": "模拟鼠标移动",
+        "inputSchema": {
+          "properties": {
+            "x": {
+              "default": 0,
+              "type": "number"
+            },
+            "y": {
+              "default": 0,
+              "type": "number"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_simulate_mouse_move"
+      },
+      {
+        "description": "模拟 Input Action",
+        "inputSchema": {
+          "properties": {
+            "action": {
+              "type": "string"
+            },
+            "pressed": {
+              "default": true,
+              "type": "boolean"
+            },
+            "strength": {
+              "default": 1.0,
+              "type": "number"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        },
+        "name": "editor_simulate_input_action"
+      },
+      {
+        "description": "列出所有 Input Action",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_input_actions"
+      },
+      {
+        "description": "创建 Input Action",
+        "inputSchema": {
+          "properties": {
+            "action": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "action"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_input_action"
+      },
+      {
+        "description": "模拟输入事件序列",
+        "inputSchema": {
+          "properties": {
+            "events": {
+              "description": "事件数组, 每个事件包含 type 和对应参数",
+              "items": {
+                "description": "一个输入事件的形状：type 必填（key/mouse_click/mouse_button/mouse_move/mouse_motion/action），其余成员按 type 取用。可粘贴样例：[{\"type\":\"key\",\"keycode\":\"W\",\"pressed\":true},{\"type\":\"key\",\"keycode\":\"W\",\"pressed\":false}]",
+                "properties": {
+                  "action": {
+                    "description": "InputMap 动作名（type=action 必填）",
+                    "type": "string"
+                  },
+                  "alt": {
+                    "default": false,
+                    "description": "Alt 修饰键（type=key 用，默认 false）",
+                    "type": "boolean"
+                  },
+                  "button": {
+                    "default": 1,
+                    "description": "鼠标键（type=mouse_click 用，1=左键，1..9）",
+                    "type": "integer"
+                  },
+                  "button_mask": {
+                    "default": 0,
+                    "description": "按住的鼠标键位掩码（type=mouse_move 用，默认 0）",
+                    "type": "integer"
+                  },
+                  "ctrl": {
+                    "default": false,
+                    "description": "Ctrl 修饰键（type=key 用，默认 false）",
+                    "type": "boolean"
+                  },
+                  "keycode": {
+                    "description": "按键名（type=key 必填，引擎的按键名，如 \"W\"/\"Space\"/\"Escape\"）",
+                    "type": "string"
+                  },
+                  "position": {
+                    "description": "{x,y} 坐标（type=mouse_click/mouse_move 用；与 x/y 等价，两者都给时以 position 为准）",
+                    "type": "object"
+                  },
+                  "pressed": {
+                    "default": true,
+                    "description": "按下(true，默认)还是松开(false)（type=key/mouse_click/action 用）",
+                    "type": "boolean"
+                  },
+                  "relative": {
+                    "description": "{x,y} 相对位移（type=mouse_move 用）",
+                    "type": "object"
+                  },
+                  "relative_x": {
+                    "default": 0.0,
+                    "description": "相对位移 x（type=mouse_move 用，默认 0）",
+                    "type": "number"
+                  },
+                  "relative_y": {
+                    "default": 0.0,
+                    "description": "相对位移 y（type=mouse_move 用，默认 0）",
+                    "type": "number"
+                  },
+                  "shift": {
+                    "default": false,
+                    "description": "Shift 修饰键（type=key 用，默认 false）",
+                    "type": "boolean"
+                  },
+                  "strength": {
+                    "default": 1.0,
+                    "description": "动作强度（type=action 用，默认 1.0；引擎会夹到 0..1）",
+                    "type": "number"
+                  },
+                  "time_ms": {
+                    "description": "被忽略：本工具按 frame_delay 逐帧注入，不按时间戳（给了它只会在响应的 time_ms_ignored 里体现）"
+                  },
+                  "type": {
+                    "description": "事件类型（必填）",
+                    "enum": [
+                      "key",
+                      "mouse_click",
+                      "mouse_button",
+                      "mouse_move",
+                      "mouse_motion",
+                      "action"
+                    ],
+                    "type": "string"
+                  },
+                  "x": {
+                    "default": 0.0,
+                    "description": "x 坐标（type=mouse_click/mouse_move 用，默认 0）",
+                    "type": "number"
+                  },
+                  "y": {
+                    "default": 0.0,
+                    "description": "y 坐标（type=mouse_click/mouse_move 用，默认 0）",
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "frame_delay": {
+              "default": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "events"
+          ],
+          "type": "object"
+        },
+        "name": "editor_simulate_input_sequence"
+      },
+      {
+        "description": "按类型查找所有节点",
+        "inputSchema": {
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        "name": "editor_find_nodes_by_type"
+      },
+      {
+        "description": "批量设置同类型节点的属性",
+        "inputSchema": {
+          "properties": {
+            "node_type": {
+              "type": "string"
+            },
+            "property": {
+              "type": "string"
+            },
+            "value": {}
+          },
+          "required": [
+            "node_type",
+            "property",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_node_property_batch"
+      },
+      {
+        "description": "递归查找场景中所有信号连接 判别点：扁平返回 connections[]（每项 {source,signal,target,method}）与 count，收全部连接（不过滤非持久连接）、node_path 与 signal_name 均按子串匹配；要按节点嵌套的流向分析请用 editor_analyze_signal_flow。",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "description": "节点路径过滤（可选，包含匹配）",
+              "type": "string"
+            },
+            "scope": {
+              "default": "all",
+              "description": "连接范围：all=全部连接（默认，与本工具旧答案逐字相同）；user=只保留 method 不含 \"::\" 的连接，即场景/脚本自己连的；internal=只保留 method 形如 Class::method 的引擎/编辑器内部连接（编辑器的自连线）。注意内部连接的 source 是普通场景节点路径，按 node_path/signal_name 过滤不掉它们，只有 method 能区分；响应的 counts 给出三种口径各自的条数",
+              "enum": [
+                "all",
+                "user",
+                "internal"
+              ],
+              "type": "string"
+            },
+            "signal_name": {
+              "description": "信号名过滤（可选，包含匹配）",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_list_signal_connections"
+      },
+      {
+        "description": "批量添加节点到场景",
+        "inputSchema": {
+          "properties": {
+            "nodes": {
+              "description": "节点数组，每个元素包含 type（必填）、parent_path、name、properties",
+              "items": {
+                "properties": {
+                  "name": {
+                    "description": "节点名称",
+                    "type": "string"
+                  },
+                  "parent_path": {
+                    "description": "父节点路径，默认 \".\"",
+                    "type": "string"
+                  },
+                  "properties": {
+                    "description": "要设置的属性字典",
+                    "type": "object"
+                  },
+                  "type": {
+                    "description": "节点类型",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "resolve_within_batch": {
+              "default": false,
+              "description": "为 true 时元素的 parent_path 可以指向**本批更早的元素**所创建的节点（同一个请求里建父子树）。父元素必须排在子元素之前，父路径指向更后面的元素会被拒绝（父/子循环在按数组顺序应用时就是这个形状）；同一父节点下、同一批内重名会被拒绝（默认 false 时保留引擎自己的重命名）——两种拒绝都仍然整批回滚。默认 false：父路径只按调用到达时的场景树解析，与旧行为逐字相同。响应在每个 created 元素上给出 parent_source（scene/batch），说明父节点来自场景树还是本批",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "nodes"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_nodes_batch"
+      },
+      {
+        "description": "在项目文件中搜索指定模式的引用 判别点：按文件聚合返回 {file,lines[]}（每文件最多 5 行、大小写敏感、上限 100，跳过隐藏文件与 addons，只扫 .tscn/.gd/.tres/.gdshader）；要逐行 {file,line,text}（大小写不敏感、上限 50）请用 project_search_file_contents。",
+        "inputSchema": {
+          "properties": {
+            "pattern": {
+              "description": "要搜索的模式",
+              "type": "string"
+            }
+          },
+          "required": [
+            "pattern"
+          ],
+          "type": "object"
+        },
+        "name": "project_find_files_referencing_symbol"
+      },
+      {
+        "description": "获取场景文件的依赖资源列表",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "场景文件路径 (res://)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_get_scene_dependencies"
+      },
+      {
+        "description": "跨场景批量设置节点属性",
+        "inputSchema": {
+          "properties": {
+            "dry_run": {
+              "description": "仅预览，不实际修改",
+              "type": "boolean"
+            },
+            "exclude_addons": {
+              "default": true,
+              "description": "是否排除 addons 目录",
+              "type": "boolean"
+            },
+            "force": {
+              "default": false,
+              "description": "是否强制修改正在编辑的场景",
+              "type": "boolean"
+            },
+            "path_filter": {
+              "description": "路径过滤，默认 res://",
+              "type": "string"
+            },
+            "property": {
+              "description": "属性名",
+              "type": "string"
+            },
+            "type": {
+              "description": "节点类型",
+              "type": "string"
+            },
+            "value": {
+              "description": "属性值"
+            }
+          },
+          "required": [
+            "type",
+            "property",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "project_set_node_property_across_scenes"
+      },
+      {
+        "description": "列出所有动画",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_list_animations"
+      },
+      {
+        "description": "创建动画",
+        "inputSchema": {
+          "properties": {
+            "length": {
+              "default": 1.0,
+              "type": "number"
+            },
+            "name": {
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "name"
+          ],
+          "type": "object"
+        },
+        "name": "editor_create_animation"
+      },
+      {
+        "description": "在指定动画中添加轨道",
+        "inputSchema": {
+          "properties": {
+            "animation": {
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "track_path": {
+              "type": "string"
+            },
+            "track_type": {
+              "default": "value",
+              "type": "string"
+            },
+            "update_mode": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "animation",
+            "track_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_animation_track"
+      },
+      {
+        "description": "在指定轨道的指定时间插入或更新关键帧",
+        "inputSchema": {
+          "properties": {
+            "animation": {
+              "type": "string"
+            },
+            "easing": {
+              "default": 1.0,
+              "type": "number"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "time": {
+              "type": "number"
+            },
+            "track_index": {
+              "type": "integer"
+            },
+            "value": {}
+          },
+          "required": [
+            "node_path",
+            "animation",
+            "track_index",
+            "time",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_animation_keyframe"
+      },
+      {
+        "description": "获取动画的详细信息（时长、轨道、关键帧等）",
+        "inputSchema": {
+          "properties": {
+            "animation": {
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "animation"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_animation_info"
+      },
+      {
+        "description": "从 AnimationPlayer 的默认库中删除指定动画",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "name"
+          ],
+          "type": "object"
+        },
+        "name": "editor_remove_animation"
+      },
+      {
+        "description": "获取 TileMapLayer 信息",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_tilemap_info"
+      },
+      {
+        "description": "获取已使用格子",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_tilemap_used_cells"
+      },
+      {
+        "description": "清除所有格子",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_remove_all_tilemap_cells"
+      },
+      {
+        "description": "设置瓦片地图单元格",
+        "inputSchema": {
+          "properties": {
+            "atlas_coords": {
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "source_id": {
+              "type": "integer"
+            },
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "node_path",
+            "x",
+            "y",
+            "source_id"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_tilemap_cell"
+      },
+      {
+        "description": "填充瓦片地图矩形区域",
+        "inputSchema": {
+          "properties": {
+            "atlas_coords": {
+              "properties": {
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "rect": {
+              "properties": {
+                "height": {
+                  "type": "integer"
+                },
+                "width": {
+                  "type": "integer"
+                },
+                "x": {
+                  "type": "integer"
+                },
+                "y": {
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "source_id": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "node_path",
+            "rect",
+            "source_id"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_tilemap_cells_in_rect"
+      },
+      {
+        "description": "获取瓦片地图指定单元格信息",
+        "inputSchema": {
+          "properties": {
+            "layer": {
+              "default": 0,
+              "type": "integer"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "x": {
+              "type": "integer"
+            },
+            "y": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "node_path",
+            "x",
+            "y"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_tilemap_cell"
+      },
+      {
+        "description": "读取资源文件",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_read_resource"
+      },
+      {
+        "description": "注册自动加载",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_add_autoload"
+      },
+      {
+        "description": "移除自动加载",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "name": "project_remove_autoload"
+      },
+      {
+        "description": "编辑资源文件属性并保存",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "资源文件路径 (res://)",
+              "type": "string"
+            },
+            "properties": {
+              "description": "要修改的属性字典",
+              "type": "object"
+            }
+          },
+          "required": [
+            "path",
+            "properties"
+          ],
+          "type": "object"
+        },
+        "name": "project_edit_resource"
+      },
+      {
+        "description": "创建新资源文件",
+        "inputSchema": {
+          "properties": {
+            "overwrite": {
+              "default": false,
+              "description": "是否覆盖已存在的文件",
+              "type": "boolean"
+            },
+            "path": {
+              "description": "保存路径 (res://)",
+              "type": "string"
+            },
+            "properties": {
+              "description": "初始属性字典",
+              "type": "object"
+            },
+            "type": {
+              "description": "资源类型",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "type"
+          ],
+          "type": "object"
+        },
+        "name": "project_create_resource"
+      },
+      {
+        "description": "获取资源预览图片 (base64编码PNG)",
+        "inputSchema": {
+          "properties": {
+            "max_size": {
+              "default": 256,
+              "description": "最大尺寸 (默认 256)",
+              "type": "integer"
+            },
+            "path": {
+              "description": "资源文件路径 (res://)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_get_resource_preview"
+      },
+      {
+        "description": "获取导出信息",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_get_export_info"
+      },
+      {
+        "description": "列出所有导出预设",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_list_export_presets"
+      },
+      {
+        "description": "读取着色器文件",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_read_shader"
+      },
+      {
+        "description": "创建着色器文件",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "shader_type": {
+              "default": "shader_type spatial;",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_create_shader"
+      },
+      {
+        "description": "编辑着色器代码",
+        "inputSchema": {
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "code"
+          ],
+          "type": "object"
+        },
+        "name": "project_edit_shader"
+      },
+      {
+        "description": "为节点分配 ShaderMaterial",
+        "inputSchema": {
+          "properties": {
+            "material_slot": {
+              "default": "material",
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "shader_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "shader_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_shader_material"
+      },
+      {
+        "description": "设置着色器参数",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            },
+            "param": {
+              "type": "string"
+            },
+            "value": {
+              "description": "参数值"
+            }
+          },
+          "required": [
+            "node_path",
+            "param",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_shader_param"
+      },
+      {
+        "description": "获取着色器参数列表",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_get_shader_params"
+      },
+      {
+        "description": "添加射线检测节点",
+        "inputSchema": {
+          "properties": {
+            "dimension": {
+              "default": "2d",
+              "type": "string"
+            },
+            "name": {
+              "default": "RayCast",
+              "type": "string"
+            },
+            "parent_path": {
+              "default": ".",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_add_raycast"
+      },
+      {
+        "description": "为物理体添加碰撞形状",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            },
+            "shape_params": {
+              "description": "形状参数, 如 {\"size\": {\"x\": 32, \"y\": 32}}",
+              "type": "object"
+            },
+            "shape_type": {
+              "default": "RectangleShape2D",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_setup_collision_shape"
+      },
+      {
+        "description": "设置物理层",
+        "inputSchema": {
+          "properties": {
+            "layer_type": {
+              "default": "collision",
+              "type": "string"
+            },
+            "layers": {
+              "type": "integer"
+            },
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "layers"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_physics_layers"
+      },
+      {
+        "description": "获取物理层信息",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_physics_layers"
+      },
+      {
+        "description": "创建物理体节点",
+        "inputSchema": {
+          "properties": {
+            "body_type": {
+              "default": "RigidBody2D",
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "parent_path": {
+              "default": ".",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_setup_physics_body"
+      },
+      {
+        "description": "获取碰撞信息",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_collision_info"
+      },
+      {
+        "description": "添加 MeshInstance3D",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "default": "Mesh",
+              "type": "string"
+            },
+            "parent_path": {
+              "default": ".",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_add_mesh_instance"
+      },
+      {
+        "description": "配置 Camera3D",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_setup_camera_3d"
+      },
+      {
+        "description": "添加光照",
+        "inputSchema": {
+          "properties": {
+            "light_type": {
+              "default": "directional",
+              "type": "string"
+            },
+            "parent_path": {
+              "default": ".",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_setup_lighting"
+      },
+      {
+        "description": "设置 3D 材质到 MeshInstance3D",
+        "inputSchema": {
+          "properties": {
+            "material_path": {
+              "type": "string"
+            },
+            "material_slot": {
+              "description": "表面索引（整数）；省略 = 第一个表面（索引 0）",
+              "type": "integer"
+            },
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "material_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_material_3d"
+      },
+      {
+        "description": "设置 3D 环境",
+        "inputSchema": {
+          "properties": {
+            "ambient_color": {
+              "properties": {
+                "b": {
+                  "type": "number"
+                },
+                "g": {
+                  "type": "number"
+                },
+                "r": {
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            },
+            "bg_color": {
+              "properties": {
+                "b": {
+                  "type": "number"
+                },
+                "g": {
+                  "type": "number"
+                },
+                "r": {
+                  "type": "number"
+                }
+              },
+              "type": "object"
+            },
+            "world_env_path": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_setup_world_environment"
+      },
+      {
+        "description": "添加 GridMap 节点",
+        "inputSchema": {
+          "properties": {
+            "mesh_library_path": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "parent_path": {
+              "default": ".",
+              "type": "string"
+            }
+          },
+          "required": [
+            "mesh_library_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_gridmap"
+      },
+      {
+        "description": "添加音频播放器",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "default": "AudioPlayer",
+              "type": "string"
+            },
+            "parent_path": {
+              "default": ".",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_add_audio_player"
+      },
+      {
+        "description": "获取音频信息",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_audio_info"
+      },
+      {
+        "description": "获取音频总线布局",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_audio_bus_layout"
+      },
+      {
+        "description": "添加音频总线",
+        "inputSchema": {
+          "properties": {
+            "after_bus_index": {
+              "default": -1,
+              "type": "integer"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_audio_bus"
+      },
+      {
+        "description": "设置音频总线属性",
+        "inputSchema": {
+          "properties": {
+            "bus_index": {
+              "type": "integer"
+            },
+            "property": {
+              "type": "string"
+            },
+            "value": {
+              "description": "属性值"
+            }
+          },
+          "required": [
+            "bus_index",
+            "property",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_audio_bus_property"
+      },
+      {
+        "description": "添加音频总线效果",
+        "inputSchema": {
+          "properties": {
+            "bus_index": {
+              "type": "integer"
+            },
+            "effect_type": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "bus_index",
+            "effect_type"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_audio_bus_effect"
+      },
+      {
+        "description": "创建 Theme 资源",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "description": "主题名称",
+              "type": "string"
+            },
+            "path": {
+              "description": "保存路径 (res://)",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_create_theme"
+      },
+      {
+        "description": "设置主题颜色",
+        "inputSchema": {
+          "properties": {
+            "color": {
+              "description": "包含 r,g,b,a 的字典",
+              "type": "object"
+            },
+            "color_name": {
+              "type": "string"
+            },
+            "node_type": {
+              "default": "Button",
+              "type": "string"
+            },
+            "theme_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "theme_path",
+            "color_name",
+            "color"
+          ],
+          "type": "object"
+        },
+        "name": "project_set_theme_color"
+      },
+      {
+        "description": "设置主题常量",
+        "inputSchema": {
+          "properties": {
+            "constant_name": {
+              "type": "string"
+            },
+            "node_type": {
+              "default": "Button",
+              "type": "string"
+            },
+            "theme_path": {
+              "type": "string"
+            },
+            "value": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "theme_path",
+            "constant_name",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "project_set_theme_constant"
+      },
+      {
+        "description": "设置主题字体大小",
+        "inputSchema": {
+          "properties": {
+            "font_size_name": {
+              "type": "string"
+            },
+            "node_type": {
+              "default": "Button",
+              "type": "string"
+            },
+            "size": {
+              "type": "integer"
+            },
+            "theme_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "theme_path",
+            "font_size_name",
+            "size"
+          ],
+          "type": "object"
+        },
+        "name": "project_set_theme_font_size"
+      },
+      {
+        "description": "设置主题样式盒",
+        "inputSchema": {
+          "properties": {
+            "bg_color": {
+              "type": "string"
+            },
+            "border_color": {
+              "type": "string"
+            },
+            "border_width": {
+              "type": "integer"
+            },
+            "corner_radius": {
+              "type": "integer"
+            },
+            "node_type": {
+              "default": "Panel",
+              "type": "string"
+            },
+            "stylebox_name": {
+              "type": "string"
+            },
+            "theme_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "theme_path",
+            "stylebox_name"
+          ],
+          "type": "object"
+        },
+        "name": "project_set_theme_stylebox"
+      },
+      {
+        "description": "对 Control 节点应用主题",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            },
+            "theme_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_control_theme"
+      },
+      {
+        "description": "获取主题信息",
+        "inputSchema": {
+          "properties": {
+            "theme_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "theme_path"
+          ],
+          "type": "object"
+        },
+        "name": "project_get_theme_info"
+      },
+      {
+        "description": "创建 AnimationTree 节点",
+        "inputSchema": {
+          "properties": {
+            "animation_player_path": {
+              "description": "AnimationPlayer 节点路径",
+              "type": "string"
+            },
+            "name": {
+              "default": "AnimationTree",
+              "type": "string"
+            },
+            "node_path": {
+              "description": "父节点路径",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_create_animation_tree"
+      },
+      {
+        "description": "获取动画树结构",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_animation_tree_structure"
+      },
+      {
+        "description": "添加状态机状态",
+        "inputSchema": {
+          "properties": {
+            "animation": {
+              "description": "state_type=animation 时该状态的动画名（当前库内）",
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "position_x": {
+              "default": 0,
+              "type": "number"
+            },
+            "position_y": {
+              "default": 0,
+              "type": "number"
+            },
+            "state_machine_path": {
+              "default": "",
+              "type": "string"
+            },
+            "state_name": {
+              "type": "string"
+            },
+            "state_type": {
+              "default": "animation",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "state_name"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_state_machine_state"
+      },
+      {
+        "description": "删除状态机状态",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            },
+            "state_machine_path": {
+              "default": "",
+              "type": "string"
+            },
+            "state_name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "state_name"
+          ],
+          "type": "object"
+        },
+        "name": "editor_remove_state_machine_state"
+      },
+      {
+        "description": "添加状态机过渡",
+        "inputSchema": {
+          "properties": {
+            "advance_condition": {
+              "description": "该转移的 advance 布尔条件名；引擎注册为 AnimationTree 的 parameters/<状态机路径>/conditions/<名字> 参数（可用 editor_set_animation_tree_parameter 直接写入）",
+              "type": "string"
+            },
+            "advance_mode": {
+              "default": "enabled",
+              "type": "string"
+            },
+            "from_state": {
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "priority": {
+              "default": 1,
+              "type": "integer"
+            },
+            "state_machine_path": {
+              "default": "",
+              "type": "string"
+            },
+            "switch_mode": {
+              "default": "immediate",
+              "type": "string"
+            },
+            "to_state": {
+              "type": "string"
+            },
+            "xfade_time": {
+              "default": 0.0,
+              "type": "number"
+            }
+          },
+          "required": [
+            "node_path",
+            "from_state",
+            "to_state"
+          ],
+          "type": "object"
+        },
+        "name": "editor_add_state_machine_transition"
+      },
+      {
+        "description": "删除状态机过渡",
+        "inputSchema": {
+          "properties": {
+            "from_state": {
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "state_machine_path": {
+              "default": "",
+              "type": "string"
+            },
+            "to_state": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "from_state",
+            "to_state"
+          ],
+          "type": "object"
+        },
+        "name": "editor_remove_state_machine_transition"
+      },
+      {
+        "description": "设置混合树节点",
+        "inputSchema": {
+          "properties": {
+            "animation": {
+              "description": "bt_node_type=Animation 时该节点的动画名",
+              "type": "string"
+            },
+            "blend_tree_state": {
+              "description": "BlendTree 所在的状态名称",
+              "type": "string"
+            },
+            "bt_node_name": {
+              "type": "string"
+            },
+            "bt_node_type": {
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "position_x": {
+              "default": 0,
+              "type": "number"
+            },
+            "position_y": {
+              "default": 0,
+              "type": "number"
+            },
+            "state_machine_path": {
+              "default": "",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "blend_tree_state",
+            "bt_node_name",
+            "bt_node_type"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_blend_tree_node"
+      },
+      {
+        "description": "设置动画树参数",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            },
+            "parameter": {
+              "type": "string"
+            },
+            "value": {}
+          },
+          "required": [
+            "node_path",
+            "parameter",
+            "value"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_animation_tree_parameter"
+      },
+      {
+        "description": "设置导航区域",
+        "inputSchema": {
+          "properties": {
+            "agent_height": {
+              "default": 1.5,
+              "type": "number"
+            },
+            "agent_radius": {
+              "default": 0.5,
+              "type": "number"
+            },
+            "cell_size": {
+              "default": 0.25,
+              "type": "number"
+            },
+            "mode": {
+              "default": "auto",
+              "description": "2d/3d/auto",
+              "type": "string"
+            },
+            "name": {
+              "default": "NavigationRegion3D",
+              "type": "string"
+            },
+            "node_path": {
+              "description": "父节点路径",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_setup_navigation_region"
+      },
+      {
+        "description": "烘焙导航网格",
+        "inputSchema": {
+          "properties": {
+            "navigation_region_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "navigation_region_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_bake_navigation_mesh"
+      },
+      {
+        "description": "设置导航代理",
+        "inputSchema": {
+          "properties": {
+            "agent_type": {
+              "default": "3D",
+              "type": "string"
+            },
+            "max_speed": {
+              "default": 10.0,
+              "type": "number"
+            },
+            "name": {
+              "default": "NavigationAgent3D",
+              "type": "string"
+            },
+            "node_path": {
+              "type": "string"
+            },
+            "radius": {
+              "default": 0.5,
+              "type": "number"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_setup_navigation_agent"
+      },
+      {
+        "description": "设置导航层",
+        "inputSchema": {
+          "properties": {
+            "layers": {
+              "type": "integer"
+            },
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "layers"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_navigation_layers"
+      },
+      {
+        "description": "获取导航信息",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "default": ".",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_navigation_info"
+      },
+      {
+        "description": "创建粒子系统节点",
+        "inputSchema": {
+          "properties": {
+            "name": {
+              "default": "Particles",
+              "type": "string"
+            },
+            "parent_path": {
+              "default": ".",
+              "description": "父节点路径",
+              "type": "string"
+            },
+            "particle_type": {
+              "default": "GPUParticles2D",
+              "description": "粒子类型",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_create_particles"
+      },
+      {
+        "description": "设置粒子材质",
+        "inputSchema": {
+          "properties": {
+            "material_params": {
+              "description": "材质参数字典",
+              "type": "object"
+            },
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "material_params"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_particle_material"
+      },
+      {
+        "description": "设置粒子颜色渐变",
+        "inputSchema": {
+          "properties": {
+            "colors": {
+              "description": "颜色停止点数组 [{offset, color}]",
+              "type": "array"
+            },
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "colors"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_particle_color_gradient"
+      },
+      {
+        "description": "应用粒子预设",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            },
+            "preset": {
+              "description": "fire/smoke/magic/explosion/rain/snow",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "preset"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_particle_preset"
+      },
+      {
+        "description": "获取粒子系统信息",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_get_particle_info"
+      },
+      {
+        "description": "查找项目中可能未使用的资源文件",
+        "inputSchema": {
+          "properties": {
+            "include_addons": {
+              "default": false,
+              "description": "是否包含 addons 目录",
+              "type": "boolean"
+            },
+            "path": {
+              "default": "res://",
+              "description": "搜索路径，默认为 res://",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_find_unused_resources"
+      },
+      {
+        "description": "分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），只收集持久连接（CONNECT_PERSIST，值为 2；注意 Godot 4 中 flags & 1 是 CONNECT_DEFERRED，不是持久连接）、node_path 精确匹配、无 signal_name 过滤；要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。",
+        "inputSchema": {
+          "properties": {
+            "node_path": {
+              "description": "要分析的节点路径（可选，不传则分析整个场景）",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_analyze_signal_flow"
+      },
+      {
+        "description": "分析场景的复杂度（节点数、深度、类型分布等）",
+        "inputSchema": {
+          "properties": {
+            "path": {
+              "description": "场景文件路径（可选，不传则分析当前编辑场景）",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_analyze_scene_complexity"
+      },
+      {
+        "description": "查找引用指定脚本的所有文件",
+        "inputSchema": {
+          "properties": {
+            "include_addons": {
+              "default": false,
+              "description": "是否包含 addons 目录",
+              "type": "boolean"
+            },
+            "path": {
+              "default": "res://",
+              "description": "搜索路径",
+              "type": "string"
+            },
+            "query": {
+              "description": "要搜索的脚本路径或类名",
+              "type": "string"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "type": "object"
+        },
+        "name": "project_find_script_references"
+      },
+      {
+        "description": "检测场景文件之间的循环依赖",
+        "inputSchema": {
+          "properties": {
+            "include_addons": {
+              "default": false,
+              "description": "是否包含 addons 目录",
+              "type": "boolean"
+            },
+            "path": {
+              "default": "res://",
+              "description": "搜索路径",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_detect_circular_dependencies"
+      },
+      {
+        "description": "获取项目统计信息（文件数、脚本行数、场景数等）",
+        "inputSchema": {
+          "properties": {
+            "include_addons": {
+              "default": false,
+              "description": "是否包含 addons 目录",
+              "type": "boolean"
+            },
+            "path": {
+              "default": "res://",
+              "description": "统计路径",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_get_statistics"
+      },
+      {
+        "description": "运行测试场景并执行一系列测试步骤",
+        "inputSchema": {
+          "properties": {
+            "scene_path": {
+              "description": "场景路径，可选 'main', 'current' 或 res:// 路径",
+              "type": "string"
+            },
+            "steps": {
+              "description": "测试步骤数组，每个步骤包含 type(input/wait/assert) 和相关参数",
+              "items": {
+                "properties": {
+                  "action": {
+                    "description": "操作名称（input 类型使用）",
+                    "type": "string"
+                  },
+                  "expected": {
+                    "description": "期望值（assert 类型使用）"
+                  },
+                  "keycode": {
+                    "description": "按键代码（input 类型使用）",
+                    "type": "string"
+                  },
+                  "node_path": {
+                    "description": "节点路径（wait/assert 类型使用）",
+                    "type": "string"
+                  },
+                  "operator": {
+                    "default": "eq",
+                    "description": "比较操作符: eq/neq/gt/lt/gte/lte/contains/type_is",
+                    "type": "string"
+                  },
+                  "pressed": {
+                    "default": true,
+                    "description": "input 步骤：注入的事件是按下(true，默认)还是松开(false)",
+                    "type": "boolean"
+                  },
+                  "property": {
+                    "description": "属性名（assert 类型使用）",
+                    "type": "string"
+                  },
+                  "seconds": {
+                    "description": "等待秒数（wait 类型使用）",
+                    "type": "number"
+                  },
+                  "strength": {
+                    "default": 1.0,
+                    "description": "input 步骤作用于 action 时的强度（默认 1.0；引擎会夹到 0..1）",
+                    "type": "number"
+                  },
+                  "text": {
+                    "description": "期望文本（assert 类型使用）",
+                    "type": "string"
+                  },
+                  "type": {
+                    "description": "步骤类型",
+                    "enum": [
+                      "input",
+                      "wait",
+                      "assert"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "steps"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_run_test_scenario"
+      },
+      {
+        "description": "断言运行中游戏节点的属性值符合预期",
+        "inputSchema": {
+          "properties": {
+            "expected": {
+              "description": "期望值"
+            },
+            "node_path": {
+              "description": "节点路径",
+              "type": "string"
+            },
+            "operator": {
+              "default": "eq",
+              "description": "比较操作符: eq/neq/gt/lt/gte/lte/contains/type_is",
+              "type": "string"
+            },
+            "property": {
+              "description": "属性名称",
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_path",
+            "property",
+            "expected"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_assert_node_state"
+      },
+      {
+        "description": "断言运行中游戏屏幕上存在指定文本",
+        "inputSchema": {
+          "properties": {
+            "case_sensitive": {
+              "default": true,
+              "description": "是否区分大小写",
+              "type": "boolean"
+            },
+            "partial": {
+              "default": true,
+              "description": "是否使用部分匹配",
+              "type": "boolean"
+            },
+            "text": {
+              "description": "要查找的文本",
+              "type": "string"
+            }
+          },
+          "required": [
+            "text"
+          ],
+          "type": "object"
+        },
+        "name": "running_game_assert_screen_text"
+      },
+      {
+        "description": "运行压力测试，重复执行指定操作 count 次",
+        "inputSchema": {
+          "properties": {
+            "action": {
+              "description": "要执行的操作（可选，默认使用方向键）",
+              "type": "string"
+            },
+            "count": {
+              "default": 10,
+              "description": "重复次数",
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "running_game_run_stress_test"
+      },
+      {
+        "description": "获取测试结果报告",
+        "inputSchema": {
+          "properties": {
+            "clear": {
+              "default": false,
+              "description": "是否清除结果",
+              "type": "boolean"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "editor_get_test_report"
+      },
+      {
+        "description": "列出已连接的 Android 设备",
+        "inputSchema": {
+          "properties": {},
+          "required": [],
+          "type": "object"
+        },
+        "name": "os_list_android_devices"
+      },
+      {
+        "description": "获取 Android 导出预设信息",
+        "inputSchema": {
+          "properties": {
+            "preset_index": {
+              "description": "预设索引（可选）",
+              "type": "integer"
+            },
+            "preset_name": {
+              "description": "预设名称（可选）",
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_get_android_preset_info"
+      },
+      {
+        "description": "将项目导出并部署到 Android 设备",
+        "inputSchema": {
+          "properties": {
+            "debug": {
+              "default": true,
+              "description": "是否以 debug 模式导出",
+              "type": "boolean"
+            },
+            "device_id": {
+              "description": "目标设备 serial（可选，部署到第一个可用设备）",
+              "type": "string"
+            },
+            "launch": {
+              "default": true,
+              "description": "安装后是否启动应用",
+              "type": "boolean"
+            },
+            "preset_name": {
+              "description": "Android 导出预设名称",
+              "type": "string"
+            },
+            "skip_export": {
+              "default": false,
+              "description": "是否跳过导出步骤（直接安装已有 APK）",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "preset_name"
+          ],
+          "type": "object"
+        },
+        "name": "os_deploy_to_android_device"
+      },
+      {
+        "description": "Build the project's C# solution by running the .NET SDK on its .csproj files, and answer the exit code with the captured output. Requires a Godot build with C# support and a .NET SDK on PATH; when either is missing the call is refused with the reason and what to install.",
+        "inputSchema": {
+          "properties": {
+            "configuration": {
+              "default": "Debug",
+              "enum": [
+                "Debug",
+                "Release"
+              ],
+              "type": "string"
+            },
+            "extra_args": {
+              "default": [],
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "rescan": {
+              "default": true,
+              "type": "boolean"
+            },
+            "timeout_ms": {
+              "default": 120000,
+              "maximum": 600000,
+              "minimum": 1000,
+              "type": "integer"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_build_csharp"
+      },
+      {
+        "description": "Write a project text file such as a .csproj, .sln, NuGet.config or .cfg, and answer the resulting size and sha256. Refuses scene, resource and script paths (use the dedicated tools for those) and refuses project.godot (use project_set_setting).",
+        "inputSchema": {
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "overwrite": {
+              "default": false,
+              "type": "boolean"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "type": "object"
+        },
+        "name": "project_write_text_file"
+      },
+      {
+        "description": "Validate every script of the project in one call and answer a per-file verdict, so a batch of edited scripts can be checked without one call per file. The categories are `ok` (the file's own language compiled it), `invalid` (it did not compile - for a `.cs` file that is a project-level build of its .csproj that project_build_csharp ran and recorded, and the item carries the compiler's own diagnostic text), `not_compiled` (no build of this source is loaded: the file was modified after the loaded .NET assembly was built, or that assembly has no class for the script's path - deliberately not `invalid`, because the engine has no C# compiler and CSharpScript::reload() returns OK unconditionally), `language_unavailable` (this build has no script backend for the extension) and `unverifiable` (the engine could not load the file as a Script resource); `valid` is published only for `ok` and `invalid`, and `count` is always the sum of the per-category counters.",
+        "inputSchema": {
+          "properties": {
+            "include_errors_only": {
+              "default": false,
+              "type": "boolean"
+            },
+            "paths": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "name": "project_validate_scripts"
+      },
+      {
+        "description": "Attach one script to many nodes in the edited scene in a single call, and answer per node whether the attachment landed and the script was readable. 'node_paths' is an array of node paths resolved relative to the edited scene root - the same strings the singular tools take under the name 'path' (editor_set_node_property, editor_get_node_properties): 'Bricks/Car' and './Bricks/Car' address 'Car' inside 'Bricks', and the edited scene root's own name may be used as a prefix ('Main/Bricks/Car' == 'Bricks/Car' == './Bricks/Car'). An absolute scene-tree path ('/root/Main/Bricks/Car') is not accepted, and a bare name such as 'Car' only addresses a direct child of the edited scene root. A refused path names this rule in data.suggestion.",
+        "inputSchema": {
+          "properties": {
+            "keep_existing": {
+              "default": false,
+              "type": "boolean"
+            },
+            "node_paths": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "script_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "node_paths",
+            "script_path"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_node_script_batch"
+      },
+      {
+        "description": "Set a different value on each of many nodes in the edited scene in one call, and answer per entry whether the value landed.",
+        "inputSchema": {
+          "properties": {
+            "updates": {
+              "items": {
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "property": {
+                    "type": "string"
+                  },
+                  "value": {}
+                },
+                "required": [
+                  "path",
+                  "property",
+                  "value"
+                ],
+                "type": "object"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "stop_on_error": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "updates"
+          ],
+          "type": "object"
+        },
+        "name": "editor_set_node_property_updates"
+      },
+      {
+        "description": "Read a text file inside the project and answer its bytes, size and digest, so a file written by a tool can be verified with a tool.",
+        "inputSchema": {
+          "properties": {
+            "max_bytes": {
+              "default": 1048576,
+              "maximum": 16777216,
+              "type": "integer"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "type": "object"
+        },
+        "name": "project_read_text_file"
+      }
+    ]
+  },
+  "_meta": {
+    "generated_from": "F:\\moonbit-hof-rs\\tests\\fixtures\\mcp\\tools_list.json",
+    "generated_from_sha256": "8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54",
+    "map_path": "C:\\Users\\wyl\\AppData\\Local\\Temp\\mcp-recovery\\rebuild\\godot\\modules\\mcp_server\\docs\\tool-rename-map.json",
+    "map_sha256": "2f552719f6a23fe328df0a2944c6048824c1b2a750aebc0fe2cabbcd3529c2bd",
+    "tool_count_in": 174,
+    "count": 177,
+    "added_count": 6,
+    "added_tools": [
+      "project_build_csharp",
+      "project_write_text_file",
+      "project_validate_scripts",
+      "editor_set_node_script_batch",
+      "editor_set_node_property_updates",
+      "project_read_text_file"
+    ],
+    "order_normative": false,
+    "excluded": [
+      "navigate_to",
+      "export_project"
+    ],
+    "merged": [
+      {
+        "old_name": "get_editor_performance",
+        "new_name": "editor_get_performance_monitors",
+        "merged_into": "get_performance_monitors"
+      }
+    ],
+    "generator_version": "1.22.0",
+    "generated_by": "modules/mcp_server/scripts/gen_renamed_contract.py",
+    "overrides": [
+      {
+        "kind": "description",
+        "old_name": "search_files",
+        "mode": "append",
+        "reason": "R-2 消歧：search_files 只按文件名子串匹配（project.rs:175，大小写不敏感、上限 200，不读内容不返回行号），与 search_in_files 的逐行内容匹配完全不同。"
+      },
+      {
+        "kind": "description",
+        "old_name": "search_in_files",
+        "mode": "append",
+        "reason": "R-2 消歧：search_in_files 逐行返回 {file,line,text}（project.rs:221-229，大小写不敏感、上限 50、跳过 addons 与 .godot），与 find_node_references 的按文件聚合不同。"
+      },
+      {
+        "kind": "description",
+        "old_name": "uid_to_project_path",
+        "mode": "append",
+        "reason": "R-3 消歧：uid_to_project_path 入参是文本 UID、出参 {uid,path}，UID 文本非法即报参数错误（project.rs:295-305），与反向转换项目路径->UID 是纯方向对。"
+      },
+      {
+        "kind": "description",
+        "old_name": "project_path_to_uid",
+        "mode": "append",
+        "reason": "R-3 消歧：project_path_to_uid 入参是项目路径、出参 {path,uid}，路径未注册时 uid 为空串且不报错（project.rs:308-322），与反向转换 UID->路径是纯方向对。"
+      },
+      {
+        "kind": "description",
+        "old_name": "play_scene",
+        "mode": "append",
+        "reason": "TASK-024 E-10 顺手性（GDR-23）：原描述只说“运行场景”，没有告诉调用方游戏子进程的 MCP 端口从哪来，于是“跑起来观察”只能靠改被测工程的 godot_mcp/port 设置（REPORT-AUDIT-M4c D-13）。实现改为经 EditorRunBar 的 p_play_args 注入 --mcp-port，并在响应里回 mcp_port/endpoint/pid，故追加一句判别点；原文逐字保留在句首。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "play_scene",
+        "mode": "replace",
+        "reason": "TASK-024a E-10 顺手性（GDR-23 §21 第 4 条）：新增可选整数参数 mcp_port，让调用方指定游戏子进程监听的端口（缺省由模块自动挑一个空闲端口并经 --mcp-port 注入）。被移除的 required 成员逐字为 []（该 schema 本来就没有必填参数，故“移除”的是一个空列表）；原有的 mode 属性一字未动，只是新增一个属性。TASK-051 M-3 增补（同一 override 条目，因为一个 old_name 只能有一条 schema override）：再新增 headless（boolean，默认 false）与 extra_args（array of string，默认 []），因为实测（racing-backlog §3.3，编辑起的子进程命令行只有 --path/--remote-debug/--editor-pid/--scene 加本工具注入的 --mcp-port=<端口>）证明调用方无法给子进程加 --headless，而 --headless 也不会从编辑器继承（它不在 Main::get_forwardable_cli_arguments(CLI_SCOPE_PROJECT) 里，main.cpp:1123-1155）。被移除的 required 成员仍然逐字为 []（未删任何成员）；mode 与 mcp_port 两个既有属性（type/default/description）一字未动，只是新增 headless 与 extra_args 两个属性。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "monitor_properties",
+        "mode": "replace",
+        "reason": "TASK-053 第 2.3 节 M-5（决策者裁决）新增可选整数参数 sample_stride（默认 1，最小 1）：保留采样读取工具 running_game_get_node_property_samples 的“观察网格”（frame_interval 决定每隔几帧观察一次）并把“回传网格”交给 sample_stride（每隔 N 个观察点回传一个，第一个恒回传）。依据：RACING-TEST-PLAN 的 AC-4/AC-5 连续性断言必须用 frame_interval=1（每帧观察），而该调用在 3 属性×180 帧下回 23 020 B（REPORT-AUDIT-RACING-BACKLOG §3.5 已记录该体积风险）。缺省（或显式 1）时响应逐字节与改动前相同：只有 stride>1 时才追加 sample_stride 与 observed_count 两个键；frame_count 的含义不变成“回传样本数”。被移除的 required 成员逐字为 [\"node_path\", \"properties\"]（它并未被移除，仍逐字保留在 required 里）；原有四个属性（frame_count/frame_interval/node_path/properties 的 type/default/description）一字未动，只是新增一个属性。"
+      },
+      {
+        "kind": "description",
+        "old_name": "replay_recording",
+        "mode": "append",
+        "reason": "D-3 契约与行为一致（TASK-014 §1.3 / D59 裁决 1）：实现允许缺省 events，并回放本游戏进程内最近一次 running_game_stop_input_recording 的录制；契约原文的 required=[events] 与描述都没有这条回退，按契约传 events 的消费者反而享受不到它。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "replay_recording",
+        "mode": "replace",
+        "reason": "D-3 契约与行为一致（TASK-014 §1.3 / D59 裁决 1）：把 events 从 required 移除，使契约与实现（缺省 events 时回退到本游戏进程最近一次录制）一致。被移除的 required 成员逐字为 [\"events\"]；properties 的两个成员一字未动。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "simulate_sequence",
+        "mode": "replace",
+        "reason": "TASK-051 O-4 契约与行为一致（racing-backlog 审计 §5.4 confirmed；D86 复测见 REPORT-051 §2.3）：为 events 补上 items 对象 schema。原文 events 只有 {\"type\":\"array\"}，调用方无法从 tools/list 得知元素形状，只能靠失败一次学到（实测 X11：{\"events\":[{\"keycode\":\"W\",\"pressed\":true}]} → -32602 \"Missing required parameter: events[0].type\"）；items 现在声明 type 的 enum（key/mouse_click/mouse_button/mouse_move/mouse_motion/action）与各类型读取的成员，全部照实现的读取路径写（editor_input_simulation.cpp:843-971 的 _build_sequence_event 与 _sequence_* 助手）。本工具不对嵌套成员做类型闸门（tool_registry.cpp 的未知参数检查只查顶层），所以 items 是声明与文档，不是新的校验层：行为一字未改。被移除的 required 成员逐字为 [\"events\"]（原样保留，未删任何成员）；frame_delay 属性（type/default）一字未动；events 的 type 仍是 array，只是补上 items。"
+      },
+      {
+        "kind": "description",
+        "old_name": "find_signal_connections",
+        "mode": "append",
+        "reason": "R-1 消歧：与 editor_analyze_signal_flow 形状/过滤/匹配方式不同（batch.rs:207 扁平 connections[]+count、不过滤非持久连接、node_path 与 signal_name 均子串匹配）。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "find_signal_connections",
+        "mode": "replace",
+        "reason": "TASK-051 O-9 顺手性（racing-backlog 审计 §5.9 confirmed；D86 复测见 REPORT-051 §2.2）：新增可选字符串参数 scope（枚举 all/user/internal，默认 \"all\"）。实测一个 5 节点、用户一条连接都没连的小场景，{} 请求返回 60/60 条、12 659 B，且 60 条全是编辑器内部方法（ScriptEditor::_queue_update_list、SceneTreeEditor::_node_script_changed、Viewport::canvas_parent_mark_dirty…）；内部连接的 source 也是普通场景节点路径，所以 node_path/signal_name 都过滤不掉它们，唯一能区分的是 method（引擎对 MethodBind 型 Callable 的拼写是 Class::method）。scope=user 只保留 method 不含 :: 的连接（场景/脚本自己连的），scope=internal 只保留引擎/编辑器内部连接；默认 all 与本工具旧答案逐字相同。signal_name 的子串过滤**刻意不改**：它是与 editor_analyze_signal_flow（精确 node_path）之间的冻结判别点（GDR-17 / R-1）。被移除的 required 成员逐字为 []（该 schema 本来就没有必填参数，“移除”的是一个空列表）；node_path 与 signal_name 两个属性（type/description）一字未动，只新增 scope 一个属性。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "batch_add_nodes",
+        "mode": "replace",
+        "reason": "TASK-051 C-3 顺手性（racing-backlog 审计 §4.3 confirmed；D86 复测见 REPORT-051 §2.1）：新增可选布尔参数 resolve_within_batch（默认 false）。缺陷的源码位置是 tools/editor_node_batch_write.cpp:251-258 —— 父路径在**构造之前**用 find_node() 按“调用到达时的场景树”解析，于是 nodes[1].parent_path=\"P1\"（P1 由同批 nodes[0] 创建）报 -32001「nodes[1]: parent 'P1'」并把整批回滚；绕法是每深一层多一次调用（审计 A06-A09 实测）。为 true 时父路径可以指向本批更早的元素所创建的节点，同时把「同批重名」「指向更后面元素的父路径」明确拒绝，并且失败仍然整批回滚（既有语义不变）；响应在每个 created 元素上给出 parent_source（scene/batch）。被移除的 required 成员逐字为 [\"nodes\"]（原样保留，未删任何成员）；nodes 属性一字未动（它的 type/description，以及 items 的 properties/required/type 与其中四个成员的 type/description，全部逐字保留），只新增 resolve_within_batch 一个属性。"
+      },
+      {
+        "kind": "description",
+        "old_name": "find_node_references",
+        "mode": "append",
+        "reason": "R-2 消歧：find_node_references 按文件聚合 {file,lines[]}（batch.rs:474-489，大小写敏感、上限 100、每文件最多 5 行），与 search_in_files 的逐行形状互为对照（GDR-17 取消合并）。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "set_material_3d",
+        "mode": "replace",
+        "reason": "TASK-035 §0 契约与引擎一致（REPORT-034 §7.1 上报、决策者批准）：把 material_slot 的声明由 string 改为 integer。引擎的 API 是整数表面索引 MeshInstance3D::set_surface_override_material(int p_surface, const Ref<Material> &p_material)（scene/3d/mesh_instance_3d.cpp:375，ERR_FAIL_INDEX 对 mesh->get_surface_count()），而契约把 material_slot 声明成 string，等于把类型风险推给客户端：客户端自然会传 0，得到 -32602「must be a string」。被替换的成员逐字为 \"material_slot\": {\"type\": \"string\"}（其 type 由 \"string\" 改为 \"integer\"，并新增一句 description 说明「表面索引，省略 = 索引 0」，该成员原本没有 description）；被移除的 required 成员逐字为 [\"node_path\", \"material_path\"]（原样保留，未删任何成员）；material_path 与 node_path 两个成员一字未动。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "add_state_machine_state",
+        "mode": "replace",
+        "reason": "TASK-034 §0 契约与行为一致（TASK-033 §7.1 上报的 schema 缺口）：新增可选 animation 成员。迁移源（addons/godot_mcp_rs/commands/animation_tree_commands.gd:271 与 godot_mcp_gdext/src/commands/animation_tree.rs）读一个契约未声明的 animation，而 AnimationNodeAnimation::animation 是**属性**、不是 parameters/… 参数，所以没有该成员时“给新建的 Animation 状态指定动画”结构性不可达（新建状态永远指向空动画名）。本次不改 required：被移除的 required 成员逐字为 [\"node_path\", \"state_name\"]（原样保留，未删任何成员）；原有六个 properties 成员（node_path/position_x/position_y/state_machine_path/state_name/state_type）的 type 与 default 一字未动，只新增 animation 一个成员。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "add_state_machine_transition",
+        "mode": "replace",
+        "reason": "TASK-034 §0 契约与行为一致（TASK-033 §7.2 上报的 schema 缺口）：新增 xfade_time / priority / advance_condition 三个可选成员。三者分别对应 AnimationNodeStateMachineTransition::set_xfade_time（animation_node_state_machine.h:86）、set_priority（:98）与 set_advance_condition（:78），而这三条能力在本批之前**没有任何工具可达**（转移只能设 switch_mode/advance_mode）。默认值取引擎自己的成员初值：xfade_time=0.0、priority=1（:58/:62）；advance_condition 缺省为空串，引擎把它注册成布尔参数 parameters/<状态机路径>/conditions/<名字>，可用 editor_set_animation_tree_parameter 直接喂回。本次不改 required：被移除的 required 成员逐字为 [\"node_path\", \"from_state\", \"to_state\"]（原样保留，未删任何成员）；原有六个 properties 成员的 type 与 default 一字未动，只新增三个成员。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "set_blend_tree_node",
+        "mode": "replace",
+        "reason": "TASK-034 §0 契约与行为一致（TASK-033 §7.1 上报的 schema 缺口）：新增可选 animation 成员。同 editor_add_state_machine_state：bt_node_type=Animation 时该节点的动画名，引擎侧是 AnimationNodeAnimation::set_animation（属性），迁移源读了未声明的同名参数。本次不改 required：被移除的 required 成员逐字为 [\"node_path\", \"blend_tree_state\", \"bt_node_name\", \"bt_node_type\"]（原样保留，未删任何成员）；原有七个 properties 成员的 type 与 default 一字未动，只新增 animation 一个成员。"
+      },
+      {
+        "kind": "description",
+        "old_name": "analyze_signal_flow",
+        "mode": "replace",
+        "reason": "R-1 消歧 + 事实纠正（TASK-007 §1）：原文按迁移源 analysis.rs:387 写成“只统计持久连接（flags & 1）”，但 Godot 4 里 CONNECT_DEFERRED = 1、CONNECT_PERSIST = 2（core/object/object.h:356-360），照字面实现会让普通 .tscn 场景恒返回 nodes: []。实现（TASK-006 已交付）按意图用了 CONNECT_PERSIST，契约描述是唯一还在说 flags & 1 的地方，故用 mode=replace 纠正。被替换的原文（逐字保留以便审计）：分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），只统计持久连接（flags & 1）、node_path 精确匹配、无 signal_name 过滤；要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "run_test_scenario",
+        "mode": "replace",
+        "reason": "TASK-051 O-5 契约与行为一致（racing-backlog 审计 §5.5 confirmed；D86 复测见 REPORT-051 §2.4）：为 steps[].properties 补上实现一直在读、契约却没写的 pressed 与 strength（tools/running_game_test_execution.cpp:141-148 optional_bool(p_step,\"pressed\",true,…) 与 optional_float(p_step,\"strength\",1.0,…)）。两者只对 type=input 的步骤有效：pressed 决定按下还是松开，strength 是作用在 action 上的强度（引擎夹到 0..1）。这一步只是把既有能力写进声明，行为一字未改（G03 实测带 pressed:true 的调用本来就成功）。被移除的 required 成员逐字为 [\"steps\"]（原样保留，未删任何成员）；steps 的 items 里原有九个属性（action/expected/keycode/node_path/operator/property/seconds/text/type，含 type 的 enum 与 items.required=[\"type\"]）一字未动，只新增两个属性。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "get_test_report",
+        "mode": "replace",
+        "reason": "TASK-029 契约与行为一致（TASK-028 G-3 收口，决策者裁决方案 A）：把 clear 的 default 由 true 改为 false。被替换的成员逐字为 \"default\": true；被移除的 required 成员逐字为 []（该 schema 本来就没有必填参数，“移除”的是一个空列表）；clear 的 description（\"是否清除结果\"）与两个 type 成员一字未动，properties 只此一个成员。TASK-028 的实现已是显式 opt-in（缺省或 false = 纯读、不删共享桥接文件），契约是唯一还在宣称“缺省即清”的地方。"
+      }
+    ]
+  }
+}

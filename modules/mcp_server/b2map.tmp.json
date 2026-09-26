@@ -1,0 +1,227 @@
+[
+ {
+  "old": "play_scene",
+  "new": "editor_play_scene",
+  "channel": "editor",
+  "verb": "play",
+  "scope": "editor",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "stop_scene",
+  "new": "editor_stop_scene",
+  "channel": "editor",
+  "verb": "stop",
+  "scope": "editor",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "get_game_scene_tree",
+  "new": "running_game_get_scene_tree",
+  "channel": "running_game",
+  "verb": "get",
+  "scope": "game",
+  "mutating": false,
+  "disp": "rename"
+ },
+ {
+  "old": "get_game_node_properties",
+  "new": "running_game_get_node_properties",
+  "channel": "running_game",
+  "verb": "get",
+  "scope": "game",
+  "mutating": false,
+  "disp": "rename"
+ },
+ {
+  "old": "set_game_node_property",
+  "new": "running_game_set_node_property",
+  "channel": "running_game",
+  "verb": "set",
+  "scope": "game",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "monitor_properties",
+  "new": "running_game_get_node_property_samples",
+  "channel": "running_game",
+  "verb": "get",
+  "scope": "game",
+  "mutating": false,
+  "disp": "rename"
+ },
+ {
+  "old": "capture_frames",
+  "new": "running_game_capture_frames",
+  "channel": "running_game",
+  "verb": "capture",
+  "scope": "game",
+  "mutating": false,
+  "disp": "rename"
+ },
+ {
+  "old": "get_game_screenshot",
+  "new": "running_game_capture_screenshot",
+  "channel": "running_game",
+  "verb": "capture",
+  "scope": "game",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "execute_game_script",
+  "new": "running_game_execute_gdscript",
+  "channel": "running_game",
+  "verb": "execute",
+  "scope": "game",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "simulate_action",
+  "new": "editor_simulate_input_action",
+  "channel": "editor",
+  "verb": "simulate",
+  "scope": "editor",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "simulate_key",
+  "new": "editor_simulate_key",
+  "channel": "editor",
+  "verb": "simulate",
+  "scope": "editor",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "simulate_mouse_click",
+  "new": "editor_simulate_mouse_click",
+  "channel": "editor",
+  "verb": "simulate",
+  "scope": "editor",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "simulate_mouse_move",
+  "new": "editor_simulate_mouse_move",
+  "channel": "editor",
+  "verb": "simulate",
+  "scope": "editor",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "simulate_sequence",
+  "new": "editor_simulate_input_sequence",
+  "channel": "editor",
+  "verb": "simulate",
+  "scope": "editor",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "get_input_actions",
+  "new": "editor_get_input_actions",
+  "channel": "editor",
+  "verb": "get",
+  "scope": "editor",
+  "mutating": false,
+  "disp": "rename"
+ },
+ {
+  "old": "set_input_action",
+  "new": "editor_add_input_action",
+  "channel": "editor",
+  "verb": "add",
+  "scope": "editor",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "start_recording",
+  "new": "running_game_create_input_recording",
+  "channel": "running_game",
+  "verb": "create",
+  "scope": "game",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "stop_recording",
+  "new": "running_game_stop_input_recording",
+  "channel": "running_game",
+  "verb": "stop",
+  "scope": "game",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "replay_recording",
+  "new": "running_game_play_input_recording",
+  "channel": "running_game",
+  "verb": "play",
+  "scope": "game",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "wait_for_node",
+  "new": "running_game_find_node_when_available",
+  "channel": "running_game",
+  "verb": "find",
+  "scope": "game",
+  "mutating": false,
+  "disp": "rename"
+ },
+ {
+  "old": "click_button_by_text",
+  "new": "running_game_simulate_button_click_by_text",
+  "channel": "running_game",
+  "verb": "simulate",
+  "scope": "game",
+  "mutating": true,
+  "disp": "rename"
+ },
+ {
+  "old": "find_ui_elements",
+  "new": "running_game_find_ui_elements",
+  "channel": "running_game",
+  "verb": "find",
+  "scope": "game",
+  "mutating": false,
+  "disp": "rename"
+ },
+ {
+  "old": "get_autoload",
+  "new": "running_game_get_autoload_node",
+  "channel": "running_game",
+  "verb": "get",
+  "scope": "game",
+  "mutating": false,
+  "disp": "rename"
+ },
+ {
+  "old": "batch_get_properties",
+  "new": "running_game_get_node_properties_batch",
+  "channel": "running_game",
+  "verb": "get",
+  "scope": "game",
+  "mutating": false,
+  "disp": "rename"
+ },
+ {
+  "old": "find_nodes_by_script",
+  "new": "running_game_find_nodes_by_script",
+  "channel": "running_game",
+  "verb": "find",
+  "scope": "game",
+  "mutating": false,
+  "disp": "rename"
+ }
+]

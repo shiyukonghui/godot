@@ -1,0 +1,5 @@
+task=TASK-074 section A (developer)
+branch={0}
+head={1}
+engine=bin/godot.windows.editor.x86_64.mono.console.exe (4.8.dev.mono.custom_build.ff796dbf9)
+editor_port=9888 game_port=9889 user_port_9877=NEVER TOUCHED

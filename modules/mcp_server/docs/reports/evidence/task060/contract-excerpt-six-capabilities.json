@@ -1,0 +1,446 @@
+{
+  "note": "Frozen excerpt of the contract entries the TASK-060 section A plan relies on. Read-only copy; the contract itself was not modified.",
+  "contract_path": "modules/mcp_server/docs/tools_list.renamed.json",
+  "contract_sha256": "c169bb676ec61c190a772b976bc8301aefc3c4b43c3545deae2cb931b6963334",
+  "contract_bytes": 148333,
+  "contract_tool_count": 175,
+  "meta": {
+    "generated_from": "F:\\moonbit-hof-rs\\tests\\fixtures\\mcp\\tools_list.json",
+    "generated_from_sha256": "8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54",
+    "map_path": "F:\\RustProjects\\godot-mcp-pro\\code\\godot\\modules\\mcp_server\\docs\\tool-rename-map.json",
+    "map_sha256": "2f552719f6a23fe328df0a2944c6048824c1b2a750aebc0fe2cabbcd3529c2bd",
+    "tool_count_in": 174,
+    "count": 175,
+    "added_count": 4,
+    "added_tools": [
+      "project_build_csharp",
+      "project_write_text_file",
+      "project_validate_scripts",
+      "editor_set_node_script_batch"
+    ],
+    "order_normative": false,
+    "excluded": [
+      "navigate_to",
+      "export_project"
+    ],
+    "merged": [
+      {
+        "old_name": "get_editor_performance",
+        "new_name": "editor_get_performance_monitors",
+        "merged_into": "get_performance_monitors"
+      }
+    ],
+    "generator_version": "1.18.0",
+    "generated_by": "modules/mcp_server/scripts/gen_renamed_contract.py",
+    "overrides": [
+      {
+        "kind": "description",
+        "old_name": "search_files",
+        "mode": "append",
+        "reason": "R-2 消歧：search_files 只按文件名子串匹配（project.rs:175，大小写不敏感、上限 200，不读内容不返回行号），与 search_in_files 的逐行内容匹配完全不同。"
+      },
+      {
+        "kind": "description",
+        "old_name": "search_in_files",
+        "mode": "append",
+        "reason": "R-2 消歧：search_in_files 逐行返回 {file,line,text}（project.rs:221-229，大小写不敏感、上限 50、跳过 addons 与 .godot），与 find_node_references 的按文件聚合不同。"
+      },
+      {
+        "kind": "description",
+        "old_name": "set_project_setting",
+        "mode": "replace",
+        "reason": "TASK-059 D-4（v1.18，mode=replace）：原文逐字为“设置项目设置”；被替换的整句含“（the engine has no partial-publish API）”，该断言已被 TASK-057 补丁 2 证伪——core/config/project_settings.h:209-241 声明、project_settings.cpp:1537-1779 实现的两个方法（update_settings_section_text / save_custom_section）正是“局部发布 API”。本批同时切换行为与描述：project_set_setting 的写入路径由 tools/project_setting_write.cpp:218 的 publish_project_settings()改为 publish_project_setting()（tools/tool_helpers.cpp 的 publish_project_setting_to()），后者在键能唯一归节时走引擎的 save_custom_section()，只在四个明写的情形回退整文件重写（无节名的键 / project.godot 不存在 / 引擎拒绝节写 / 该名已在文件的无头全局块里，见 tools/tool_helpers.h 的完整论证）。新描述逐条说明：按节写入保留注释与其余文本；何时仍整文件重写；以及“现在不再丢注释”这一行为改善。原文“设置项目设置”逐字保留在句首（replace 模式，被替换文本已在 reason 中逐字引用以便审计）。"
+      },
+      {
+        "kind": "description",
+        "old_name": "uid_to_project_path",
+        "mode": "append",
+        "reason": "R-3 消歧：uid_to_project_path 入参是文本 UID、出参 {uid,path}，UID 文本非法即报参数错误（project.rs:295-305），与反向转换项目路径->UID 是纯方向对。"
+      },
+      {
+        "kind": "description",
+        "old_name": "project_path_to_uid",
+        "mode": "append",
+        "reason": "R-3 消歧：project_path_to_uid 入参是项目路径、出参 {path,uid}，路径未注册时 uid 为空串且不报错（project.rs:308-322），与反向转换 UID->路径是纯方向对。"
+      },
+      {
+        "kind": "description",
+        "old_name": "play_scene",
+        "mode": "append",
+        "reason": "TASK-024a E-10 顺手性（GDR-23 §21 第 4 条）：原描述只有“运行场景”，没有告诉调用方游戏子进程的 MCP 端口从哪来。实测（REPORT-AUDIT-M4c D-13）编辑器起的子进程 cmdline 里没有 --mcp-port（只有 --path/--remote-debug/--editor-pid/--scene），游戏于是只读自己的 godot_mcp/port 设置，“跑起来观察”必须先改被测工程。实现改为经 EditorRunBar::play_*(..., p_play_args) 注入 --mcp-port=<端口>（EditorInterface::play_* 不转发运行参数，故不能再走它），并在响应里回 mcp_port/mcp_port_source/endpoint/pid，故追加判别句。原文“运行场景”逐字保留在句首（append 模式）。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "play_scene",
+        "mode": "replace",
+        "reason": "TASK-024a E-10 顺手性（GDR-23 §21 第 4 条）：新增可选整数参数 mcp_port，让调用方指定游戏子进程监听的端口（缺省由模块自动挑一个空闲端口并经 --mcp-port 注入）。被移除的 required 成员逐字为 []（该 schema 本来就没有必填参数，故“移除”的是一个空列表）；原有的 mode 属性一字未动，只是新增一个属性。TASK-051 M-3 增补（同一 override 条目，因为一个 old_name 只能有一条 schema override）：再新增 headless（boolean，默认 false）与 extra_args（array of string，默认 []），因为实测（racing-backlog §3.3，编辑起的子进程命令行只有 --path/--remote-debug/--editor-pid/--scene 加本工具注入的 --mcp-port=<端口>）证明调用方无法给子进程加 --headless，而 --headless 也不会从编辑器继承（它不在 Main::get_forwardable_cli_arguments(CLI_SCOPE_PROJECT) 里，main.cpp:1123-1155）。被移除的 required 成员仍然逐字为 []（未删任何成员）；mode 与 mcp_port 两个既有属性（type/default/description）一字未动，只是新增 headless 与 extra_args 两个属性。"
+      },
+      {
+        "kind": "description",
+        "old_name": "reload_plugin",
+        "mode": "replace",
+        "reason": "TASK-059 D-4（v1.18，mode=replace）：原文逐字为“重新加载 MCP 插件”；被替换的整句含“（the engine has no partial-publish API）”，已被 TASK-057 补丁 2 证伪。但本工具的判定是**不切换**：它的保存不是本模块发出的——tools/editor_write_scene_editor.cpp 只调 EditorNode::set_addon_plugin_enabled(name, false/true, false)（p_config_changed=false），而 editor/editor_node.cpp 的 _update_addon_config() 不受该参数约束、无条件 queue_save()，由编辑器自己的 ProjectSettingsEditor 定时器 _save() -> ProjectSettings::save() -> save_custom() 整文件写。本模块既决定不了“要不要写”，也拿不到“写哪一节”，因此无节可命名（TASK-043 的 reason 已记录这条源码链与实测探针 scripts/mcp043_reload_plugin_rewrite_probe.ps1 的 14/14）。新描述改为点明“本工具自己不写文件、保存是编辑器的副作用”，并诚实保留注释会丢的陈述。原文“重新加载 MCP 插件”逐字保留在句首（replace 模式）。"
+      },
+      {
+        "kind": "description",
+        "old_name": "get_game_node_properties",
+        "mode": "append",
+        "reason": "TASK-032 D6 契约与行为一致（M4d 第四次独立验收）：running_game_get_scene_tree 实测返回 path=\"/root/Main/Actor\"（Node::get_path()，从 SceneTree 根 /root 起算的绝对路径），而同族 running_game_get_node_properties 的 node_path 描述写的是“相对于场景根节点”，只读 tools/list 的调用方看不出「绝对路径」也能喂回来。实测两种写法都能被解析（MCPTools::resolve_game_node：\"/root/...\" 走 SceneTree 根，其余先相对当前场景根解析、再退化为按名查找），故追加判别句声明实际返回形态。原文“获取运行中游戏指定节点的属性”逐字保留在句首（append 模式）。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "monitor_properties",
+        "mode": "replace",
+        "reason": "TASK-053 第 2.3 节 M-5（决策者裁决）新增可选整数参数 sample_stride（默认 1，最小 1）：保留采样读取工具 running_game_get_node_property_samples 的“观察网格”（frame_interval 决定每隔几帧观察一次）并把“回传网格”交给 sample_stride（每隔 N 个观察点回传一个，第一个恒回传）。依据：RACING-TEST-PLAN 的 AC-4/AC-5 连续性断言必须用 frame_interval=1（每帧观察），而该调用在 3 属性×180 帧下回 23 020 B（REPORT-AUDIT-RACING-BACKLOG §3.5 已记录该体积风险）。缺省（或显式 1）时响应逐字节与改动前相同：只有 stride>1 时才追加 sample_stride 与 observed_count 两个键；frame_count 的含义不变成“回传样本数”。被移除的 required 成员逐字为 [\"node_path\", \"properties\"]（它并未被移除，仍逐字保留在 required 里）；原有四个属性（frame_count/frame_interval/node_path/properties 的 type/default/description）一字未动，只是新增一个属性。"
+      },
+      {
+        "kind": "description",
+        "old_name": "replay_recording",
+        "mode": "append",
+        "reason": "D-3 契约与行为一致（TASK-014 §1.3 / D59 裁决 1）：实现允许缺省 events，并回放本游戏进程内最近一次 running_game_stop_input_recording 的录制；契约原文的 required=[events] 与描述都没有这条回退，按契约传 events 的消费者反而享受不到它。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "replay_recording",
+        "mode": "replace",
+        "reason": "D-3 契约与行为一致（TASK-014 §1.3 / D59 裁决 1）：把 events 从 required 移除，使契约与实现（缺省 events 时回退到本游戏进程最近一次录制）一致。被移除的 required 成员逐字为 [\"events\"]；properties 的两个成员一字未动。"
+      },
+      {
+        "kind": "description",
+        "old_name": "validate_script",
+        "mode": "append",
+        "reason": "TASK-050 N-2 诚实性（决策者裁决；依据 racing-backlog 审计的 N-2 与我在 9888 上的独立复现）：project_validate_script 原实现（project_read_files.cpp 旧 302-305 行）在 ScriptServer::get_language_for_extension(ext) 返回 null 时回退 GDScript，于是 module_mono_enabled=no 构建里的合法 .cs 得到 {\"error_text\":\"ERR_PARSE_ERROR\",\"valid\":false,\"message\":\"Compilation failed. Check the script for errors.\"} —— 把「本构建没有该语言的脚本后端」冒充成「编译失败」。改为能力感知：语言不可用 → -32000 + data.suggestion（说明用哪个构建/文件），valid 只在真的用该文件自身语言编译过时才是结论；进程没有任何脚本语言时仍走原有的结构检查降级分支（其 message 明说没有编译）。原文“验证脚本语法”逐字保留在句首（append 模式）。TASK-054（D-053-3）在同一句后追加一句：语言**存在**但该 API 不能编译其脚本的（C#，mono 构建）同样不给 valid —— CSharpScript::reload() 无条件返回 OK（modules/mono/csharp_script.cpp:2588-2621，函数体里唯一的 return 在 2620 行）且从不解析 set_source_code() 传入的源码；唯一真信号是私有字段 CSharpScript::valid（csharp_script.h:137，由 ScriptManagerBridge_AddScriptBridge 依「该脚本路径是否已在已加载的 .NET 程序集里」写入，csharp_script.cpp:2599 与 ScriptManagerBridge.cs:436-463），既无公开读取口、语义也是「这个类之前建过吗」而不是「这段源码能编译吗」。实测（TASK-053 c03/c05，本任务在改动前的 mono 二进制上再次复现）：语法错误的 broken.cs 得到 category=ok、valid=true、message=\"Script compiles successfully\"。因此单数工具对该文件 -32000 + data.suggestion，批量工具分类 unverifiable（valid 为 null + reason），两边口径一致。TASK-055（D112，引擎补丁）**取代**上面那句「C# 没有结论」的措辞：用户已授权给引擎源码打补丁，补丁只有一处只读 API —— CSharpScript::is_source_newer_than_assembly()（modules/mono/csharp_script.h，把 CSharpScript::_update_exports() 里既有的「源文件 mtime > 已加载程序集 mtime」比较提升为公开访问器，并让该处复用它以保持单一事实源）；与**本来就公开**的 Script::is_script_valid()（core/object/script_language.h:180，CSharpScript 用同一个 valid 字段实现）合起来可把「已加载程序集里有这段源码的构建」与「没有任何构建编译过这段源码」分开。项目级那一半由本模块自己的构建工具记录：project_build_csharp 从其已捕获的 stdout/stderr 里解析编译器诊断（tools/csharp_verdict.cpp 的 parse_csharp_build_errors），连**每个文件在构建那一刻的 mtime** 一起写入 user://mcp_csharp_build_state.json；于是「该文件已被改过」会让旧诊断自动失效 —— 这正是「编译失败」与「改过但未编译」的区分机制。判定表（纯函数 MCPTools::classify_csharp_verdict，可在非 mono 的 --test 进程 doctest）：class_loaded && !source_newer → ok；否则有适用诊断 → invalid（error_text 为编译器原文，message 明说这是 project_build_csharp 的项目级构建）；否则 → not_compile... (line truncated to 2000 chars)
+      },
+      {
+        "kind": "description",
+        "old_name": "set_input_action",
+        "mode": "replace",
+        "reason": "TASK-059 D-4（v1.18，mode=replace）：原文逐字为“创建 Input Action”；被替换的整句含“（the engine has no partial-publish API）”，已被 TASK-057 补丁 2 证伪（core/config/project_settings.h:209-241、project_settings.cpp:1537-1779）。本批同时切换行为与描述：editor_add_input_action 的持久化路径 tools/editor_input_simulation.cpp:665 persist_input_action() -> tools/tool_helpers.cpp persist_input_action() -> persist_input_action_to() 的发布一步由 publish_project_settings_to() 改为 publish_project_setting_to()，键 input/<action> 唯一归节 [input]，走引擎的 save_custom_section()；四个整文件回退条件见 tools/tool_helpers.h。新描述说明按节写入保留注释与其余文本、何时仍整文件重写、以及不再丢注释的行为改善；并保留“进程没有 project.godot 时只写内存、不写文件、游戏看不到”的既存条件句义务（persist_input_action() 的 :857-861 守卫不变）。原文“创建 Input Action”逐字保留在句首（replace 模式）。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "simulate_sequence",
+        "mode": "replace",
+        "reason": "TASK-051 O-4 契约与行为一致（racing-backlog 审计 §5.4 confirmed；D86 复测见 REPORT-051 §2.3）：为 events 补上 items 对象 schema。原文 events 只有 {\"type\":\"array\"}，调用方无法从 tools/list 得知元素形状，只能靠失败一次学到（实测 X11：{\"events\":[{\"keycode\":\"W\",\"pressed\":true}]} → -32602 \"Missing required parameter: events[0].type\"）；items 现在声明 type 的 enum（key/mouse_click/mouse_button/mouse_move/mouse_motion/action）与各类型读取的成员，全部照实现的读取路径写（editor_input_simulation.cpp:843-971 的 _build_sequence_event 与 _sequence_* 助手）。本工具不对嵌套成员做类型闸门（tool_registry.cpp 的未知参数检查只查顶层），所以 items 是声明与文档，不是新的校验层：行为一字未改。被移除的 required 成员逐字为 [\"events\"]（原样保留，未删任何成员）；frame_delay 属性（type/default）一字未动；events 的 type 仍是 array，只是补上 items。"
+      },
+      {
+        "kind": "description",
+        "old_name": "find_signal_connections",
+        "mode": "append",
+        "reason": "R-1 消歧：与 editor_analyze_signal_flow 形状/过滤/匹配方式不同（batch.rs:207 扁平 connections[]+count、不过滤非持久连接、node_path 与 signal_name 均子串匹配）。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "find_signal_connections",
+        "mode": "replace",
+        "reason": "TASK-051 O-9 顺手性（racing-backlog 审计 §5.9 confirmed；D86 复测见 REPORT-051 §2.2）：新增可选字符串参数 scope（枚举 all/user/internal，默认 \"all\"）。实测一个 5 节点、用户一条连接都没连的小场景，{} 请求返回 60/60 条、12 659 B，且 60 条全是编辑器内部方法（ScriptEditor::_queue_update_list、SceneTreeEditor::_node_script_changed、Viewport::canvas_parent_mark_dirty…）；内部连接的 source 也是普通场景节点路径，所以 node_path/signal_name 都过滤不掉它们，唯一能区分的是 method（引擎对 MethodBind 型 Callable 的拼写是 Class::method）。scope=user 只保留 method 不含 :: 的连接（场景/脚本自己连的），scope=internal 只保留引擎/编辑器内部连接；默认 all 与本工具旧答案逐字相同。signal_name 的子串过滤**刻意不改**：它是与 editor_analyze_signal_flow（精确 node_path）之间的冻结判别点（GDR-17 / R-1）。被移除的 required 成员逐字为 []（该 schema 本来就没有必填参数，“移除”的是一个空列表）；node_path 与 signal_name 两个属性（type/description）一字未动，只新增 scope 一个属性。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "batch_add_nodes",
+        "mode": "replace",
+        "reason": "TASK-051 C-3 顺手性（racing-backlog 审计 §4.3 confirmed；D86 复测见 REPORT-051 §2.1）：新增可选布尔参数 resolve_within_batch（默认 false）。缺陷的源码位置是 tools/editor_node_batch_write.cpp:251-258 —— 父路径在**构造之前**用 find_node() 按“调用到达时的场景树”解析，于是 nodes[1].parent_path=\"P1\"（P1 由同批 nodes[0] 创建）报 -32001「nodes[1]: parent 'P1'」并把整批回滚；绕法是每深一层多一次调用（审计 A06-A09 实测）。为 true 时父路径可以指向本批更早的元素所创建的节点，同时把「同批重名」「指向更后面元素的父路径」明确拒绝，并且失败仍然整批回滚（既有语义不变）；响应在每个 created 元素上给出 parent_source（scene/batch）。被移除的 required 成员逐字为 [\"nodes\"]（原样保留，未删任何成员）；nodes 属性一字未动（它的 type/description，以及 items 的 properties/required/type 与其中四个成员的 type/description，全部逐字保留），只新增 resolve_within_batch 一个属性。"
+      },
+      {
+        "kind": "description",
+        "old_name": "find_node_references",
+        "mode": "append",
+        "reason": "R-2 消歧：find_node_references 按文件聚合 {file,lines[]}（batch.rs:474-489，大小写敏感、上限 100、每文件最多 5 行），与 search_in_files 的逐行形状互为对照（GDR-17 取消合并）。"
+      },
+      {
+        "kind": "description",
+        "old_name": "add_autoload",
+        "mode": "replace",
+        "reason": "TASK-059 D-4（v1.18，mode=replace）：原文逐字为“注册自动加载”；被替换的整句含“（the engine has no partial-publish API）”，已被 TASK-057 补丁 2 证伪（core/config/project_settings.h:209-241、project_settings.cpp:1537-1779）。本批同时切换行为与描述：project_add_autoload 的写入路径由 tools/project_autoload_write.cpp 的 publish_project_settings()改为 publish_project_setting_to(target, key, ...)，键 autoload/<name> 唯一归节 [autoload]，走引擎的 save_custom_section()；四个整文件回退条件与 project_set_setting 相同（tools/tool_helpers.h）。新描述说明按节写入保留注释与其余文本、何时仍整文件重写、以及不再丢注释的行为改善；并保留原文已有的“同路径已存在则不写文件”的条件句义务（:121-135 的既存早退分支不变）。原文“注册自动加载”逐字保留在句首（replace 模式）。"
+      },
+      {
+        "kind": "description",
+        "old_name": "remove_autoload",
+        "mode": "replace",
+        "reason": "TASK-059 D-4（v1.18，mode=replace）：原文逐字为“移除自动加载”；被替换的整句含“（the engine has no partial-publish API）”，已被 TASK-057 补丁 2 证伪。但本工具的判定是**不切换**：新 API 是“按给出名字替换值”，从不删除键（core/config/project_settings.h:226-227 的契约注释，update_settings_section_text() 只替换已存在键的值跨度、只追加不存在的键），而本工具的全部工作就是删键（tools/project_autoload_write.cpp 的 settings->clear(key) -> publish_project_settings_to()）。把它改成按节写需要从内存重建整节 [autoload] 并重排其余条目的序列化形状、丢失节内手写注释、并新增“枚举命名空间构造 CustomMap”的辅助函数——对一个工具而言是真实且高风险的行为变更，不划算。因此它保留整文件重写，新描述**诚实**说明：为什么删除无法按节做、注释仍然会丢、以及它与已切换的 project_add_autoload 的差别。原文“移除自动加载”逐字保留在句首（replace 模式）。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "set_material_3d",
+        "mode": "replace",
+        "reason": "TASK-035 §0 契约与引擎一致（REPORT-034 §7.1 上报、决策者批准）：把 material_slot 的声明由 string 改为 integer。引擎的 API 是整数表面索引 MeshInstance3D::set_surface_override_material(int p_surface, const Ref<Material> &p_material)（scene/3d/mesh_instance_3d.cpp:375，ERR_FAIL_INDEX 对 mesh->get_surface_count()），而契约把 material_slot 声明成 string，等于把类型风险推给客户端：客户端自然会传 0，得到 -32602「must be a string」。被替换的成员逐字为 \"material_slot\": {\"type\": \"string\"}（其 type 由 \"string\" 改为 \"integer\"，并新增一句 description 说明「表面索引，省略 = 索引 0」，该成员原本没有 description）；被移除的 required 成员逐字为 [\"node_path\", \"material_path\"]（原样保留，未删任何成员）；material_path 与 node_path 两个成员一字未动。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "add_state_machine_state",
+        "mode": "replace",
+        "reason": "TASK-034 §0 契约与行为一致（TASK-033 §7.1 上报的 schema 缺口）：新增可选 animation 成员。迁移源（addons/godot_mcp_rs/commands/animation_tree_commands.gd:271 与 godot_mcp_gdext/src/commands/animation_tree.rs）读一个契约未声明的 animation，而 AnimationNodeAnimation::animation 是**属性**、不是 parameters/… 参数，所以没有该成员时“给新建的 Animation 状态指定动画”结构性不可达（新建状态永远指向空动画名）。本次不改 required：被移除的 required 成员逐字为 [\"node_path\", \"state_name\"]（原样保留，未删任何成员）；原有六个 properties 成员（node_path/position_x/position_y/state_machine_path/state_name/state_type）的 type 与 default 一字未动，只新增 animation 一个成员。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "add_state_machine_transition",
+        "mode": "replace",
+        "reason": "TASK-034 §0 契约与行为一致（TASK-033 §7.2 上报的 schema 缺口）：新增 xfade_time / priority / advance_condition 三个可选成员。三者分别对应 AnimationNodeStateMachineTransition::set_xfade_time（animation_node_state_machine.h:86）、set_priority（:98）与 set_advance_condition（:78），而这三条能力在本批之前**没有任何工具可达**（转移只能设 switch_mode/advance_mode）。默认值取引擎自己的成员初值：xfade_time=0.0、priority=1（:58/:62）；advance_condition 缺省为空串，引擎把它注册成布尔参数 parameters/<状态机路径>/conditions/<名字>，可用 editor_set_animation_tree_parameter 直接喂回。本次不改 required：被移除的 required 成员逐字为 [\"node_path\", \"from_state\", \"to_state\"]（原样保留，未删任何成员）；原有六个 properties 成员的 type 与 default 一字未动，只新增三个成员。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "set_blend_tree_node",
+        "mode": "replace",
+        "reason": "TASK-034 §0 契约与行为一致（TASK-033 §7.1 上报的 schema 缺口）：新增可选 animation 成员。同 editor_add_state_machine_state：bt_node_type=Animation 时该节点的动画名，引擎侧是 AnimationNodeAnimation::set_animation（属性），迁移源读了未声明的同名参数。本次不改 required：被移除的 required 成员逐字为 [\"node_path\", \"blend_tree_state\", \"bt_node_name\", \"bt_node_type\"]（原样保留，未删任何成员）；原有七个 properties 成员的 type 与 default 一字未动，只新增 animation 一个成员。"
+      },
+      {
+        "kind": "description",
+        "old_name": "analyze_signal_flow",
+        "mode": "replace",
+        "reason": "R-1 消歧 + 事实纠正（TASK-007 §1）：原文按迁移源 analysis.rs:387 写成“只统计持久连接（flags & 1）”，但 Godot 4 里 CONNECT_DEFERRED = 1、CONNECT_PERSIST = 2（core/object/object.h:356-360），照字面实现会让普通 .tscn 场景恒返回 nodes: []。实现（TASK-006 已交付）按意图用了 CONNECT_PERSIST，契约描述是唯一还在说 flags & 1 的地方，故用 mode=replace 纠正。被替换的原文（逐字保留以便审计）：分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），只统计持久连接（flags & 1）、node_path 精确匹配、无 signal_name 过滤；要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "run_test_scenario",
+        "mode": "replace",
+        "reason": "TASK-051 O-5 契约与行为一致（racing-backlog 审计 §5.5 confirmed；D86 复测见 REPORT-051 §2.4）：为 steps[].properties 补上实现一直在读、契约却没写的 pressed 与 strength（tools/running_game_test_execution.cpp:141-148 optional_bool(p_step,\"pressed\",true,…) 与 optional_float(p_step,\"strength\",1.0,…)）。两者只对 type=input 的步骤有效：pressed 决定按下还是松开，strength 是作用在 action 上的强度（引擎夹到 0..1）。这一步只是把既有能力写进声明，行为一字未改（G03 实测带 pressed:true 的调用本来就成功）。被移除的 required 成员逐字为 [\"steps\"]（原样保留，未删任何成员）；steps 的 items 里原有九个属性（action/expected/keycode/node_path/operator/property/seconds/text/type，含 type 的 enum 与 items.required=[\"type\"]）一字未动，只新增两个属性。"
+      },
+      {
+        "kind": "description",
+        "old_name": "get_test_report",
+        "mode": "append",
+        "reason": "TASK-029 契约与行为一致（TASK-028 G-3 收口，决策者裁决方案 A）：原文只有“获取测试结果报告”，既没说清 clear 的缺省语义，也没说清它会删掉一个**共享**文件。而读取带破坏性副作用是有实测记录的缺陷（user://mcp_test_report.json 由同一编辑器进程的所有客户端共用，先读的一方会删掉后读一方还没读的报告，M4c 的 G-3）；TASK-028 已把实现改成显式 opt-in，契约是唯一还在宣称“缺省即清”的地方。一个只读 tools/list 的智能体必须能看出这一点，故追加判别句。原文“获取测试结果报告”逐字保留在句首（append 模式）。"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "get_test_report",
+        "mode": "replace",
+        "reason": "TASK-029 契约与行为一致（TASK-028 G-3 收口，决策者裁决方案 A）：把 clear 的 default 由 true 改为 false。被替换的成员逐字为 \"default\": true；被移除的 required 成员逐字为 []（该 schema 本来就没有必填参数，“移除”的是一个空列表）；clear 的 description（\"是否清除结果\"）与两个 type 成员一字未动，properties 只此一个成员。TASK-028 的实现已是显式 opt-in（缺省或 false = 纯读、不删共享桥接文件），契约是唯一还在宣称“缺省即清”的地方。"
+      }
+    ]
+  },
+  "excerpts": [
+    {
+      "description": "设置项目设置 This call publishes exactly one setting, and it does so section by section. When the key names a section - any name with a slash after its first character: input/jump belongs to [input], rendering/renderer/rendering_method to [rendering] - the write goes through the engine's own section-granular writer (ProjectSettings::save_custom_section), which replaces only that section's text and copies every other byte of project.godot through untouched: every hand-written comment, blank line, key order, UTF-8 BOM and CRLF line ending outside the target section is preserved byte for byte, and a repeated identical call changes no bytes (idempotent). This is a behaviour improvement: before TASK-059 every save rewrote the whole file with the engine's whole-file writer, which re-emits its own fixed header and every setting and so destroyed every hand-written comment in project.godot. The whole file is still rewritten that way, and those comments still lost, in four cases: the key names no section (no slash, or a leading one - such a key lives in the file's header-less global block, which has no section name to publish into); project.godot does not exist yet (the section writer publishes into a file and never creates one, while the whole-file writer does create it); the engine refuses the section write (it rejects a section name carrying a bracket or a line break, and a value it cannot serialize); or the file already carries this setting name in its header-less global block (a section write would leave a second home for it). Only the one named setting is written: settings the editor holds in memory but has not saved are no longer flushed as a side effect of this call.",
+      "inputSchema": {
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "value": {
+            "description": "设置值"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "type": "object"
+      },
+      "name": "project_set_setting"
+    },
+    {
+      "description": "创建 Input Action This call publishes exactly one setting, and it does so section by section. When the key names a section - any name with a slash after its first character: input/jump belongs to [input], rendering/renderer/rendering_method to [rendering] - the write goes through the engine's own section-granular writer (ProjectSettings::save_custom_section), which replaces only that section's text and copies every other byte of project.godot through untouched: every hand-written comment, blank line, key order, UTF-8 BOM and CRLF line ending outside the target section is preserved byte for byte, and a repeated identical call changes no bytes (idempotent). This is a behaviour improvement: before TASK-059 every save rewrote the whole file with the engine's whole-file writer, which re-emits its own fixed header and every setting and so destroyed every hand-written comment in project.godot. The whole file is still rewritten that way, and those comments still lost, in four cases: the key names no section (no slash, or a leading one - such a key lives in the file's header-less global block, which has no section name to publish into); project.godot does not exist yet (the section writer publishes into a file and never creates one, while the whole-file writer does create it); the engine refuses the section write (it rejects a section name carrying a bracket or a line break, and a value it cannot serialize); or the file already carries this setting name in its header-less global block (a section write would leave a second home for it). Only the one named setting is written: settings the editor holds in memory but has not saved are no longer flushed as a side effect of this call. In a process with no project.godot the action is written to this process's InputMap only: nothing is saved and no game can see it.",
+      "inputSchema": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "type": "object"
+      },
+      "name": "editor_add_input_action"
+    },
+    {
+      "description": "Validate every script of the project in one call and answer a per-file verdict, so a batch of edited scripts can be checked without one call per file. The categories are `ok` (the file's own language compiled it), `invalid` (it did not compile - for a `.cs` file that is a project-level build of its .csproj that project_build_csharp ran and recorded, and the item carries the compiler's own diagnostic text), `not_compiled` (no build of this source is loaded: the file was modified after the loaded .NET assembly was built, or that assembly has no class for the script's path - deliberately not `invalid`, because the engine has no C# compiler and CSharpScript::reload() returns OK unconditionally), `language_unavailable` (this build has no script backend for the extension) and `unverifiable` (the engine could not load the file as a Script resource); `valid` is published only for `ok` and `invalid`, and `count` is always the sum of the per-category counters.",
+      "inputSchema": {
+        "properties": {
+          "include_errors_only": {
+            "default": false,
+            "type": "boolean"
+          },
+          "paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "project_validate_scripts"
+    },
+    {
+      "description": "Build the project's C# solution by running the .NET SDK on its .csproj files, and answer the exit code with the captured output. Requires a Godot build with C# support and a .NET SDK on PATH; when either is missing the call is refused with the reason and what to install.",
+      "inputSchema": {
+        "properties": {
+          "configuration": {
+            "default": "Debug",
+            "enum": [
+              "Debug",
+              "Release"
+            ],
+            "type": "string"
+          },
+          "extra_args": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "rescan": {
+            "default": true,
+            "type": "boolean"
+          },
+          "timeout_ms": {
+            "default": 120000,
+            "maximum": 600000,
+            "minimum": 1000,
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "project_build_csharp"
+    },
+    {
+      "description": "批量添加节点到场景",
+      "inputSchema": {
+        "properties": {
+          "nodes": {
+            "description": "节点数组，每个元素包含 type（必填）、parent_path、name、properties",
+            "items": {
+              "properties": {
+                "name": {
+                  "description": "节点名称",
+                  "type": "string"
+                },
+                "parent_path": {
+                  "description": "父节点路径，默认 \".\"",
+                  "type": "string"
+                },
+                "properties": {
+                  "description": "要设置的属性字典",
+                  "type": "object"
+                },
+                "type": {
+                  "description": "节点类型",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "resolve_within_batch": {
+            "default": false,
+            "description": "为 true 时元素的 parent_path 可以指向**本批更早的元素**所创建的节点（同一个请求里建父子树）。父元素必须排在子元素之前，父路径指向更后面的元素会被拒绝（父/子循环在按数组顺序应用时就是这个形状）；同一父节点下、同一批内重名会被拒绝（默认 false 时保留引擎自己的重命名）——两种拒绝都仍然整批回滚。默认 false：父路径只按调用到达时的场景树解析，与旧行为逐字相同。响应在每个 created 元素上给出 parent_source（scene/batch），说明父节点来自场景树还是本批",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "nodes"
+        ],
+        "type": "object"
+      },
+      "name": "editor_add_nodes_batch"
+    },
+    {
+      "description": "Attach one script to many nodes in the edited scene in a single call, and answer per node whether the attachment landed and the script was readable.",
+      "inputSchema": {
+        "properties": {
+          "keep_existing": {
+            "default": false,
+            "type": "boolean"
+          },
+          "node_paths": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "script_path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_paths",
+          "script_path"
+        ],
+        "type": "object"
+      },
+      "name": "editor_set_node_script_batch"
+    },
+    {
+      "description": "递归查找场景中所有信号连接 判别点：扁平返回 connections[]（每项 {source,signal,target,method}）与 count，收全部连接（不过滤非持久连接）、node_path 与 signal_name 均按子串匹配；要按节点嵌套的流向分析请用 editor_analyze_signal_flow。",
+      "inputSchema": {
+        "properties": {
+          "node_path": {
+            "description": "节点路径过滤（可选，包含匹配）",
+            "type": "string"
+          },
+          "scope": {
+            "default": "all",
+            "description": "连接范围：all=全部连接（默认，与本工具旧答案逐字相同）；user=只保留 method 不含 \"::\" 的连接，即场景/脚本自己连的；internal=只保留 method 形如 Class::method 的引擎/编辑器内部连接（编辑器的自连线）。注意内部连接的 source 是普通场景节点路径，按 node_path/signal_name 过滤不掉它们，只有 method 能区分；响应的 counts 给出三种口径各自的条数",
+            "enum": [
+              "all",
+              "user",
+              "internal"
+            ],
+            "type": "string"
+          },
+          "signal_name": {
+            "description": "信号名过滤（可选，包含匹配）",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "editor_list_signal_connections"
+    },
+    {
+      "description": "Write a project text file such as a .csproj, .sln, NuGet.config or .cfg, and answer the resulting size and sha256. Refuses scene, resource and script paths (use the dedicated tools for those) and refuses project.godot (use project_set_setting).",
+      "inputSchema": {
+        "properties": {
+          "content": {
+            "type": "string"
+          },
+          "overwrite": {
+            "default": false,
+            "type": "boolean"
+          },
+          "path": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "type": "object"
+      },
+      "name": "project_write_text_file"
+    },
+    {
+      "description": "移除自动加载 This call removes one autoload setting, and this one cannot be done section by section. The engine's section-granular writer (ProjectSettings::save_custom_section) replaces the values of the names it is given and never deletes a key, so this tool deliberately keeps the engine's whole-file writer (ProjectSettings::save_custom). Every save therefore rewrites the entire project.godot: the file is regenerated out of the settings held in memory, the engine's own fixed header is written, and every hand-written comment in that file is lost - the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), so back the file up yourself before calling if you need those comments. Together with editor_reload_plugin this is one of the two saves in this module that TASK-059 left on the whole-file writer; project_add_autoload did move to the section-granular path, and the pair differs for exactly this reason. A name the project does not declare is refused with an error and nothing is written.",
+      "inputSchema": {
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "type": "object"
+      },
+      "name": "project_remove_autoload"
+    }
+  ]
+}

@@ -1,0 +1,230 @@
+================================================================================
+M6__004_coin000_signals
+sha256=f1bc509c1444274ba3fb16d06590da068f6920fe44e7d8becbe27ef852527b6b bytes=3267
+{
+ "count": 18,
+ "node_path": "World/CoinField/Coin000",
+ "signals": [
+  {
+   "args": [
+    {
+     "name": "value",
+     "type": "int"
+    }
+   ],
+   "connections": [],
+   "name": "coin_collected"
+  },
+  {
+   "args": [],
+   "connections": [
+    {
+     "method": "SceneTreeEditor::_node_script_changed",
+     "target": "../../../../../../../../../../../../../../DockVSplitLeftR/DockSlotLeftUR/Scene/@VBoxContainer@5378/@MarginContainer@5441/@SceneTreeEditor@5485"
+    },
+    {
+     "method": "ScriptEditor::_queue_update_list",
+     "target": "../../../../../../../../../Script"
+    },
+    {
+     "method": "ScriptEditor::_queue_update_list",
+     "target": "../../../../../../../../../../../../@EditorBottomPanel@8211/Shader Editor"
+    }
+   ],
+   "name": "script_changed"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "property_list_changed"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "ready"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "renamed"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "tree_entered"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "tree_exiting"
+  },
+  {
+   "args": [],
+   "connections": [
+    {
+     "method": "ScriptEditor::_queue_update_list",
+     "target": "../../../../../../../../../Script"
+    },
+    {
+     "method": "ScriptEditor::_queue_update_list",
+     "target": "../../../../../../../../../../../../@EditorBottomPanel@8211/Shader Editor"
+    }
+   ],
+   "name": "tree_exited"
+  },
+  {
+   "args": [
+    {
+     "name": "node",
+     "type": "Object"
+    }
+   ],
+   "connections": [
+    {
+     "method": "ScriptEditor::_connect_to_scene_recursive",
+     "target": "../../../../../../../../../Script"
+    },
+    {
+     "method": "ScriptEditor::_connect_to_scene_recursive",
+     "target": "../../../../../../../../../../../../@EditorBottomPanel@8211/Shader Editor"
+    }
+   ],
+   "name": "child_entered_tree"
+  },
+  {
+   "args": [
+    {
+     "name": "node",
+     "type": "Object"
+    }
+   ],
+   "connections": [],
+   "name": "child_exiting_tree"
+  },
+  {
+   "args": [],
+   "connections": [
+    {
+     "method": "SceneTreeEditor::_node_child_order_changed",
+     "target": "../../../../../../../../../../../../../../DockVSplitLeftR/DockSlotLeftUR/Scene/@VBoxContainer@5378/@MarginContainer@5441/@SceneTreeEditor@5485"
+    }
+   ],
+   "name": "child_order_changed"
+  },
+  {
+   "args": [
+    {
+     "name": "node",
+     "type": "Object"
+    }
+   ],
+   "connections": [],
+   "name": "replacing_by"
+  },
+  {
+   "a
+...[TRUNC total 3735 chars]
+================================================================================
+M6__005_pause_signals
+sha256=89b15065bb7f2f47c7017513692ba6eb8e7f62b561742a44dcd5fefceef3e7e0 bytes=4220
+{
+ "count": 33,
+ "node_path": "HUD/HudRoot/PauseButton",
+ "signals": [
+  {
+   "args": [],
+   "connections": [
+    {
+     "method": "SceneTreeEditor::_node_script_changed",
+     "target": "../../../../../../../../../../../../../../DockVSplitLeftR/DockSlotLeftUR/Scene/@VBoxContainer@5378/@MarginContainer@5441/@SceneTreeEditor@5485"
+    },
+    {
+     "method": "ScriptEditor::_queue_update_list",
+     "target": "../../../../../../../../../Script"
+    },
+    {
+     "method": "ScriptEditor::_queue_update_list",
+     "target": "../../../../../../../../../../../../@EditorBottomPanel@8211/Shader Editor"
+    }
+   ],
+   "name": "script_changed"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "property_list_changed"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "ready"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "renamed"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "tree_entered"
+  },
+  {
+   "args": [],
+   "connections": [],
+   "name": "tree_exiting"
+  },
+  {
+   "args": [],
+   "connections": [
+    {
+     "method": "ScriptEditor::_queue_update_list",
+     "target": "../../../../../../../../../Script"
+    },
+    {
+     "method": "ScriptEditor::_queue_update_list",
+     "target": "../../../../../../../../../../../../@EditorBottomPanel@8211/Shader Editor"
+    }
+   ],
+   "name": "tree_exited"
+  },
+  {
+   "args": [
+    {
+     "name": "node",
+     "type": "Object"
+    }
+   ],
+   "connections": [
+    {
+     "method": "ScriptEditor::_connect_to_scene_recursive",
+     "target": "../../../../../../../../../Script"
+    },
+    {
+     "method": "ScriptEditor::_connect_to_scene_recursive",
+     "target": "../../../../../../../../../../../../@EditorBottomPanel@8211/Shader Editor"
+    }
+   ],
+   "name": "child_entered_tree"
+  },
+  {
+   "args": [
+    {
+     "name": "node",
+     "type": "Object"
+    }
+   ],
+   "connections": [],
+   "name": "child_exiting_tree"
+  },
+  {
+   "args": [],
+   "connections": [
+    {
+     "method": "SceneTreeEditor::_node_child_order_changed",
+     "target": "../../../../../../../../../../../../../../DockVSplitLeftR/DockSlotLeftUR/Scene/@VBoxContainer@5378/@MarginContainer@5441/@SceneTreeEditor@5485"
+    }
+   ],
+   "name": "child_order_changed"
+  },
+  {
