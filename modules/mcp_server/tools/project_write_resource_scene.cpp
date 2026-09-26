@@ -148,6 +148,30 @@ static bool _is_settable_property_name(const StringName &p_name) {
 	return String(p_name).is_valid_identifier();
 }
 
+static HashMap<StringName, bool> _property_table(const Object *p_object) {
+	HashMap<StringName, bool> table;
+	List<PropertyInfo> properties;
+	p_object->get_property_list(&properties);
+	for (const PropertyInfo &property : properties) {
+		const bool is_label = property_is_label(property);
+		if (table.has(property.name)) {
+			table[property.name] = table[property.name] && is_label;
+		} else {
+			table[property.name] = is_label;
+		}
+	}
+	return table;
+}
+
+namespace MCPTools {
+
+bool resource_bag_name_is_addressable(const StringName &p_name) {
+	return String(p_name).is_valid_identifier();
+}
+
+} // namespace MCPTools
+
+
 // The JSON image of a property, for the old/new pair of a `changed` entry.
 static Variant _serialized_property(const Object *p_object, const StringName &p_name) {
 	return serialize_variant(p_object->get(p_name));
@@ -198,6 +222,10 @@ static bool _stored_value_matches_request(const Variant &p_requested_serialized,
 // otherwise ordered as the manifest lists them.
 static bool _write_resource_properties(const Ref<Resource> &p_resource, const Dictionary &p_properties,
 		Dictionary &r_changed, Dictionary &r_ignored, Array &r_properties_set, MCPToolError &r_error);
+
+	// The body stays where the recorded revision keeps it (next to `project_edit_resource`);
+	// `_tool_create_resource` calls it long before that.
+	static bool _require_properties(const Dictionary &p_args, Dictionary &r_out, MCPToolError &r_error);
 
 // ---------------------------------------------------------------------------
 // Atomic publish (TASK-007 section 3.1)
@@ -371,60 +399,111 @@ static Variant _tool_create_scene_file(const Dictionary &p_args, MCPToolError &r
 	if (!normalize_project_path(raw_path, path, r_error)) {
 		return Variant();
 	}
-	Dictionary properties;
-	if (!_require_properties(p_args, properties, r_error)) {
+	String type_name;
+	if (!optional_string(p_args, "root_type", "Node2D", type_name, r_error)) {
+		return Variant();
+	}
+	String requested_name;
+	if (!optional_string(p_args, "root_name", String(), requested_name, r_error)) {
+		return Variant();
+	}
+
+	if (path == String("res://")) {
+		r_error = MCPToolError::invalid_params(
+				"Parameter 'path' must name a file, got the project root 'res://'");
+		return Variant();
+	}
+	if (FileAccess::exists(path)) {
+		r_error = MCPToolError::tool_state(vformat("Scene file already exists: %s", path),
+				"Delete it first with project_delete_scene_file, or choose another path");
+		return Variant();
+	}
+
+	const StringName class_name(type_name);
+	if (!ClassDB::class_exists(class_name) || !ClassDB::can_instantiate(class_name) ||
+			!ClassDB::is_parent_class(class_name, "Node")) {
+		r_error = MCPToolError::invalid_params(
+				vformat("Parameter 'root_type' must name a node class, got '%s'", type_name));
+		return Variant();
+	}
+	Object *created = ClassDB::instantiate(class_name);
+	Node *root = Object::cast_to<Node>(created);
+	if (root == nullptr) {
+		if (created != nullptr) {
+			memdelete(created);
+		}
+		r_error = MCPToolError::invalid_params(
+				vformat("Parameter 'root_type' must name a node class, got '%s'", type_name));
+		return Variant();
+	}
+
+	String root_name = requested_name;
+	if (root_name.is_empty()) {
+		root_name = path.get_file().get_basename();
+	}
+	if (root_name.is_empty()) {
+		root_name = "Node";
+	}
+	root->set_name(root_name);
+
+	Ref<PackedScene> scene;
+	scene.instantiate();
+	const Error pack_error = scene->pack(root);
+	if (pack_error != OK) {
+		memdelete(root);
+		r_error = MCPToolError::internal(vformat("Failed to pack the scene: %s", error_names[(int)pack_error]));
+		return Variant();
+	}
+	// The packed scene holds everything it needs; the temporary root node goes
+	// away again once packing succeeded (the reference `queue_free()`s it).
+	memdelete(root);
+
+	const Error save_error = _save_resource_atomically(scene, path);
+	if (save_error != OK) {
+		r_error = MCPToolError::internal(vformat("Failed to save the scene: %s", error_names[(int)save_error]));
+		return Variant();
+	}
+
+	Dictionary result;
+	result["path"] = path;
+	result["root_type"] = type_name;
+	result["root_name"] = root_name;
+	result["created"] = true;
+	return result;
+}
+
+
+// ---------------------------------------------------------------------------
+// project_delete_scene_file (old `delete_scene`, scene.rs:251)
+//
+// `path` is required and must exist, otherwise -32001 with a suggestion (the
+// migration source returned not_found as well). The scene file and, when it is
+// there, its `<path>.import` sidecar are removed - the `rescan` the reference
+// performed afterwards is an editor-side refresh that the tool does not need.
+//
+// Returns `{"path","deleted":true}` where `path` is the *normalised* path.
+// ---------------------------------------------------------------------------
+
+static Variant _tool_delete_scene_file(const Dictionary &p_args, MCPToolError &r_error) {
+	String raw_path;
+	if (!require_string(p_args, "path", raw_path, r_error)) {
+		return Variant();
+	}
+	String path;
+	if (!normalize_project_path(raw_path, path, r_error)) {
 		return Variant();
 	}
 
 	if (!FileAccess::exists(path)) {
-		r_error = MCPToolError::not_found(vformat("Resource '%s'", path),
-				"Use project_get_filesystem_tree to list the resources of the project");
-		return Variant();
-	}
-	const Ref<Resource> resource = ResourceLoader::load(path);
-	if (resource.is_null()) {
-		// The file is there but is not (or no longer) a loadable resource. It is
-		// deliberately left exactly as it is: a read failure must never turn
-		// into a write.
-		r_error = MCPToolError::not_found(vformat("Loadable resource '%s'", path),
-				"The file exists but could not be loaded as a resource; fix or delete it first");
+		r_error = MCPToolError::not_found(vformat("Scene file '%s'", path),
+				"Use project_get_filesystem_tree to list the .tscn files of the project");
 		return Variant();
 	}
 
-	const HashSet<StringName> names = _property_names(resource.ptr());
-	Dictionary changed;
-
-	const Array keys = properties.keys();
-	for (int i = 0; i < keys.size(); i++) {
-		const StringName key(keys[i]);
-		if (!names.has(key) || !_is_settable_property_name(key)) {
-			continue;
-		}
-		const Variant old_value = _serialized_property(resource.ptr(), key);
-		const Variant::Type target_type = property_type_of(resource.ptr(), key);
-		Variant value;
-		if (!coerce_to_property_type(property_value_from_json(properties[keys[i]], target_type),
-					target_type, value, r_error, "properties")) {
-			return Variant();
-		}
-		resource->set(key, value);
-
-		Dictionary entry;
-		entry["old"] = old_value;
-		entry["new"] = _serialized_property(resource.ptr(), key);
-		changed[String(key)] = entry;
-	}
-
-	// The reference's "nothing to do" short circuit: when the bag named no
-	// property the resource actually has, nothing is written and no file is
-	// touched at all. (A property that is written with its current value *is* a
-	// change - the reference reports it the same way - and rewriting identical
-	// bytes is harmless.)
-	if (changed.is_empty()) {
-		Dictionary result;
-		result["path"] = path;
-		result["changed"] = Dictionary();
-		result["message"] = "No properties were changed";
+	const Error remove_error = DirAccess::remove_absolute(path);
+	if (remove_error != OK) {
+		r_error = MCPToolError::internal(vformat("Failed to delete the scene file: %s",
+				error_names[(int)remove_error]));
 		return Variant();
 	}
 	// A scene that was imported has a sidecar; it is removed with the scene.
@@ -504,7 +583,19 @@ static bool _write_resource_properties(const Ref<Resource> &p_resource, const Di
 			// name the table does not carry is an unknown property (-32001,
 			// naming it).
 			if (!resource_bag_name_is_addressable(key)) {
+				// [REBUILT-2C low-confidence: verify]
 				r_error = MCPToolError::invalid_params(vformat(
+						"Property name '%s' is not a settable property name: Object::set() takes a non-empty identifier",
+						String(key)));
+				return false;
+			}
+			r_error = MCPToolError::not_found(
+					vformat("Property '%s' on %s", String(key), p_resource->get_class()),
+					vformat("'%s' is not a property of %s; read the properties this resource really has with "
+							"project_read_resource (its 'properties' object is exactly what this tool takes back)",
+							String(key), p_resource->get_class()));
+			return false;
+		}
 		const Variant::Type target_type = property_type_of(p_resource.ptr(), key);
 		Variant value;
 		if (!_resource_property_value(p_properties[keys[i]], target_type, key, p_resource.ptr(), value, r_error)) {
@@ -535,6 +626,16 @@ static bool _write_resource_properties(const Ref<Resource> &p_resource, const Di
 	}
 	return true;
 }
+
+namespace MCPTools {
+
+// The exported name the header declares (project_write_resource_scene.h).
+bool write_resource_properties(const Ref<Resource> &p_resource, const Dictionary &p_properties,
+		Dictionary &r_changed, Dictionary &r_ignored, Array &r_properties_set, MCPToolError &r_error) {
+	return _write_resource_properties(p_resource, p_properties, r_changed, r_ignored, r_properties_set, r_error);
+}
+
+} // namespace MCPTools
 
 // ---------------------------------------------------------------------------
 // project_edit_resource (old `edit_resource`, resource.rs:131)

@@ -320,4 +320,13 @@ Response handle(const String &p_payload, const MCPToolRegistry &p_registry, bool
 	return _error_response(id_json, METHOD_NOT_FOUND, vformat("Method not found: %s", method));
 }
 
+
+String build_result_raw(const String &p_id_json, const Variant &p_result) {
+	return _envelope_result(p_id_json, p_result);
+}
+
+String build_error_raw(const String &p_id_json, int p_code, const String &p_message, const Variant &p_data) {
+	return _envelope_error(p_id_json, p_code, p_message, p_data);
+}
+
 } // namespace MCPJsonRpc

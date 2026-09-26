@@ -727,57 +727,77 @@ static Variant _tool_add_resource_to_node_property(const Dictionary &p_args, MCP
 // `editor_get_viewport_3d_camera`.
 // ---------------------------------------------------------------------------
 static Variant _tool_set_viewport_3d_camera(const Dictionary &p_args, MCPToolError &r_error) {
-	String property;
-	if (!require_string(p_args, "property", property, r_error)) {
+	bool has_position = false;
+	Vector3 position;
+	if (!vector3_from_json(p_args, "position", has_position, position, r_error)) {
 		return Variant();
 	}
-	String resource_type;
-	if (!require_string(p_args, "resource_type", resource_type, r_error)) {
+	bool has_rotation = false;
+	Vector3 rotation;
+	if (!vector3_from_json(p_args, "rotation_degrees", has_rotation, rotation, r_error)) {
 		return Variant();
 	}
-	Dictionary resource_properties;
-	const Variant raw_properties = p_args.get("resource_properties", Variant());
-	if (raw_properties.get_type() != Variant::NIL) {
-		if (raw_properties.get_type() != Variant::DICTIONARY) {
-			r_error = MCPToolError::invalid_params(vformat("Parameter 'resource_properties' must be an object, got %s",
-					Variant::get_type_name(raw_properties.get_type())));
-			return Variant();
-		}
-		resource_properties = raw_properties;
-	}
-
-	ClassDB *class_db = ClassDB::get_singleton();
-	const StringName type_name(resource_type);
-	if (!class_db->class_exists(type_name)) {
-		r_error = MCPToolError::invalid_params(vformat("Unknown resource type: %s", resource_type));
+	bool has_look_at = false;
+	Vector3 look_at;
+	if (!vector3_from_json(p_args, "look_at", has_look_at, look_at, r_error)) {
 		return Variant();
 	}
-	if (!class_db->is_parent_class(type_name, StringName("Resource"))) {
-		r_error = MCPToolError::invalid_params(vformat("'%s' is not a Resource type", resource_type));
+	// `has_fov` is the call-site half (see the note above the helper block); the
+	// shared reader owns the value and its type refusal.
+	const bool has_fov = p_args.get("fov", Variant()).get_type() != Variant::NIL;
+	double fov = 0.0;
+	if (has_fov && !optional_float(p_args, "fov", 0.0, fov, r_error)) {
 		return Variant();
 	}
-
 	if (!require_editor_ui(r_error, "editor writes outside a running editor",
 				"Start the MCP server inside the Godot editor to write editor state")) {
 		return Variant();
 	}
 #ifdef MCP_EDITOR_TOOLS_ENABLED
-	Node *root = _edited_scene_root();
-	if (root == nullptr) {
-		r_error = MCPToolError::no_scene();
+	if (Node3DEditor::get_singleton() == nullptr) {
+		r_error = MCPToolError::internal(String::utf8("无法获取3D视口, 请确保已打开3D场景"));
 		return Variant();
 	}
-	Node *node = _find_node(root, node_path);
-	if (node == nullptr) {
-		r_error = MCPToolError::not_found(vformat("Node '%s'", node_path),
-				"Use editor_get_scene_tree to list the nodes of the edited scene");
+	EditorInterface *editor = EditorInterface::get_singleton();
+	SubViewport *viewport = editor != nullptr ? editor->get_editor_viewport_3d() : nullptr;
+	Camera3D *camera = viewport != nullptr ? viewport->get_camera_3d() : nullptr;
+	if (camera == nullptr) {
+		r_error = MCPToolError::internal(String::utf8("无法获取3D视口, 请确保已打开3D场景"));
 		return Variant();
 	}
 
-	Object *instance = class_db->instantiate(type_name);
-	Resource *resource = Object::cast_to<Resource>(instance);
-	if (resource == nullptr) {
-		if (instance != nullptr) {
+	if (has_position) {
+		camera->set_global_position(position);
+	}
+	if (has_rotation) {
+		camera->set_rotation_degrees(rotation);
+	}
+	if (has_look_at) {
+		camera->look_at(look_at);
+	}
+	if (has_fov) {
+		camera->set_fov((real_t)fov);
+	}
+
+	const Vector3 current_position = camera->get_global_position();
+	const Vector3 current_rotation = camera->get_rotation_degrees();
+	Dictionary position_json;
+	position_json["x"] = current_position.x;
+	position_json["y"] = current_position.y;
+	position_json["z"] = current_position.z;
+	Dictionary rotation_json;
+	rotation_json["x"] = current_rotation.x;
+	rotation_json["y"] = current_rotation.y;
+	rotation_json["z"] = current_rotation.z;
+
+	Dictionary result;
+	result["position"] = position_json;
+	result["rotation_degrees"] = rotation_json;
+	result["fov"] = camera->get_fov();
+	return result;
+#endif
+	return Variant();
+}
 // `saved_path`. Both key sets are the reference's.
 //
 // Two deliberate changes:

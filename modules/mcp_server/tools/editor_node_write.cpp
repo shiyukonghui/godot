@@ -387,12 +387,12 @@ static Variant _tool_add_node(const Dictionary &p_args, MCPToolError &r_error) {
 				"Start the MCP server inside the Godot editor to write editor state")) {
 		return Variant();
 	}
-	Node *root = _edited_scene_root();
+	Node *root = MCPTools::edited_scene_root();
 	if (root == nullptr) {
 		r_error = MCPToolError::no_scene();
 		return Variant();
 	}
-	Node *parent = _find_node(root, parent_path);
+	Node *parent = MCPTools::find_node(root, parent_path);
 	if (parent == nullptr) {
 		r_error = MCPToolError::not_found(vformat("Parent '%s'", parent_path),
 				"Use editor_get_scene_tree to list the nodes of the edited scene");
@@ -415,7 +415,7 @@ static Variant _tool_add_node(const Dictionary &p_args, MCPToolError &r_error) {
 	node->set_owner(root);
 
 	Dictionary result;
-	result["node_path"] = _relative_path(root, node);
+	result["node_path"] = relative_path(root, node);
 	result["name"] = String(node->get_name());
 	result["type"] = node->get_class();
 	return result;
@@ -445,12 +445,12 @@ static Variant _tool_delete_node(const Dictionary &p_args, MCPToolError &r_error
 				"Start the MCP server inside the Godot editor to write editor state")) {
 		return Variant();
 	}
-	Node *root = _edited_scene_root();
+	Node *root = MCPTools::edited_scene_root();
 	if (root == nullptr) {
 		r_error = MCPToolError::no_scene();
 		return Variant();
 	}
-	Node *node = _find_node(root, path);
+	Node *node = MCPTools::find_node(root, path);
 	if (node == nullptr) {
 		r_error = MCPToolError::not_found(vformat("Node '%s'", path),
 				"Use editor_get_scene_tree to list the nodes of the edited scene");
@@ -461,7 +461,7 @@ static Variant _tool_delete_node(const Dictionary &p_args, MCPToolError &r_error
 				"Open another scene (editor_open_scene) to replace this one instead of deleting its root");
 		return Variant();
 	}
-	const String resolved = _relative_path(root, node);
+	const String resolved = relative_path(root, node);
 	node->queue_free();
 
 	Dictionary result;

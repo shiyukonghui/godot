@@ -3441,4 +3441,40 @@ RichTextLabel *find_rich_text_label(Node *p_node) {
 	return nullptr;
 }
 
+Dictionary schema_with_integer_defaults(const Dictionary &p_schema, const Vector<StringName> &p_names) {
+	// A **deep** duplicate: a `Dictionary` in this fork is a shared container
+	// (there is no copy-on-write `modify()`, `core/variant/dictionary.h:109` is
+	// the only copy entry point), so writing into a member of a shallow copy
+	// would change the caller's dictionary as well. The helper promises a copy,
+	// so it makes one.
+	Dictionary schema = p_schema.duplicate(true);
+	const Variant properties_value = schema.get(String::utf8("properties"), Variant());
+	if (properties_value.get_type() != Variant::DICTIONARY) {
+		return schema;
+	}
+	Dictionary properties = ((Dictionary)properties_value).duplicate(true);
+	for (int i = 0; i < p_names.size(); i++) {
+		const StringName key = p_names[i];
+		if (!properties.has(key)) {
+			continue;
+		}
+		const Variant member_value = properties[key];
+		if (member_value.get_type() != Variant::DICTIONARY) {
+			continue;
+		}
+		Dictionary member = member_value;
+		const Variant default_value = member.get(String::utf8("default"), Variant());
+		if (default_value.get_type() != Variant::FLOAT && default_value.get_type() != Variant::INT) {
+			continue;
+		}
+		// `(int64_t)` of the parsed double, kept as an INT Variant so the wire
+		// writes `-1` / `0` exactly the way the contract spells it.
+		member[String::utf8("default")] = (int64_t)(double)default_value;
+		properties[key] = member;
+	}
+	schema[String::utf8("properties")] = properties;
+	return schema;
+}
+
+
 } // namespace MCPTools
