@@ -30,6 +30,7 @@
 
 #include "mcp_server.h"
 
+#include "mcp_frame_clock.h"
 #include "mcp_jsonrpc.h"
 #include "tools/registration.h"
 #include "tools/tool_builder.h"
@@ -256,6 +257,16 @@ void MCPServer::pump_frame(double p_delta) {
 	} else {
 		frame_count++;
 	}
+	// TASK-092 (item B4): one sample per frame for the deferred drivers' stable
+	// cost estimate. This is the only caller, so "the duration of a frame" means
+	// "the gap between two pumps", which is the frame the tools really run in.
+	// It is one clock read per frame: no allocation, no lock, no I/O.
+	{
+		OS *os = OS::get_singleton();
+		if (os != nullptr) {
+			MCPFrameClock::note_frame(os->get_ticks_usec());
+		}
+	}
 	// TASK-044: the frame clock of an in-flight capture is handed in *before*
 	// the transport poll, so a capture armed while a request is answered is
 	// completed one frame later and not in the frame it was taken in.
@@ -321,16 +332,15 @@ void MCPServer::handle_jsonrpc_request(const String &p_body, MCPHttpOutcome &r_o
 	if (capture_enabled) {
 		String capture_tool;
 		if (MCPCapture::payload_calls_tool(p_body, capture_tool)) {
-			if (registry.is_deferred_tool(StringName(capture_tool))) {
-				// Answered across frames, so the call line is written from the
-				// completion - far too late to decide whether the picture should
-				// have been dropped. The log still gets a verdict instead of
-				// silence; no snapshot is taken.
-				capture_token = capture_engine->arm_unavailable(capture_tool,
-						"the call is answered across frames (deferred), which the capture does not cover");
-			} else {
-				capture_token = capture_engine->arm(capture_tool);
-			}
+			// TASK-092 (item B2): a deferred call is captured like any other. The
+			// `before` frame is the frame the request was read in (which is what
+			// `arm()` has always taken); the slot is **not** finished here,
+			// because the call has not run yet - it is finished by the transport
+			// when the completion arrives, with the `seq` of the line the deferred
+			// call will be written as. TASK-090 answered `arm_unavailable` for this
+			// case and the reason on the line said so; that verdict is now a real
+			// capture whose pixel difference is the deferred call's own effect.
+			capture_token = capture_engine->arm(capture_tool);
 		}
 	}
 
@@ -345,19 +355,56 @@ void MCPServer::handle_jsonrpc_request(const String &p_body, MCPHttpOutcome &r_o
 	r_outcome.trace = dispatched.trace;
 
 	if (capture_enabled && capture_token >= 0) {
-		// The call line is the *next* request line the recorder writes: the
-		// transport writes it immediately after this call returns, with no other
-		// line in between, so its `seq` is knowable here - and the capture line,
-		// appended a frame later, carries the same number.
-		const int capture_seq = trace_recorder->get_seq() + 1;
-		if (capture_engine->finish(capture_token, dispatched.trace.ok, capture_seq)) {
-			r_outcome.trace.capture_present = true;
-			r_outcome.trace.capture_mode = MCPCapture::mode_name(capture_engine->get_config().mode);
-			r_outcome.trace.capture_viewport = capture_engine->get_viewport_name();
-			r_outcome.trace.capture_status = capture_engine->call_line_status(capture_token);
-			r_outcome.trace.capture_reason = capture_engine->call_line_reason(capture_token);
+		if (dispatched.deferred) {
+			// TASK-092 (item B2): the capture is finished when the call really
+			// ends, not when it is accepted - see `finish_deferred_capture`. The
+			// token travels on the record, which travels with the pending entry,
+			// so the transport can hand it back at completion. `capture_present`
+			// stays false until then, which is exactly right: the call line does
+			// not exist yet.
 			r_outcome.trace.capture_token = capture_token;
+		} else {
+			// The call line is the *next* request line the recorder writes: the
+			// transport writes it immediately after this call returns, with no other
+			// line in between, so its `seq` is knowable here - and the capture line,
+			// appended a frame later, carries the same number.
+			const int capture_seq = trace_recorder->get_seq() + 1;
+			if (capture_engine->finish(capture_token, dispatched.trace.ok, capture_seq)) {
+				r_outcome.trace.capture_present = true;
+				r_outcome.trace.capture_mode = MCPCapture::mode_name(capture_engine->get_config().mode);
+				r_outcome.trace.capture_viewport = capture_engine->get_viewport_name();
+				r_outcome.trace.capture_status = capture_engine->call_line_status(capture_token);
+				r_outcome.trace.capture_reason = capture_engine->call_line_reason(capture_token);
+				r_outcome.trace.capture_token = capture_token;
+			}
 		}
+	}
+}
+bool MCPServer::finish_deferred_capture(MCPTrace::Record &r_record, int p_seq) {
+	if (capture_engine == nullptr || !capture_engine->is_active()) {
+		return false;
+	}
+	const int token = r_record.capture_token;
+	if (token < 0) {
+		return false;
+	}
+	if (!capture_engine->finish(token, r_record.ok, p_seq)) {
+		// `on_error` mode and the call succeeded: the picture is dropped and the
+		// call line carries no `capture` member at all (the engine's own rule).
+		r_record.capture_token = -1;
+		return false;
+	}
+	r_record.capture_present = true;
+	r_record.capture_mode = MCPCapture::mode_name(capture_engine->get_config().mode);
+	r_record.capture_viewport = capture_engine->get_viewport_name();
+	r_record.capture_status = capture_engine->call_line_status(token);
+	r_record.capture_reason = capture_engine->call_line_reason(token);
+	return true;
+}
+
+void MCPServer::discard_deferred_capture(int p_token) {
+	if (capture_engine != nullptr && capture_engine->is_active()) {
+		capture_engine->discard(p_token);
 	}
 }
 String MCPServer::build_deferred_body(const MCPDeferred::Completion &p_completion) {

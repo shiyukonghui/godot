@@ -30,6 +30,8 @@
 
 #include "mcp_deferred.h"
 
+#include "mcp_file_effects.h"
+
 namespace MCPDeferred {
 
 MCPToolError make_timeout_error(const String &p_description, uint64_t p_timeout_ms) {
@@ -130,13 +132,49 @@ void Queue::tick(int64_t p_frame, uint64_t p_now_ms, int p_budget, Vector<Comple
 			// frame.
 			completion.kind = CompletionKind::TIMEOUT;
 			completion.error = make_timeout_error(entry.task->describe(), entry.timeout_ms);
+			// TASK-092 (item B2): the window observed so far travels with the
+			// timeout too. A wait that ran for ten frames and then expired has
+			// ten frames of file-side evidence; the ones it never got are not
+			// claimed as "no mutation". A record that is not traceable carries no
+			// file-side evidence at all (`""`), exactly like an immediate call
+			// with the trace switched off.
+			if (entry.trace.traceable) {
+				completion.file_effects = entry.file_effects;
+				completion.file_effect_status = entry.effects_observed ? MCPFileEffect::status_of(entry.file_effects) : String("not_tracked_deferred");
+			}
 			finished_sequences.push_back(entry.sequence);
 			r_out.push_back(completion);
 			index++;
 			continue;
 		}
 
+		// TASK-092 (item B2): the tool's own frame, wrapped. `Queue::tick` is the
+		// only place a deferred task runs, so this is where a deferred call's disk
+		// work can be seen at all. The rows are accumulated across the whole
+		// deferred window (not per tick) so the completion's status is the verdict
+		// of the call, exactly like a synchronous call's single buffer.
+		//
+		// `is_recording()` is checked, not assumed: nothing opens a scope around
+		// this loop today, and if something ever does, the outer buffer is left
+		// alone rather than being reset from under it.
+		const bool observe_files = entry.trace.traceable && !MCPFileEffect::is_recording();
+		if (observe_files) {
+			MCPFileEffect::begin_recording();
+		}
 		const TickResult result = entry.task->tick(p_frame, p_now_ms);
+		if (observe_files) {
+			MCPFileEffect::end_recording();
+			const Array ticked = MCPFileEffect::take_effects();
+			entry.effects_observed = true;
+			for (int r = 0; r < ticked.size() && entry.file_effects.size() < MCPFileEffect::MAX_ROWS; r++) {
+				entry.file_effects.push_back(ticked[r]);
+			}
+		}
+		if (entry.trace.traceable) {
+			completion.file_effects = entry.file_effects;
+			completion.file_effect_status = entry.effects_observed ? MCPFileEffect::status_of(entry.file_effects) : String("not_tracked_deferred");
+		}
+
 		if (result.state == State::DONE) {
 			completion.kind = CompletionKind::DONE;
 			completion.result = result.result;
@@ -169,11 +207,17 @@ void Queue::tick(int64_t p_frame, uint64_t p_now_ms, int p_budget, Vector<Comple
 	}
 }
 
-void Queue::drop_connection(uint64_t p_connection_id) {
+void Queue::drop_connection(uint64_t p_connection_id, Vector<MCPTrace::Record> *r_dropped_traces) {
 	int removed = 0;
 	for (int i = entries.size() - 1; i >= 0; i--) {
 		if (entries[i].connection_id != p_connection_id) {
 			continue;
+		}
+		if (r_dropped_traces != nullptr) {
+			// TASK-092 (item B2): the record still names the capture slot this
+			// request armed, so the transport can release it. Order does not
+			// matter; only the tokens do.
+			r_dropped_traces->push_back(entries[i].trace);
 		}
 		memdelete(entries[i].task);
 		entries.remove_at(i);

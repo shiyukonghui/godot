@@ -439,7 +439,20 @@ void MCPHttpServer::_drop_connection(int p_index) {
 	// (GDR-20 point 5). Because `Queue` is keyed by connection id, this is a
 	// one-call, complete cleanup: there is no other place a pending entry for
 	// this connection can live, so a leak is not expressible.
-	pending_requests.drop_connection(connections[p_index]->id);
+	//
+	// TASK-092 (item B2): the released entries' records come back so the capture
+	// slots they armed can be released too. A request nobody will ever answer has
+	// no line to carry a capture verdict, but its `before` frame must not stay in
+	// memory until the process exits.
+	Vector<MCPTrace::Record> dropped;
+	pending_requests.drop_connection(connections[p_index]->id, &dropped);
+	if (sink != nullptr) {
+		for (int i = 0; i < dropped.size(); i++) {
+			if (dropped[i].capture_token >= 0) {
+				sink->discard_deferred_capture(dropped[i].capture_token);
+			}
+		}
+	}
 	memdelete(connections[p_index]);
 	connections.remove_at(p_index);
 }
@@ -466,7 +479,12 @@ void MCPHttpServer::_tick_pending(int64_t p_frame, uint64_t p_now) {
 		const int index = _find_connection(completion.connection_id);
 		if (index < 0) {
 			// Unreachable by construction (dropping a connection releases its
-			// entries), but a stale write is worse than a lost one.
+			// entries), but a stale write is worse than a lost one. TASK-092
+			// (item B2): a capture armed for this request has no line left to be
+			// reported on, so its slot is released here rather than kept armed.
+			if (sink != nullptr && completion.trace.capture_token >= 0) {
+				sink->discard_deferred_capture(completion.trace.capture_token);
+			}
 			print_verbose(vformat("[MCP] deferred completion for unknown connection %d dropped",
 					(int64_t)completion.connection_id));
 			continue;
@@ -483,6 +501,15 @@ void MCPHttpServer::_tick_pending(int64_t p_frame, uint64_t p_now) {
 		if (trace != nullptr && trace->is_active() && completion.trace.traceable) {
 			MCPTrace::Record record = completion.trace;
 			record.result_bytes = body.utf8().length();
+			// TASK-092 (item B2): the file-side verdict the deferred queue
+			// accumulated across every frame the call's task ran in. It replaces
+			// the `not_tracked_deferred` placeholder the dispatcher put on the
+			// record - that placeholder now survives only when no completion was
+			// ever produced for the request.
+			if (!completion.file_effect_status.is_empty()) {
+				record.file_effect_status = completion.file_effect_status;
+				record.file_effects = completion.file_effects;
+			}
 			if (completion.kind == MCPDeferred::CompletionKind::DONE) {
 				record.ok = true;
 				record.error_code = 0;
@@ -524,6 +551,16 @@ void MCPHttpServer::_tick_pending(int64_t p_frame, uint64_t p_now) {
 			}
 			const uint64_t finished = OS::get_singleton()->get_ticks_msec();
 			const uint64_t waited = (finished > completion.start_ms) ? finished - completion.start_ms : 0;
+			// TASK-092 (item B2): the capture of a deferred call is finished
+			// **here**, where the call really ended - the `before` frame was
+			// taken when the request was read, the `after` frame is taken one
+			// rendered frame after this one, and the pixel difference between them
+			// is the deferred call's own effect on the screen. The `seq` handed in
+			// is the one the line below is about to be written with, which is what
+			// pairs the call line with its capture line.
+			if (record.capture_token >= 0 && sink != nullptr) {
+				sink->finish_deferred_capture(record, trace->get_seq() + 1);
+			}
 			// A deferred call spends its whole duration in the pending channel, so
 			// the two wall times of the line are the same measurement; they are
 			// both reported because `pending_ms` is what an observer compares

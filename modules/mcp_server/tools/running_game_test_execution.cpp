@@ -30,6 +30,7 @@
 #include "running_game_test_execution.h"
 
 #include "../mcp_deferred.h"
+#include "../mcp_frame_clock.h"
 #include "tool_builder.h"
 #include "tool_helpers.h"
 
@@ -117,21 +118,24 @@ static bool _resolve_scenario_keycode(const String &p_key, Key &r_out, MCPToolEr
 // in the round-8 session: one game run answered every call in 250-530 ms (a
 // ~4 fps loop), and a 0.4 s, 3-step scenario **that did exactly what it was
 // asked** was killed by its own 1150 ms estimate before it could answer
-// (`-32000`, `data.timeout_ms: 1150`). The estimate now reads the process' own
-// frame rate, with the previous constants as the floor, so a game at 60 fps
-// keeps exactly the deadline it always had and a slow one gets the time its
-// frames really take. `Engine` is the source because every main loop updates it;
-// a process without one (0 fps) falls back to the old floor.
+// (`-32000`, `data.timeout_ms: 1150`).
+//
+// TASK-092 (item B4): the estimate itself is now a **median over the last 15
+// frames**, sampled once per frame by `MCPServer::pump_frame`, instead of the
+// one-second reading `Engine::get_frames_per_second()` answers. That reading is
+// updated once per second, so a single stalled second was inherited by every
+// deadline computed in the next one - measured in the same session as
+// `timeout_ms: 4396` for one instance of a scenario and `timeout_ms: 1150` for
+// the next. The median is truncated to whole ms and clamped to [16, 1000], so at
+// 60 fps the answer is exactly the old constant (16667 us -> 16 ms) and a slow
+// loop is reflected within a quarter of a second. The full rule is in
+// `mcp_frame_clock.h`; `docs/reports/MCP-TRACEABILITY.md` §6 writes the reading
+// side of it.
 // [REBUILT-2C low-confidence: verify] TASK-090 item C: written, not replayed;
-// REBUILT-2C-MANIFEST.md section 2c-9 (J-3).
+// REBUILT-2C-MANIFEST.md section 2c-9 (J-3). TASK-092 item B4 replaces the
+// source of the reading, not the shape of the deadline (still `MAX(250, 4*frame)`).
 static uint64_t _frame_cost_ms() {
-	const Engine *engine = Engine::get_singleton();
-	const int fps = engine != nullptr ? engine->get_frames_per_second() : 0;
-	if (fps <= 0) {
-		return 16;
-	}
-	const double frame_ms = 1000.0 / (double)fps;
-	return frame_ms < 16.0 ? 16u : (uint64_t)(frame_ms + 0.5);
+	return MCPFrameClock::frame_cost_ms();
 }
 // [/REBUILT-2C]
 
@@ -676,6 +680,21 @@ private:
 };
 
 static MCPDeferred::Task *_tool_run_test_scenario(const Dictionary &p_args, MCPToolError &r_error) {
+	// The tool's own statement about its environment: a scenario drives a
+	// *running* game. The core below is what turns a request into a task, and it
+	// is also what the `[MCPServer]` doctests drive (they have no `SceneTree`,
+	// which is exactly why TASK-090 could not pin `in_input_map` there).
+	return MCPTools::create_test_scenario_task(p_args, (uint64_t)OS::get_singleton()->get_ticks_msec(),
+			/*p_require_scene_tree=*/true, r_error);
+}
+
+// TASK-092 (item B3): see the header. The body is the TASK-090 one, unchanged
+// except that the `SceneTree` requirement became the caller's argument, so the
+// refusal keeps its original position **after** the argument validation (a
+// malformed `steps` is still `-32602` in every process).
+namespace MCPTools {
+MCPDeferred::Task *create_test_scenario_task(const Dictionary &p_args, uint64_t p_now_ms,
+		bool p_require_scene_tree, MCPToolError &r_error) {
 	const Variant steps_value = p_args.get("steps", Variant());
 	if (steps_value.get_type() == Variant::NIL) {
 		r_error = MCPToolError::invalid_params("Missing required parameter: steps");
@@ -712,7 +731,7 @@ static MCPDeferred::Task *_tool_run_test_scenario(const Dictionary &p_args, MCPT
 	}
 
 	SceneTree *tree = SceneTree::get_singleton();
-	if (tree == nullptr) {
+	if (p_require_scene_tree && tree == nullptr) {
 		// Nothing can be driven in a process without a SceneTree.
 		r_error = MCPToolError::no_scene();
 		return nullptr;
@@ -734,8 +753,9 @@ static MCPDeferred::Task *_tool_run_test_scenario(const Dictionary &p_args, MCPT
 		}
 		estimated_ms += per_step_ms;
 	}
-	return memnew(TestScenarioTask(steps, (uint64_t)OS::get_singleton()->get_ticks_msec(), estimated_ms));
+	return memnew(TestScenarioTask(steps, p_now_ms, estimated_ms));
 }
+} // namespace MCPTools
 
 // ---------------------------------------------------------------------------
 // running_game_run_stress_test (old `run_stress_test`)

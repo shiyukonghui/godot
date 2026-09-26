@@ -476,6 +476,20 @@ int Engine::arm_unavailable(const String &p_tool, const String &p_reason) {
 	return index;
 }
 
+// TASK-092 (item B2): release an armed slot with no verdict. See the header: the
+// only caller is the transport's connection-drop path, where there is no response
+// left to describe.
+void Engine::discard(int p_token) {
+	if (p_token < 0 || p_token >= pending.size()) {
+		return;
+	}
+	if (!pending[p_token].active) {
+		return;
+	}
+	pending.ptrw()[p_token] = Pending();
+	live_count--;
+}
+
 bool Engine::finish(int p_token, bool p_ok, int p_seq) {
 	if (p_token < 0 || p_token >= pending.size()) {
 		return false;

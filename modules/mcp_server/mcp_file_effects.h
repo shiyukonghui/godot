@@ -108,6 +108,16 @@ bool last_truncated();
 // trace was off, or the call never reached a tool).
 String status_name();
 
+// TASK-092 (item B2): the same vocabulary, computed from an **accumulated** set
+// of rows instead of the buffer of one call. A deferred call's disk work is
+// spread over the frames its task is ticked in, so its rows are collected
+// tick by tick and the verdict can only be taken once, when the call really
+// ends. `p_rows` empty answers `no_mutation`, which for a deferred call means
+// "every frame it ran in was observed and none of them touched disk" - the
+// caller is responsible for saying `not_tracked_deferred` when it observed no
+// frame at all (see `MCPDeferred::Queue::tick`).
+String status_of(const Array &p_rows);
+
 // The scope a mutating primitive opens around itself. Non-copyable; the
 // destructor is what appends the row.
 //

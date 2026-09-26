@@ -219,6 +219,16 @@ public:
 	// gets its `unavailable` verdict and its reason.
 	int arm_unavailable(const String &p_tool, const String &p_reason);
 
+	// TASK-092 (item B2): releases an armed capture without writing anything.
+	//
+	// It exists for the one case a deferred capture can end in with no response
+	// to describe it: the connection that issued the request went away, so its
+	// pending entry - and the token it carried - is released by the transport's
+	// drop path. Without this the slot would stay armed (and keep its `before`
+	// frame) until the process exits, because `tick()` deliberately never
+	// completes an entry whose call was not answered.
+	void discard(int p_token);
+
 	// Called once the outcome of the call is known, before the call line is
 	// written. `p_seq` is the line number that call line will carry (the
 	// recorder's next request line). Answers false when the capture was

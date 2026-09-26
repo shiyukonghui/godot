@@ -36,6 +36,7 @@
 // TASK-089 (item A): the file-side recorder's own tests live at the end of this
 // header; `mcp_trace.h` is what the call line is asserted against.
 #include "../mcp_file_effects.h"
+#include "../mcp_frame_clock.h"
 #include "../mcp_trace.h"
 #include "../tool_registry.h"
 // TASK-045: the timing half of the raw-byte comparison's doctest needs the clock
@@ -279,6 +280,10 @@
 // `std::numeric_limits` is the explicit source of the NaN/INF doubles the
 // TASK-010 range guard tests use; this fork has no `std::numeric_limits<double>::quiet_NaN()`/`std::numeric_limits<double>::infinity()`.
 #include <limits>
+// TASK-092 (item B3): the deferred-completion case drives the real transport
+// over a loopback socket, and waits for the wire with the same timeout idiom
+// `tests/core/io/test_tcp_server.cpp` uses.
+#include <functional>
 
 namespace TestMCPServer {
 
@@ -9672,6 +9677,590 @@ TEST_CASE("[MCPServer] running_game_execute_gdscript reaches a live scene tree a
 
 	memdelete(scene_root);
 }
+
+// ---------------------------------------------------------------------------
+// TASK-092 (item B3, first half): the scenario step's `in_input_map`.
+//
+// TASK-090 (item C) added the field because the round-8 session measured the
+// silent failure it exists to name: `mcp_right` was injected, reached `_input`,
+// and the player still did not move, because `InputEvent::is_action_pressed()`
+// resolves through `InputMap::event_get_action_status()` and that answers false
+// for an action the running map does not declare - `injected: 1` alone looked
+// like success. TASK-090's report declared the gap this case closes: the field
+// was pinned only on the *editor* side (`editor_simulate_input_action`) and by
+// one live trace, never by a doctest of the scenario driver itself.
+//
+// Both halves are needed for the field to mean anything:
+//   * an action the map **declares** -> `in_input_map: true`, and the action
+//     state really moves (which is what makes `true` worth reading);
+//   * an action it does **not** declare -> `in_input_map: false`, while the
+//     event is still injected (`injected: 1`) and the state really does not
+//     move. The two facts together are the contract: the event is delivered,
+//     the action is not activated.
+//
+// The `InputMap` singleton is created by the case itself: the engine's listener
+// only creates it for `[SceneTree]` / `[Editor]` cases (`tests/test_main.cpp`),
+// and this module's cases are `[MCPServer]`. The `Input` the injection goes
+// through is not needed - the scenario driver only reads the map.
+//
+// TASK-092 (item B3) also removed the *other* blocker this case used to have: the
+// tool refuses in any process without a `SceneTree`, so the task is built through
+// the exported core (`MCPTools::create_test_scenario_task`) with the scene-tree
+// requirement turned off - the request's meaning is what is under test here, and
+// the tool's own environment statement keeps its own refusal (unchanged).
+// ---------------------------------------------------------------------------
+TEST_CASE("[MCPServer] a scenario input step answers in_input_map for a declared and for an undeclared action") {
+	if (InputMap::get_singleton() == nullptr) {
+		memnew(InputMap);
+		InputMap::get_singleton()->load_default();
+	}
+	InputMap *map = InputMap::get_singleton();
+	REQUIRE(map != nullptr);
+
+	const String declared = "mcp092_declared_action";
+	const String absent = "mcp092_absent_action";
+	map->add_action(declared);
+	CHECK(map->has_action(declared));
+	CHECK_FALSE(map->has_action(absent));
+
+	// One `input` step is answered inside one tick (see `TestScenarioTask::tick`:
+	// the step is processed, `next` passes the end, and the task is done).
+	struct Case {
+		String action;
+		bool expected_flag;
+	};
+	const Case cases[2] = { { declared, true }, { absent, false } };
+
+	for (int i = 0; i < 2; i++) {
+		const Case &probe = cases[i];
+		Array steps;
+		Dictionary step;
+		step["type"] = "input";
+		step["action"] = probe.action;
+		steps.push_back(step);
+		Dictionary args;
+		args["steps"] = steps;
+
+		MCPToolError error;
+		MCPDeferred::Task *task = MCPTools::create_test_scenario_task(args, /*p_now_ms*/ 0,
+				/*p_require_scene_tree*/ false, error);
+		CHECK_MESSAGE(error.code == 0, error.message);
+		REQUIRE(task != nullptr);
+		if (task == nullptr) {
+			continue;
+		}
+
+		const MCPDeferred::TickResult ticked = task->tick(1, 0);
+		REQUIRE(ticked.state == MCPDeferred::State::DONE);
+		if (ticked.state == MCPDeferred::State::DONE) {
+			REQUIRE(ticked.result.get_type() == Variant::DICTIONARY);
+			const Dictionary result = ticked.result;
+			REQUIRE(result["results"].get_type() == Variant::ARRAY);
+			const Array results = result["results"];
+			REQUIRE(results.size() == 1);
+			const Dictionary entry = results[0];
+			CHECK(String(entry["type"]) == "input");
+			// The event is handed to `Input` in **both** cases: delivery and
+			// activation are different facts, and the field is the one that tells
+			// them apart.
+			CHECK((int64_t)entry["injected"] == 1);
+			CHECK(String(entry["action"]) == probe.action);
+			CHECK((bool)entry["in_input_map"] == probe.expected_flag);
+			// The field agrees with the engine's own answer for this process, so a
+			// doctest cannot pin a value the map disagrees with.
+			CHECK((bool)entry["in_input_map"] == map->has_action(probe.action));
+		}
+		memdelete(task);
+	}
+
+	map->erase_action(declared);
+	CHECK_FALSE(map->has_action(declared));
+}
+
+// ---------------------------------------------------------------------------
+// TASK-092 (item B2, first half): a deferred call's file effects.
+//
+// The per-call recorder is synchronous; a deferred tool's disk work happens in
+// the frames its task is ticked in, after the request was answered. TASK-089
+// declared the boundary (`file_effect_status: "not_tracked_deferred"` on every
+// deferred line); the queue now wraps the one place the task really runs and
+// accumulates the rows for the whole deferred window.
+//
+// Driven at the queue's own seam, with an explicit frame clock, because that is
+// what makes the three cases deterministic instead of timing-dependent:
+//   * a tick that writes -> `observed_changed` and the row names the file;
+//   * a tick that writes nothing -> `no_mutation`, which is a *fact* (the window
+//     was observed) and not the old absence;
+//   * a deadline that expires before the first tick -> `not_tracked_deferred`,
+//     the declared boundary, kept only where it is true.
+//
+// The task is local to this header on purpose: the file-effect half of the queue
+// has to be drivable with no socket, no registry and no wall clock, and the
+// shared `FakePendingTask` of `tests/test_mcp_server.cpp` is compiled *after*
+// this header is included.
+// ---------------------------------------------------------------------------
+namespace {
+
+class DeferredFileProbeTask : public MCPDeferred::Task {
+public:
+	// `p_ticks_to_finish < 0` never finishes on its own (the timeout case);
+	// an empty `p_path` finishes without touching the disk.
+	DeferredFileProbeTask(const String &p_path, int p_ticks_to_finish) :
+			path(p_path), ticks_to_finish(p_ticks_to_finish) {}
+
+	MCPDeferred::TickResult tick(int64_t p_frame, uint64_t p_now_ms) override {
+		(void)p_now_ms;
+		ticks++;
+		if (ticks_to_finish < 0 || ticks < ticks_to_finish) {
+			return MCPDeferred::TickResult::pending();
+		}
+		if (!path.is_empty()) {
+			// Through the module's own publish primitive, which is the one place
+			// a `MutationScope` is opened: the test writes the way a tool writes.
+			MCPTools::publish_text_atomically(path, "written in a deferred tick\n");
+		}
+		Dictionary result;
+		result["ticks"] = ticks;
+		result["frame"] = p_frame;
+		return MCPDeferred::TickResult::done(result);
+	}
+
+	String describe() const override { return "deferred file probe"; }
+
+	int ticks = 0;
+
+private:
+	String path;
+	int ticks_to_finish = 1;
+};
+
+} // namespace
+
+TEST_CASE("[MCPServer] a deferred call's file effects are observed across its window and its boundaries are named") {
+	const String dir = file_effect_fixture_dir();
+	TestMCPServer::remove_tree(dir);
+	DirAccess::make_dir_recursive_absolute(ProjectSettings::get_singleton()->globalize_path(dir));
+	const String written_path = dir.path_join("deferred-note.txt");
+	const String absolute_written_path = ProjectSettings::get_singleton()->globalize_path(written_path);
+
+	// (1) a deferred tick that really writes.
+	{
+		MCPDeferred::Queue queue;
+		MCPTrace::Record trace;
+		trace.traceable = true;
+		trace.method = "tools/call";
+		trace.tool = "project_get_fake_pending";
+		MCPDeferred::Task *task = memnew(DeferredFileProbeTask(written_path, 1));
+
+		queue.add(1, "1", task, 100, true, /*frame*/ 5, /*now_ms*/ 1000, trace, /*start_ms*/ 1000);
+		Vector<MCPDeferred::Completion> out;
+		queue.tick(/*frame*/ 6, /*now_ms*/ 1050, 8, out);
+
+		REQUIRE(out.size() == 1);
+		CHECK(out[0].kind == MCPDeferred::CompletionKind::DONE);
+		CHECK(out[0].file_effect_status == "observed_changed");
+		REQUIRE(out[0].file_effects.size() == 1);
+		const Dictionary row = out[0].file_effects[0];
+		CHECK(bool(row["changed"]) == true);
+		CHECK(String(row["abs_path"]) == absolute_written_path);
+		CHECK(FileAccess::exists(written_path));
+		// The queue owns and deletes the task on completion.
+	}
+
+	// (2) a deferred tick that touches no file: `no_mutation`, never
+	// `not_tracked_deferred` - the window was watched and nothing happened.
+	{
+		MCPDeferred::Queue queue;
+		MCPTrace::Record trace;
+		trace.traceable = true;
+		trace.method = "tools/call";
+		MCPDeferred::Task *task = memnew(DeferredFileProbeTask(String(), 1));
+
+		queue.add(2, "2", task, 100, true, 5, 1000, trace, 1000);
+		Vector<MCPDeferred::Completion> out;
+		queue.tick(6, 1050, 8, out);
+
+		REQUIRE(out.size() == 1);
+		CHECK(out[0].kind == MCPDeferred::CompletionKind::DONE);
+		CHECK(out[0].file_effect_status == "no_mutation");
+		CHECK(out[0].file_effects.is_empty());
+	}
+
+	// (3) the deadline expires before the first tick: no frame was watched, so
+	// the status says exactly that instead of claiming "nothing changed".
+	{
+		MCPDeferred::Queue queue;
+		MCPTrace::Record trace;
+		trace.traceable = true;
+		trace.method = "tools/call";
+		// `-1` never finishes on its own; the timeout is what ends it.
+		MCPDeferred::Task *task = memnew(DeferredFileProbeTask(written_path, -1));
+
+		queue.add(3, "3", task, 100, true, 5, 1000, trace, 1000);
+		Vector<MCPDeferred::Completion> out;
+		queue.tick(6, /*now_ms*/ 2000, 8, out);
+
+		REQUIRE(out.size() == 1);
+		CHECK(out[0].kind == MCPDeferred::CompletionKind::TIMEOUT);
+		CHECK(out[0].file_effect_status == "not_tracked_deferred");
+		CHECK(out[0].file_effects.is_empty());
+	}
+
+	// (4) a trace that is off is observed by nothing: no rows, no status. The
+	// recorder is inert, exactly as it is for an immediate call.
+	{
+		MCPDeferred::Queue queue;
+		MCPTrace::Record trace;
+		trace.traceable = false;
+		MCPDeferred::Task *task = memnew(DeferredFileProbeTask(dir.path_join("untraced.txt"), 1));
+
+		queue.add(4, "4", task, 100, true, 5, 1000, trace, 1000);
+		Vector<MCPDeferred::Completion> out;
+		queue.tick(6, 1050, 8, out);
+
+		REQUIRE(out.size() == 1);
+		CHECK(out[0].kind == MCPDeferred::CompletionKind::DONE);
+		CHECK(out[0].file_effect_status.is_empty());
+		CHECK(out[0].file_effects.is_empty());
+	}
+
+	TestMCPServer::remove_tree(dir);
+}
+
+// ---------------------------------------------------------------------------
+// TASK-092 (item B3, second half): `_tick_pending`'s own trace line.
+//
+// TASK-090 (item C) fixed the defect this pins - every deferred call line
+// carried `result_bytes` and nothing else, so the two tools whose entire answer
+// *is* a verdict (`all_passed` / per-step `passed`) could not be judged from the
+// trace - and declared the gap: "no doctest; it needs a `MCPHttpServer` with a
+// recorder and a pending advance, and the existing cases only test the wire
+// payload". This case builds exactly that, over a loopback socket, because the
+// completion is produced by `MCPHttpServer::poll` and nowhere else.
+//
+// What it pins on the **line the transport writes**:
+//   * `result_json` is the tool's own body (here the fake task's dictionary),
+//     byte-identical to what the wire carried - the same Variant the response
+//     was built from;
+//   * the file-side status is the queue's real verdict for a deferred call,
+//     not the old `not_tracked_deferred` placeholder.
+//
+// It is the one case in this header that opens a socket. It uses a fixed
+// loopback port (the same idiom as `tests/core/io/test_tcp_server.cpp`) and
+// closes everything before returning.
+// ---------------------------------------------------------------------------
+TEST_CASE("[MCPServer] a deferred completion carries its own body and its file effects on the trace line") {
+	MCPToolRegistry registry;
+	TestMCPServer::build_deferred_probe_registry(registry);
+
+	const String dir = file_effect_fixture_dir();
+	TestMCPServer::remove_tree(dir);
+	DirAccess::make_dir_recursive_absolute(ProjectSettings::get_singleton()->globalize_path(dir));
+	const String trace_path = dir.path_join("trace-deferred-completion.jsonl");
+	DirAccess::remove_absolute(trace_path);
+	const String written_path = dir.path_join("written-in-tick.txt");
+
+	MCPTrace::Recorder recorder;
+	REQUIRE(recorder.open(trace_path));
+	REQUIRE(recorder.is_active());
+
+	// The sink is the JSON-RPC layer of a real process, minus the process: the
+	// transport's own contract is what is under test, so the body it builds has
+	// to be the production one (`content_result` / `build_*_raw`).
+	class TestSink : public MCPHttpRequestSink {
+	public:
+		const MCPToolRegistry *registry = nullptr;
+		void handle_jsonrpc_request(const String &p_body, MCPHttpOutcome &r_outcome) override {
+			const MCPJsonRpc::Dispatch dispatched = MCPJsonRpc::dispatch(p_body, *registry, false, 30000, true);
+			r_outcome.body = dispatched.response.body;
+			r_outcome.http_status = dispatched.response.http_status;
+			r_outcome.deferred = dispatched.deferred;
+			r_outcome.task = dispatched.task;
+			r_outcome.id_json = dispatched.id_json;
+			r_outcome.timeout_ms = dispatched.timeout_ms;
+			r_outcome.trace = dispatched.trace;
+		}
+		String build_deferred_body(const MCPDeferred::Completion &p_completion) override {
+			if (p_completion.kind == MCPDeferred::CompletionKind::DONE) {
+				return MCPJsonRpc::build_result_raw(p_completion.id_json, MCPTools::content_result(p_completion.result));
+			}
+			return MCPJsonRpc::build_error_raw(p_completion.id_json, p_completion.error.code,
+					p_completion.error.message, p_completion.error.data);
+		}
+		String get_status_body() override { return String("{}"); }
+	};
+
+	TestSink sink;
+	sink.registry = &registry;
+
+	MCPHttpServer server;
+	server.set_sink(&sink);
+	server.set_trace_recorder(&recorder);
+	server.set_pending_timeout_ms(30000);
+	const uint16_t port = 12741;
+	const Error listened = server.listen(port, "127.0.0.1");
+	REQUIRE(listened == OK);
+	REQUIRE(server.is_listening());
+
+	Ref<StreamPeerTCP> client;
+	client.instantiate();
+	REQUIRE(client->connect_to_host(IPAddress("127.0.0.1"), port) == OK);
+
+	const uint64_t wait_start = OS::get_singleton()->get_ticks_usec();
+	while (client->get_status() == StreamPeerTCP::STATUS_CONNECTING &&
+			OS::get_singleton()->get_ticks_usec() - wait_start < 2000000) {
+		client->poll();
+		server.poll(8, 1);
+		OS::get_singleton()->delay_usec(500);
+	}
+	REQUIRE(client->get_status() == StreamPeerTCP::STATUS_CONNECTED);
+
+	// One deferred call whose finishing tick publishes a file: the body and the
+	// file-side verdict are asserted on the same line.
+	const String body = vformat(
+			"{\"jsonrpc\":\"2.0\",\"id\":77,\"method\":\"tools/call\",\"params\":{\"name\":\"project_get_fake_pending\","
+			"\"arguments\":{\"payload\":\"trace-body\",\"ticks\":2,\"write_path\":\"%s\"}}}",
+			written_path);
+	const String request = vformat("POST /mcp HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: application/json\r\n"
+								   "Content-Length: %d\r\n\r\n%s",
+			body.utf8().length(), body);
+	const PackedByteArray request_bytes = request.to_utf8_buffer();
+	CHECK_EQ(client->put_data(request_bytes.ptr(), request_bytes.size()), Error::OK);
+
+	String received;
+	int64_t frame = 2;
+	bool answered = false;
+	const uint64_t deadline = OS::get_singleton()->get_ticks_usec();
+	while (!answered && OS::get_singleton()->get_ticks_usec() - deadline < 5000000) {
+		client->poll();
+		server.poll(8, frame);
+		frame++;
+		const int available = client->get_available_bytes();
+		if (available > 0) {
+			received += client->get_utf8_string(available);
+		}
+		// The tool's own payload is only in the complete body, so its presence is
+		// the completion marker.
+		answered = received.contains("trace-body") && received.contains("\"result\"");
+		if (!answered) {
+			OS::get_singleton()->delay_usec(500);
+		}
+	}
+
+	CHECK(answered);
+	// The wire answer and the trace line are the same Variant, so both have to
+	// carry the tool's own fields.
+	CHECK(received.contains("trace-body"));
+	CHECK(received.contains("ticks"));
+
+	server.stop();
+	recorder.close();
+
+	REQUIRE(FileAccess::exists(trace_path));
+	const String text = FileAccess::get_file_as_string(trace_path);
+	const PackedStringArray lines = text.strip_edges().split("\n");
+	REQUIRE(lines.size() == 1);
+	const String line = lines[0];
+	// The identity of the call, so the assertions below cannot pass on a line
+	// that describes some other request.
+	CHECK(line.begins_with("{\"id\":77,"));
+	CHECK(line.contains("\"tool\":\"project_get_fake_pending\""));
+	CHECK(line.contains("\"method\":\"tools/call\""));
+	CHECK(line.contains("\"ok\":true"));
+	// (a) the tool's own body, on the line.
+	CHECK(line.contains("\"result_json\""));
+	CHECK(line.contains("trace-body"));
+	CHECK(line.contains("\"result_json_bytes\""));
+	CHECK_FALSE(line.contains("\"result_json_truncated\":true"));
+	// (b) the file-side verdict of a deferred call: the real one, from the tick
+	// that published the file - not the placeholder TASK-089 declared.
+	CHECK(line.contains("\"file_effect_status\":\"observed_changed\""));
+	CHECK_FALSE(line.contains("not_tracked_deferred"));
+	CHECK(line.contains("\"path\":\"" + written_path + "\""));
+	CHECK(line.contains("\"changed\":true"));
+
+	TestMCPServer::remove_tree(dir);
+}
+
+// ---------------------------------------------------------------------------
+// TASK-092 (item B1): an over-bound payload is reproducible from its sidecar.
+//
+// The row's own facts used to be unreconstructible exactly when the payload was
+// interesting: the Pong session recorded `args_truncated: true` with
+// `args_bytes: 9464`, so a reader could see that something was cropped and never
+// what. The rule these two cases pin is the one the ledger reads:
+//
+//   * inside the bound -> inline, no file, `args_sidecar` absent;
+//   * over the bound -> the line keeps its cropped `args` **and** names a file
+//     that holds the whole payload, with its true byte count and its sha256, so
+//     the two can be reconciled by anyone.
+//
+// The sha256 is recomputed from the file in the test, because "the line says a
+// hash" is worth nothing unless the file matches it.
+// ---------------------------------------------------------------------------
+TEST_CASE("[MCPServer] an over-bound argument list is written whole to a sidecar the line names") {
+	const String dir = file_effect_fixture_dir();
+	TestMCPServer::remove_tree(dir);
+	DirAccess::make_dir_recursive_absolute(ProjectSettings::get_singleton()->globalize_path(dir));
+	const String trace_path = dir.path_join("trace-sidecar.jsonl");
+	DirAccess::remove_absolute(trace_path);
+
+	MCPTrace::Recorder recorder;
+	REQUIRE(recorder.open(trace_path));
+	// The bound is a property of the recorder, so the case can make it small and
+	// keep the payload readable.
+	recorder.set_max_args_bytes(1024);
+
+	MCPToolRegistry registry;
+	TestMCPServer::build_all_tools_registry(registry);
+
+	// A body comfortably over 1024 bytes, and one comfortably under it.
+	String filler;
+	for (int i = 0; i < 200; i++) {
+		filler += vformat("line %03d of the over-bound payload\n", i);
+	}
+	CHECK(filler.utf8().length() > 1024);
+
+	const String big_body = vformat("{\"jsonrpc\":\"2.0\",\"id\":31,\"method\":\"tools/call\",\"params\":"
+									"{\"name\":\"project_write_text_file\",\"arguments\":{\"path\":\"%s\",\"content\":\"%s\"}}}",
+			dir.path_join("sidecar-probe.txt"), filler.replace("\n", "\\n"));
+	const String small_body = vformat("{\"jsonrpc\":\"2.0\",\"id\":32,\"method\":\"tools/call\",\"params\":"
+									  "{\"name\":\"project_write_text_file\",\"arguments\":{\"path\":\"%s\",\"content\":\"tiny\"}}}",
+			dir.path_join("sidecar-probe.txt"));
+
+	const MCPJsonRpc::Dispatch big = MCPJsonRpc::dispatch(big_body, registry, false, 30000, true);
+	CHECK(big.trace.args_bytes > 1024);
+	recorder.record(1, big.trace, 3, 0);
+
+	const MCPJsonRpc::Dispatch small = MCPJsonRpc::dispatch(small_body, registry, false, 30000, true);
+	CHECK(small.trace.args_bytes <= 1024);
+	recorder.record(1, small.trace, 1, 0);
+
+	recorder.close();
+
+	const String text = FileAccess::get_file_as_string(trace_path);
+	const PackedStringArray lines = text.strip_edges().split("\n");
+	REQUIRE(lines.size() == 2);
+
+	// (1) the over-bound line: cropped inline, complete on disk.
+	const String over = lines[0];
+	CHECK(over.contains("\"args_truncated\":true"));
+	CHECK(over.contains("\"args_sidecar\""));
+	CHECK_FALSE(over.contains("\"args_sidecar_error\""));
+	REQUIRE(over.contains("\"sha256\""));
+	const String sha_from_line = over.split("\"sha256\":\"")[1].split("\"")[0];
+	const String path_from_line = over.split("\"path\":\"")[1].split("\"")[0];
+	const String relative_from_line = over.split("\"relative_path\":\"")[1].split("\"")[0];
+	// `path` is whatever `--mcp-trace` was given, verbatim (a real session passes
+	// an absolute OS path; this case passes `res://`), so both spellings of the
+	// same file are accepted here. The disjunction is computed outside `CHECK`
+	// because doctest rejects a compound expression it cannot decompose.
+	const bool path_is_inside_the_fixture = path_from_line.begins_with(dir) ||
+			path_from_line.begins_with(ProjectSettings::get_singleton()->globalize_path(dir));
+	CHECK(path_is_inside_the_fixture);
+	CHECK(relative_from_line.begins_with("trace-sidecar.sidecar/"));
+	CHECK(relative_from_line.ends_with("-args.json"));
+	REQUIRE(FileAccess::exists(path_from_line));
+	// The file really is the whole payload, and the hash on the line really is
+	// the file's hash.
+	const String stored = FileAccess::get_file_as_string(path_from_line);
+	CHECK(stored.utf8().length() == big.trace.args_bytes);
+	CHECK(stored == big.trace.args_json);
+	CHECK(stored.contains("line 199 of the over-bound payload"));
+	CHECK(FileAccess::get_sha256(path_from_line) == sha_from_line);
+	CHECK(over.contains(vformat("\"bytes\":%d", big.trace.args_bytes)));
+	// The cropped copy is still there - the sidecar is an addition, not a
+	// replacement, so an existing reader is unaffected.
+	CHECK(over.contains(vformat("\"args_bytes\":%d", big.trace.args_bytes)));
+
+	// (2) the inline line carries no sidecar at all: the evidence is only
+	// produced where it is needed.
+	const String under = lines[1];
+	// Printed only when an assertion below fails: the canonical key order of
+	// `args` is not part of the contract, so a failure here needs the line.
+	INFO(under);
+	CHECK(under.contains("\"args_truncated\":false"));
+	CHECK_FALSE(under.contains("args_sidecar"));
+	CHECK(under.contains("tiny"));
+	CHECK(under.contains("sidecar-probe.txt"));
+
+	TestMCPServer::remove_tree(dir);
+}
+
+// ---------------------------------------------------------------------------
+// TASK-092 (item B4): the frame-cost estimate's rule.
+//
+// The deferred drivers size their deadlines from one frame's cost, so the
+// estimate is a behaviour and not a diagnostic. TASK-090 read
+// `Engine::get_frames_per_second()`, a one-second reading updated once per
+// second: the round-8 session got `timeout_ms: 4396` for one instance of a
+// scenario and `1150` for the next. The replacement is a median over a window of
+// frame durations, and this case pins the three properties that make it stable:
+//
+//   * one outlier among fifteen fast frames does not move the answer;
+//   * a genuinely slow loop does (that is the case the deadline has to survive);
+//   * the answer is clamped, and truncation is what keeps a 60 fps process on
+//     the constant the formula used before the estimate existed (16667 us -> 16).
+//
+// The clock is driven by the test, so nothing here depends on wall time.
+// ---------------------------------------------------------------------------
+TEST_CASE("[MCPServer] the frame-cost estimate is a clamped median of a window, not a moment reading") {
+	MCPFrameClock::reset_for_tests();
+	CHECK(MCPFrameClock::sample_count() == 0);
+	// Nothing sampled: the floor, never zero and never a division by a missing
+	// frame rate.
+	CHECK(MCPFrameClock::frame_cost_ms() == MCPFrameClock::FLOOR_MS);
+
+	// Fifteen frames at 60 fps, in microseconds, starting from an arbitrary
+	// origin: the first call only establishes the origin and is not a sample.
+	uint64_t now = 1000000;
+	MCPFrameClock::note_frame(now);
+	for (int i = 0; i < MCPFrameClock::SAMPLE_COUNT; i++) {
+		now += 16667;
+		MCPFrameClock::note_frame(now);
+	}
+	CHECK(MCPFrameClock::sample_count() == MCPFrameClock::SAMPLE_COUNT);
+	// 16667 us truncated to 16 ms: byte-identical to the constant the deadline
+	// formula was built on.
+	CHECK(MCPFrameClock::frame_cost_ms() == 16);
+
+	// One 500 ms stall among fifteen fast frames: the median does not move. This
+	// is the whole point - the old reading would have inherited the stall for a
+	// full second.
+	now += 500000;
+	MCPFrameClock::note_frame(now);
+	CHECK(MCPFrameClock::frame_cost_ms() == 16);
+
+	// A loop that is really slow (every frame ~250 ms): the median follows, and
+	// the deadline is allowed to grow with it.
+	for (int i = 0; i < MCPFrameClock::SAMPLE_COUNT; i++) {
+		now += 250000;
+		MCPFrameClock::note_frame(now);
+	}
+	CHECK(MCPFrameClock::frame_cost_ms() == 250);
+
+	// A stall/zero-duration pair is not a frame and is not sampled: the window
+	// keeps the slow value.
+	const int before = MCPFrameClock::sample_count();
+	MCPFrameClock::note_frame(now); // 0 us later: not a sample
+	CHECK(MCPFrameClock::sample_count() == before);
+	now += 5000000; // > MAX_SAMPLE_US: not a sample either
+	MCPFrameClock::note_frame(now);
+	CHECK(MCPFrameClock::sample_count() == before);
+	CHECK(MCPFrameClock::frame_cost_ms() == 250);
+
+	// The ceiling: a loop slower than one second per frame is a stall, and the
+	// deadline formula has the framework ceiling as its real bound.
+	for (int i = 0; i < MCPFrameClock::SAMPLE_COUNT; i++) {
+		now += 1999999;
+		MCPFrameClock::note_frame(now);
+	}
+	CHECK(MCPFrameClock::frame_cost_ms() == MCPFrameClock::CEILING_MS);
+
+	MCPFrameClock::reset_for_tests();
+	CHECK(MCPFrameClock::sample_count() == 0);
+}
+
 
 
 

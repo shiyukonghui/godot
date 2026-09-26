@@ -38,6 +38,12 @@
 #include "../tools/project_read_template.h"
 #include "../tools/registration.h"
 #include "../tools/tool_builder.h"
+// TASK-092 (item B2): the fake deferred task publishes its file through the
+// module's own write primitive - the one place a `MutationScope` is opened -
+// so the file-side half of a deferred call has a deterministic source. This
+// translation unit deliberately does not include `test_mcp_server.h`, so the
+// declaration has to be pulled in here.
+#include "../tools/tool_helpers.h"
 
 #include "core/config/engine.h"
 #include "core/io/dir_access.h"
@@ -191,11 +197,12 @@ int fake_pending_live() {
 
 class FakePendingTask : public MCPDeferred::Task {
 public:
-	FakePendingTask(const String &p_payload, int p_ticks_to_finish, uint64_t p_timeout_ms, bool p_fail) :
+	FakePendingTask(const String &p_payload, int p_ticks_to_finish, uint64_t p_timeout_ms, bool p_fail, const String &p_write_path = String()) :
 			payload(p_payload),
 			ticks_to_finish(p_ticks_to_finish),
 			timeout_ms(p_timeout_ms),
-			fail(p_fail) {
+			fail(p_fail),
+			write_path(p_write_path) {
 		fake_pending_live_tasks++;
 	}
 
@@ -213,6 +220,15 @@ public:
 		if (fail) {
 			return MCPDeferred::TickResult::failed(MCPToolError::tool_state(
 					vformat("fake pending failure for '%s'", payload), "fake suggestion"));
+		}
+
+		// TASK-092 (item B2): a deferred task's disk work happens **in its own
+		// tick**, which is exactly what the per-call recorder could not see. A
+		// task that writes here is what the "a deferred call's file effects reach
+		// the completion" case needs; `write_path` empty (every pre-TASK-092
+		// use of this class) writes nothing at all.
+		if (!write_path.is_empty()) {
+			MCPTools::publish_text_atomically(write_path, "written in a deferred tick\n" + payload + "\n");
 		}
 
 		Dictionary result;
@@ -233,6 +249,9 @@ private:
 	int ticks_to_finish = 1;
 	uint64_t timeout_ms = 0;
 	bool fail = false;
+	// Non-empty: the finishing tick publishes this `res://` path through the
+	// module's own publish primitive, so the file-effect recorder sees it.
+	String write_path;
 };
 
 static MCPDeferred::Task *_fake_pending_handler(const Dictionary &p_args, MCPToolError &r_error) {
@@ -259,7 +278,11 @@ static MCPDeferred::Task *_fake_pending_handler(const Dictionary &p_args, MCPToo
 	if (!MCPTools::optional_bool(p_args, "fail", false, fail, r_error)) {
 		return nullptr;
 	}
-	return memnew(FakePendingTask(payload, (int)ticks, (uint64_t)timeout_ms, fail));
+	String write_path;
+	if (!MCPTools::optional_string(p_args, "write_path", String(), write_path, r_error)) {
+		return nullptr;
+	}
+	return memnew(FakePendingTask(payload, (int)ticks, (uint64_t)timeout_ms, fail, write_path));
 }
 
 // A plain immediate tool of the same registry, so that "an ordinary request is
@@ -297,6 +320,13 @@ static Dictionary _fake_pending_schema() {
 	Dictionary fail;
 	fail["type"] = "boolean";
 	properties["fail"] = fail;
+	// TASK-092 (item B2): a path the finishing tick publishes through the
+	// module's own primitive, so a deferred call's file-side effect has a
+	// deterministic source. Declared here because the unknown-argument gate
+	// refuses any name a schema does not carry.
+	Dictionary write_path;
+	write_path["type"] = "string";
+	properties["write_path"] = write_path;
 
 	Dictionary schema;
 	schema["type"] = "object";

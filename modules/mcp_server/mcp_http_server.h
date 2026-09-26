@@ -172,6 +172,35 @@ public:
 
 	// Body of `GET /mcp` (connectivity probe).
 	virtual String get_status_body() = 0;
+
+	// -----------------------------------------------------------------------
+	// TASK-092 (item B2): the capture half of a deferred call.
+	//
+	// A deferred request is answered frames after it was read, so the machinery
+	// that finishes a capture when a response is produced (`MCPServer::
+	// handle_jsonrpc_request`) cannot be the place a *deferred* capture is
+	// finished: at that moment the call has not run yet. The transport is where
+	// the call really ends, and it is the transport that knows the one fact the
+	// capture line still needs - the `seq` of the call line it belongs to.
+	//
+	// Both methods are non-pure with a no-op default: a sink that has no capture
+	// engine (every doctest, and every process without `--mcp-capture`) keeps
+	// working unchanged, and the transport never has to know whether capture is
+	// on. `r_record.capture_token` (present only when the request armed one) is
+	// the handle.
+	//
+	// `finish_deferred_capture` answers whether the call line should carry a
+	// `capture` member; it must be called with `r_record.ok` already set, because
+	// `on_error` mode drops a successful call's picture.
+	virtual bool finish_deferred_capture(MCPTrace::Record &r_record, int p_seq) {
+		(void)r_record;
+		(void)p_seq;
+		return false;
+	}
+
+	// Releases an armed capture of a request that will never be answered (its
+	// connection went away). Nothing is written: there is no line to describe it.
+	virtual void discard_deferred_capture(int p_token) { (void)p_token; }
 };
 
 // Non-blocking HTTP/1.1 server on top of TCPServer/StreamPeerTCP.

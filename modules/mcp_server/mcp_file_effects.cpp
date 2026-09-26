@@ -219,6 +219,19 @@ Variant state_dictionary(const Snapshot &p_snapshot) {
 	return out;
 }
 
+// TASK-092 (item B2): the one place the file-side vocabulary is decided, shared
+// by `status_name()` (a synchronous call's own buffer) and `status_of()` (a
+// deferred call's window accumulated over frames).
+String status_for_flags(bool p_any_changed, bool p_any_unchanged, int p_total_rows) {
+	if (p_total_rows == 0) {
+		return "no_mutation";
+	}
+	if (p_any_changed && p_any_unchanged) {
+		return "observed_mixed";
+	}
+	return p_any_changed ? "observed_changed" : "observed_no_change";
+}
+
 } // namespace
 
 void begin_recording() {
@@ -256,13 +269,27 @@ String status_name() {
 	if (recording) {
 		return "recording";
 	}
-	if (total_rows == 0) {
-		return "no_mutation";
+	return status_for_flags(any_changed, any_unchanged, total_rows);
+}
+
+String status_of(const Array &p_rows) {
+	bool any = false;
+	bool any_unchanged_row = false;
+	int total = 0;
+	for (int i = 0; i < p_rows.size(); i++) {
+		const Variant entry = p_rows[i];
+		if (entry.get_type() != Variant::DICTIONARY) {
+			continue;
+		}
+		const Dictionary row = entry;
+		total++;
+		if ((bool)row.get("changed", false)) {
+			any = true;
+		} else {
+			any_unchanged_row = true;
+		}
 	}
-	if (any_changed && any_unchanged) {
-		return "observed_mixed";
-	}
-	return any_changed ? "observed_changed" : "observed_no_change";
+	return status_for_flags(any, any_unchanged_row, total);
 }
 
 MutationScope::MutationScope(const String &p_path, const String &p_kind) {

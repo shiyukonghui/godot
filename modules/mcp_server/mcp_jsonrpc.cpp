@@ -404,10 +404,18 @@ static Dispatch _dispatch_tools_call(const String &p_id_json, const Variant &p_p
 		r_trace.timeout_ms = deferred.timeout_ms;
 		// TASK-089: a deferred tool's disk work happens after this function has
 		// returned (its task is ticked by the transport), so the file-side
-		// recorder - which is per-call and synchronous - cannot see it. That is
-		// said on the line instead of being left to look like "no mutation".
+		// recorder - which is per-call and synchronous - cannot see it *here*.
+		// TASK-092 (item B2) closed the gap at the place the work really happens:
+		// `MCPDeferred::Queue::tick` wraps every tick in the same recorder and
+		// accumulates its rows for the whole deferred window, and the transport
+		// writes that verdict onto this record before the line is emitted. What is
+		// set here is therefore a **placeholder for a request that never
+		// completes** (its connection went away): it is overwritten on every path
+		// that produces a line, and it says "not observed" rather than "nothing
+		// changed" - which is what it means.
 		// [REBUILT-2C low-confidence: verify] TASK-089 item A: written, not
-		// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-1).
+		// replayed; REBUILT-2C-MANIFEST.md 2c-8 (H-1). TASK-092 item B2 keeps the
+		// placeholder and adds the overwrite.
 		if (r_trace.traceable) {
 			r_trace.file_effect_status = "not_tracked_deferred";
 		}

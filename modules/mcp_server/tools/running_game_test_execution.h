@@ -94,4 +94,30 @@ Dictionary node_state_step_verdict(const String &p_step_node_path, const String 
 Dictionary screen_text_step_verdict(const String &p_text, bool p_partial, bool p_case_sensitive,
 		const Array &p_visible_texts, const Array &p_visible_elements, bool p_found);
 
+// ---------------------------------------------------------------------------
+// TASK-092 (item B3): the scenario driver's core, separated from the tool's
+// statement about its environment.
+//
+// The state machine (`TestScenarioTask`) was only reachable through
+// `running_game_run_test_scenario`, and that tool refuses with `-32000` in any
+// process without a `SceneTree` - which every doctest is. That is why TASK-090
+// had to declare "`in_input_map` has no doctest" and pin the field with one live
+// trace instead. Exporting the core is the same move TASK-090 made for the
+// GDScript executor ("the core with the mount point passed in"), and it keeps the
+// two things apart on purpose:
+//
+//   * **what the request means** (the step validation, the deadline estimate, the
+//     task itself) - this function, testable with no engine state at all;
+//   * **whether this process can serve it** - the `SceneTree` requirement, which
+//     stays a property of the *tool*: `running_game_run_test_scenario` passes
+//     `p_require_scene_tree = true`, an in-process caller that already knows what
+//     it is doing passes `false`.
+//
+// `p_now_ms` is the caller's clock (`OS::get_ticks_msec()` in the tool), so a
+// doctest never depends on wall time. Ownership of the returned task transfers to
+// the caller, exactly like `pending_handler` does.
+// ---------------------------------------------------------------------------
+MCPDeferred::Task *create_test_scenario_task(const Dictionary &p_args, uint64_t p_now_ms,
+		bool p_require_scene_tree, MCPToolError &r_error);
+
 } // namespace MCPTools

@@ -1,7 +1,9 @@
 # MCP-TRACEABILITY — 一次操作是否有效，以及凭什么判定
 
 * Task: TASK-088 item ⑤；TASK-089 item A 关闭了当时的唯一缺口（文件侧副作用）；
-  TASK-090 item A 关闭了剩下的一个（失败应答的 `data` 载荷）。
+  TASK-090 item A 关闭了剩下的一个（失败应答的 `data` 载荷）；
+  **TASK-092 关闭了最后三个**：截断参数的旁路证据（item B1`args_complete`）、延迟调用的文件侧与画面侧
+  证据（item B2）、帧代价取值的稳定性规则（item B4，见 §6）。
 * 口径：本文定义**溯源模型**（字段 / 判定规则 / 失败分类）与**如何用日志判定一次操作是否有效**，
   并给出一次真实会话的产物路径。所有字段名都以实际写出的 JSON 行为准，逐条给出源码位置。
 
@@ -12,11 +14,15 @@
 运行期已经**把判定一次操作是否有效所需的全部事实写进日志**：每条请求一行，每次 `tools/call`
 另配一行 `{"event":"capture"}`（截图像素差），并且（TASK-089 起）调用行本身还带着**这次调用改了
 哪些文件**（绝对路径 + 前后 sha256/大小 + 是否真的变了 + 文本文件的首尾差异摘要）与**这次调用
-答了什么**（`result_json`，有界；TASK-090 起失败时还有 `error_data_json`，同样是工具自身写的、
-有界的）。读取侧由 `scripts/mcp_trace_ledger.py` 把这些行合成**每次调用一行**的有效性台账。
+答了什么**（`result_json`，有界；TASK-090 起失败时还有 `error_data_json`）。读取侧由
+`scripts/mcp_trace_ledger.py` 把这些行合成**每次调用一行**的有效性台账。
 
-**TASK-088 声明的缺口（文件侧副作用 `not_recorded_in_trace`）已在 TASK-089 补上**，
-**TASK-090 item A 又补上了失败应答的 `data`**，见 §2.4、§3.2 与 §5。
+TASK-092 起，**任何被 trace 的字节上限裁掉的载荷都有可核的旁路证据**：整份载荷写进同目录的
+sidecar 文件，调用行给出相对路径 + 绝对路径 + 真实字节数 + sha256，台账在读取时**重新算一遍
+hash 与大小**并据此判 `args_complete`（§2.6 / §3.1）。**延迟调用的文件侧副作用与画面侧效果也
+在完成时刻被采集**（§2.7）：文件侧复用同一个 `MutationScope`，在延迟窗口的每一帧累计；画面侧
+在请求到达帧取 `before`、完成帧之后取 `after`。仍然做不到的那一类（超时到**一帧都没被观测**）
+在行里写 `not_tracked_deferred`，是一个**明确命名的边界**而不是静默缺失。
 
 ---
 
@@ -60,6 +66,7 @@
 | `file_effect_status` / `file_effects` | **TASK-089 新增**：这次调用对磁盘做了什么，见 §2.4 | `mcp_file_effects.*`；`mcp_trace.cpp` 的 `_build_line` |
 | `result_json` / `result_json_bytes` / `result_json_truncated` | **TASK-089 新增**：成功应答的**工具自身返回体**（规范化 JSON，按 `args` 同一上限截断；真实字节数另给）。看的不是「调用成功」，而是「它自己说什么」：`passed:false`、`created:true`、`ignored`、`changed` | `mcp_jsonrpc.cpp`（`_dispatch_tools_call` 成功分支）；`mcp_trace.cpp` 的 `_build_line` |
 | `error_data_json` / `error_data_json_bytes` / `error_data_json_truncated` | **TASK-090 新增**：失败应答的**工具自身 `data` 载荷**（`suggestion`、`parse_error` 等），与 `result_json` 同一收口、同一上限策略。**每一次失败的 `tools/call` 都写**，工具没带载荷时写 `""`——「有这个字段」因此可以与「这条 trace 出自旧版本」区分开 | `mcp_jsonrpc.cpp`（`_record_error_data`；延迟分支与立即分支）；`mcp_http_server.cpp`（延迟完成）；`mcp_trace.cpp` 的 `_build_line` |
+| `args_sidecar` / `result_json_sidecar` / `error_data_json_sidecar` | **TASK-092 (B1) 新增**：被上限裁掉的载荷的**完整旁路证据**，`{path, relative_path, bytes, sha256}`。只在载荷真的超限时出现（未超限的载荷是 inline 完整的，不产生文件也不产生这个字段）。写文件失败时同一位置写 `<同名前缀>_sidecar_error`（字符串原因），裁断因此是**声明的**而不是隐形的 | `mcp_trace.cpp` 的 `Recorder::_write_sidecar` / `Recorder::record` / `_emit_sidecar`；读取规则见 §2.6 与 §3.1 |
 
 ### 2.4 TASK-089 新增：文件侧副作用（`file_effect_status` + `file_effects`）
 
@@ -113,6 +120,68 @@ file_effects: [ {                                   // 一次调用一个受影�
 尚未发布进 `project.godot` 的 InputMap 动作）记为 `no_mutation`——那是正确的读法，台账的
 `file_effect` 一列写 `none`，而不是暗示「这次调用什么都没做」。
 
+### 2.6 TASK-092 (item B1)：超限载荷的 sidecar（`*_sidecar`）
+
+**它补的是什么缺口。** trace 对三个载荷有字节上限（`args` / `result_json` / `error_data_json`，
+默认 4096 B）。超限就只写前缀 + 真实字节数，于是**台账恰好在载荷最值得看的时候失去可重建性**：
+Pong 会话里 `project_edit_script` 的行写着 `args_truncated: true` 与 `args_bytes: 9464`，读者能
+看见「被裁了」，永远看不见「裁掉的是什么」。
+
+**现在的规则**（写侧：`mcp_trace.cpp` 的 `_write_sidecar` / `record` / `_emit_sidecar`）：
+
+| 情形 | 行上的字段 | 文件侧 |
+|---|---|---|
+| 载荷未超限 | `args`（完整）、`args_truncated: false` | 无文件 |
+| 载荷超限 | `args`（仍是裁断后的前缀）、`args_truncated: true`、`args_sidecar: {path, relative_path, bytes, sha256}` | `res://`… 之外，写进**trace 文件同目录**的 `<trace 名>.sidecar/<行号>-<种类>.json`，内容是**整份**规范化载荷 |
+| 文件写不出来 | 同上，但改为 `args_sidecar_error: "<原因>"` | 无文件 |
+
+三个载荷同一套机制，种类后缀是 `args` / `result` / `error_data`，trace 字段前缀分别是
+`args` / `result_json` / `error_data_json`。
+
+**为什么可核，而不是「它说写了就写了」。** 字段给的是**路径 + 相对路径 + 真实字节数 +
+sha256**，台账（`sidecar_of()`）读取时**自己重新打开文件、重新算 sha256、重新量大小**：
+`sidecar_verified` 只在**三者全都对上**时才成立，否则是 `sidecar_mismatch`（并给出实际值）；
+两个路径都找不到就是 `sidecar_missing`。`sha256` 用的是 `FileAccess::get_sha256()`——和
+`file_effects` 的前后 hash **同一个函数**，所以「读侧重算」与「写侧记录」按构造同源；`bytes` 是
+**把文件读回来量出来的**，不是把写进去的字符串长度抄一遍。`path` 是 `--mcp-trace` 给的那个形式
+**原样**（试测里是绝对 OS 路径；`res://` / `user://` 形式原样保留），`relative_path` 相对 **trace
+文件所在目录**，因此 trace 被拷到别的机器/别的目录后旁路证据仍然可核——读侧**先试 `path`、
+再试 `<trace 目录>/<relative_path>`**。
+
+**成本是显式有界的**：只有超限的载荷才落盘，每份一次 `store_string` + 一次 `get_sha256`（读回
+自己刚写的文件），且写失败**绝不打断它描述的那次调用**（记录器是旁观者，见 `mcp_trace.h` 的
+两条硬约束）。
+
+### 2.7 TASK-092 (item B2)：延迟调用的文件侧与画面侧证据
+
+**它补的是什么缺口。** 延迟通道（GDR-20：工具跨帧作答）此前在文件侧只有一个声明
+（`file_effect_status: "not_tracked_deferred"`），在画面侧只有 `capture.status: "unavailable"`：
+每调用一次的同步缓冲看不到「应答之后」的落盘，而截图在 TASK-090 之前的实现里根本没被 arm。
+于是场景 / 压力这两个**整个答案就是判定**的工具，在台账上既没有磁盘证据也没有画面证据。
+
+**文件侧。** 记录器（TASK-089 的 `MutationScope`）现在开在**任务真正跑的那一处**：
+`MCPDeferred::Queue::tick()` 在调用 `entry.task->tick()` 前后各开/收一次，把这一次 tick 的行
+**跨整个延迟窗口累计**到该 pending 条目上，完成时随 `Completion` 交回运输层，写进调用行。
+`Completion::file_effect_status` 的取值规则：
+
+| 情形 | 状态 | 读法 |
+|---|---|---|
+| 至少有一帧被观测，且这些帧里有落盘改动 | `observed_changed` / `observed_mixed` | 真的写了文件，行里有 sha 证据 |
+| 至少有一帧被观测，没有落盘改动 | `no_mutation` | **是事实**：窗口被看着，什么都没变 |
+| 一帧都没被观测（deadline 在第一次 tick 之前就到了） | `not_tracked_deferred` | **明确命名的边界**，不是「没变」 |
+| trace 关（`traceable=false`） | 空串 | 这条 trace 不带文件侧证据 |
+
+**画面侧。** 延迟调用的 `before` 帧在**请求被读到的帧**取（`Engine::arm()`，与立即调用同一处），
+`after` 帧在**完成帧之后至少一整个渲染帧**取（`Engine::_complete()`，与立即调用同一处）——
+不同的只是 `finish()` 从「应答时」移到了「完成时」，而 `seq` 用**完成时才知道的那个行号**。
+调用行因此仍然写 `capture.status: "pending"`，紧随其后的 `{"event":"capture"}` 行带着
+`changed` / `changed_pixels` / `total_changed_ratio` 与两张 PNG，`frames_waited` 就是**这个延迟
+窗口的长度**——它本身就是「after 帧确实在完成之后」的证据。
+
+**声明的代价与边界**：每个在飞的延迟调用会多持有一帧 framebuffer 拷贝，直到它完成；数量上界
+就是 pending 表的上界。连接在完成前断开时，slot 由运输层显式释放（`Engine::discard()`），
+不留内存、也不写行（没有应答可依附）。`on_error` 模式下成功的延迟调用与立即调用一样被丢弃。
+
 ### 2.2 捕获行（`{"event":"capture"}`，与调用行同 `seq`，`mcp_capture.cpp:608-710`）
 
 `status`、`tool`、`mode`、`viewport`、`scale`、`frames_waited`、`ts_ms`、
@@ -153,8 +222,13 @@ scene_effect  = changed    捕获行说 before/after 像素不同
 file_effect   = changed    这次调用真的改写了盘上的落点（`file_effect_status` = observed_changed / mixed）
                 unchanged  走了写出原语，字节与之前完全相同（observed_no_change）
                 none       这次调用没有碰盘（no_mutation）
-                not_tracked 延迟应答通道（工具的实际工作在应答之后），本进程无法观测
+                not_tracked 延迟应答通道里**一帧都没被观测**（deadline 先到）；这是命名的边界，不是「没变」
                 not_recorded 这条 trace 由没有文件侧记录器的版本写出（声明的缺失，不读作「没变」）
+
+args_complete = true       参数完整：要么 inline 未截断，要么超限但 sidecar 被读侧**重新核对通过**
+                            （`args_evidence` = inline_complete / sidecar_verified）
+                false      截断了且没有可核的旁路证据（`truncated_no_sidecar` /
+                            `sidecar_missing` / `sidecar_mismatch` / `sidecar_not_recorded_in_trace`）
 
 verdict       = failed                   ok=false（带 error_code/error_message）
                 ok_file_effect_observed  file_effect ∈ {changed, mixed}   ← 有效，且改动有 sha 证据
@@ -179,9 +253,24 @@ verdict       = failed                   ok=false（带 error_code/error_message
 ### 3.1 可重建性（facts）
 
 每一行同时给出该调用**可从日志重建的事实**是否齐备：
-`request_id` / `tool` / `args`（未截断）/ `times` / `result` / `capture` / `scene_evidence` /
-`file_effect` / `error_data`，以及 `facts_complete`。用它区分「证据支持」与「推断」：
+`request_id` / `tool` / `args`（未截断，**或**有通过核对的 sidecar）/ `times` / `result` / `capture` /
+`scene_evidence` / `file_effect` / `error_data`，以及 `facts_complete`。用它区分「证据支持」与「推断」：
 `facts_complete=false` 的行不得用来下结论。
+
+`args` 的事实（TASK-092 item B1 起）由 `args_complete` 判定，而 `args_complete` 由台账**实际读盘**
+得出，不是照抄行上的 `args_truncated`：
+
+| `args_evidence` | 含义 | `facts.args` |
+|---|---|---|
+| `inline_complete` | 未截断，参数就在行上 | true |
+| `sidecar_verified` | 截断了，但 sidecar 存在且 sha256 与字节数与行上一致 | true |
+| `truncated_no_sidecar` | 截断了，写 sidecar 时报了错（`args_sidecar_error`） | false |
+| `sidecar_missing` | 截断了，行指名了文件，两个候选路径都找不到 | false |
+| `sidecar_mismatch` | 文件在，但 sha256 或字节数与行上不符（`args_sidecar_detail.actual_*`） | false |
+| `sidecar_not_recorded_in_trace` | 截断了，行上连 sidecar 字段都没有 → 旧版本写出的 trace | false |
+
+读法（重要）：`sidecar_not_recorded_in_trace` **只对旧 trace 成立**；新版本对每一个被裁的载荷
+要么写出可核的 sidecar，要么写出 `args_sidecar_error`，两者都让「为什么不可重建」有名字。
 
 `error_data`（TASK-090 新增）只在**失败**的调用上不可省略：新版本对每一次失败的
 `tools/call` 都写这个字段（没载荷就是 `""`），所以「字段在」＝可重建；「失败却没有这个
@@ -201,21 +290,30 @@ verdict       = failed                   ok=false（带 error_code/error_message
   `error_data` / `error_data_evidence` / `error_flags`（`error_suggestion` / `error_parse_error`），
   并在文本里单列「failure payloads」一段。
   **旧 trace 读法**：`error_data_evidence = not_recorded_in_trace`（失败行没有该字段）。
-* **延迟应答通道（deferred）不算已补**：`file_effect_status` 写 `not_tracked_deferred`。工具的
-  实际磁盘工作发生在应答之后（运输层逐帧 tick），同步的每调用缓冲看不到它。声明的边界。
-  它的**失败载荷**则是在完成处写的（上面那条），两者不矛盾：载荷由运输层知道，磁盘副作用由
-  同步缓冲知道，而后者看不到。
+* **延迟应答通道（deferred）的文件侧：已补**（TASK-092 item B2）。记录器开在
+  `MCPDeferred::Queue::tick()`——任务真正运行的那一处——并把每一帧的行**跨整个延迟窗口累计**，
+  完成时写进调用行（`Completion::file_effects` / `file_effect_status`）。仍然存在的边界只有一条，
+  而且是**命名的**：deadline 在第一次 tick 之前就到（一帧都没被观测）时写 `not_tracked_deferred`，
+  读作「没有可观测量」，绝不读作「没有改动」。dispatch 时放在记录上的
+  `not_tracked_deferred` 只是占位，任何产生了行的路径都会覆盖它（`mcp_http_server.cpp::_tick_pending`）。
+* **延迟应答通道（deferred）的画面侧：已补**（TASK-092 item B2）。`before` 帧在请求被读到的帧取，
+  `finish()` 移到完成时（`MCPHttpRequestSink::finish_deferred_capture`），`after` 帧在完成帧之后
+  至少一个渲染帧取，像素差与两张 PNG 与立即调用同一套代码。见 §2.7。
 * **延迟调用的 `result_json`：已补**（TASK-090 item C）。TASK-089 只在**立即**成功分支写这个字段，
   于是每一个 deferred 调用行只有 `result_bytes`——而场景（`running_game_run_test_scenario`）与
   压力（`running_game_run_stress_test`）这两个工具**整个答案就是判定**（`all_passed` / 每步
   `passed`），台账因此无法回答「断言成立吗」，无论读取侧怎么写。现在 `_tick_pending` 在
   `CompletionKind::DONE` 时从 `completion.result` 写同族字段——那正是 `build_deferred_body`
   用 `content_result` 包起来的**同一个 Variant**，所以调用行与 wire body 字节同源。
-  画面侧与磁盘侧**仍然**不可观测（上一段），三者互不替代。
-* `args` 超过 4096 B 会被截断（`args_bytes` 仍给真实值，`args_truncated=true`）；`result_json`
-  与 `error_data_json` 用同一上限（各自的 `_bytes` 给真实值）；`error_message` 上限 512 B。
-  这四条是刻意的。
-* 捕获只在 `tools/call` 上开（`initialize` / `tools/list` 无副作用可观测）。
+* **`args` 超过 4096 B 被截断**：**已补旁路证据**（TASK-092 item B1）。行上保留裁断后的前缀与
+  真实 `args_bytes`，同时给出 `args_sidecar`（完整载荷 + 相对/绝对路径 + 真实字节数 + sha256），
+  台账**重算并核对**后判 `args_complete`，见 §2.6 与 §3.1。`result_json` 与 `error_data_json`
+  用同一上限、同一机制（`error_message` 上限 512 B 仍然是纯截断，见下）。
+* **仍然是纯截断的**：`error_message` 上限 512 B（它是一句给人看的话，载荷在
+  `error_data_json` 里，机器可读的那一半从不丢）。
+* **捕获只在 `tools/call` 上开**（`initialize` / `tools/list` 无副作用可观测）。
+
+---
 
 
 ---
@@ -396,7 +494,37 @@ seq=26 req_id=326  result_json = {"all_passed":false,"passed":0,"failed":1,...}
 | 无效成功（本模型的核心） | `ok=true` + `scene_effect=unchanged` + `file_effect∈{unchanged,none}` | 画面没动、盘上也没动 |
 | 成功但结论为否 | `ok=true` + `result_flags` 含 `assertion_failed` | 工具答 `passed:false`；TASK-089 起可见 |
 | 自相矛盾的声称 | `ok=true` + `result_flags` 含 `created_conflict` | `created:true` 与 `existed_before:true` 并存 |
-| 无法判定的成功（诚实边界） | `ok=true` + `unavailable` / `not_observed` / `not_tracked_deferred` | 无 framebuffer / 没开捕获 / 延迟应答通道 |
-| 证据不完整 | `args_truncated=true` 或 `result_json_truncated=true` 或 `error_data_json_truncated=true` 或 `facts_complete=false` | 不得据此下结论 |
+| 无法判定的成功（诚实边界） | `ok=true` + `unavailable` / `not_observed` / `not_tracked_deferred` | 无 framebuffer / 没开捕获 / 延迟窗口一帧都没被观测 |
+| 证据不完整 | `args_complete=false` 或 `result_json_truncated=true` 或 `error_data_json_truncated=true` 或 `facts_complete=false` | 不得据此下结论。**参数**的完整性与 sidecar 核对结果绑定（§3.1），不再与「行上的前缀有多长」绑定 |
 | 文件侧证据缺失 | `file_effect_evidence=not_recorded_in_trace` | 只对**旧版本写出的** trace 成立，见 §3.2 |
 | 失败载荷缺失 | `error_data_evidence=not_recorded_in_trace` | 只对**旧版本写出的** trace 成立，见 §3.2 |
+| 参数证据缺失 | `args_evidence=sidecar_not_recorded_in_trace` / `sidecar_missing` / `sidecar_mismatch` | 只对**旧版本写出的** trace 或**写不出文件**的那种成立；`sidecar_mismatch` 还给出 `args_sidecar_detail.actual_*` |
+
+---
+
+## 6. 帧代价的取值规则（TASK-092 item B4）
+
+延迟驱动器（`running_game_run_test_scenario` / `running_game_run_stress_test`）**每帧推进一步**，
+所以「一帧的代价」是它们 deadline 的**构成**，不是诊断信息。取值规则写在
+`modules/mcp_server/mcp_frame_clock.h`，实现在 `.cpp`，读法如下（台账与报告引用的是同一套）：
+
+| 项 | 规则 | 为什么 |
+|---|---|---|
+| 采样点 | `MCPServer::pump_frame()` 每帧一次，`OS::get_ticks_usec()` | 模块本来每帧都在那里；帧的定义就是「两次 pump 之间的间隔」，不是调用 tool 的时刻 |
+| 样本 | 相邻两次采样的差值 | 一次时钟读，无分配、无锁、无 I/O |
+| 丢弃的样本 | 差值 = 0（同一微秒内两次，doctest 会这样）或 > 2000 ms（加载卡顿、断点、挂起进程——那是停顿不是帧代价） | 让「代价」这个词只覆盖帧 |
+| 窗口 | **最近 15 帧** | 60 fps 下约四分之一秒：一次卡顿不影响，换了工况在一场场景自己的时长内就被反映 |
+| 估计值 | 窗口中位数，**截断**到整毫秒，再夹到 [16, 1000] | 见下 |
+| 截断 | 16667 µs → **16 ms** | 60 fps 下与 `_frame_cost_ms` 出现之前的硬编码常量**逐字相同**，deadline 公式的行为对快进程零变化 |
+| 下限 | 16 ms | 同上；一个比旧常量更短的 deadline 不是这次改动要引入的东西 |
+| 上限 | 1000 ms | 比一秒更慢的帧是停顿；deadline 真正的上界是框架的 30 s 天花板（GDR-20） |
+| 无样本时 | 下限 16 ms | 从没 pump 过帧的进程（doctest、单帧进程）拿到确定答案。**不**退回 `Engine::get_frames_per_second()`：`Engine::_fps` 的默认值是 **1**（`core/config/engine.h:67`），一个占位值会被读成「每帧 1000 ms」并把每个 deadline 放大 60 倍；而任何能算出 deadline 的进程都已经 pump 过帧（采样在请求被服务之前） |
+| 中位数取偶数个时 | 取中间两个中**较大**的那个 | 一种约定必须被选定；对 deadline 而言偏大是不低估一帧代价的那一侧 |
+
+**它替换掉了什么**：TASK-090 读的是 `Engine::get_frames_per_second()`，那是**一秒一次更新的
+一秒读数**——一次卡顿会被接下来整整一秒里计算的每一个 deadline 继承。第 8 轮会话实测到后果：
+同一个 3 步场景的两个实例相差一秒，拿到的 `timeout_ms` 分别是 `4396` 与 `1150`。中位数窗口
+让单个离群值不再移动答案，而**真的慢**的循环（每一帧都慢）会把答案搬到慢的那一侧。
+
+**读法**：行上的 `timeout_ms` 是**由这个估计造出来的**，所以两条相同场景的 `timeout_ms` 不同
+只说明它们的**取值时刻**不同，不说明契约变了；`duration_ms` 才是这次调用实际花了多久。

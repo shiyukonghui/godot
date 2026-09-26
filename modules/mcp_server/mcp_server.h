@@ -193,6 +193,12 @@ public:
 	void handle_jsonrpc_request(const String &p_body, MCPHttpOutcome &r_outcome) override;
 	String build_deferred_body(const MCPDeferred::Completion &p_completion) override;
 	String get_status_body() override;
+	// TASK-092 (item B2): the transport is where a deferred call really ends, so
+	// it is where a deferred capture is finished. `r_record.capture_token` is the
+	// handle the request armed; `p_seq` is the call line the recorder is about to
+	// write. See `MCPHttpRequestSink`.
+	bool finish_deferred_capture(MCPTrace::Record &r_record, int p_seq) override;
+	void discard_deferred_capture(int p_token) override;
 
 	// Diagnostics; intentionally not exposed through tools/list.
 	int get_port() const { return port; }

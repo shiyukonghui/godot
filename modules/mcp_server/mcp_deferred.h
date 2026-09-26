@@ -160,6 +160,23 @@ struct Completion {
 	// was read; the transport computes the two wall times of the trace line from
 	// it. 0 when the trace is off.
 	uint64_t start_ms = 0;
+
+	// TASK-092 (item B2): the **file-side** half of a deferred call.
+	//
+	// Until this existed a deferred call's line said
+	// `file_effect_status: "not_tracked_deferred"` and nothing else: the
+	// per-call recorder is synchronous, and the tool's disk work happens in the
+	// frames its task is ticked in, long after the request was answered. The
+	// rows are now collected **inside `Queue::tick`** - the one place the task
+	// runs - and accumulated for the whole deferred window, so the completion
+	// carries what the call really did to disk, next to what it answered.
+	//
+	// `file_effect_status` is `not_tracked_deferred` only when the call ended
+	// without a single observed tick (a deadline that expired before the first
+	// one); an observed window with no mutation is `no_mutation`, which is a
+	// fact and not an absence.
+	Array file_effects;
+	String file_effect_status;
 };
 
 // The pending table.
@@ -190,7 +207,14 @@ public:
 	// Releases every pending entry of one connection. Called from the single
 	// point where a connection is dropped, which is what makes a leak
 	// structurally impossible.
-	void drop_connection(uint64_t p_connection_id);
+	//
+	// TASK-092 (item B2): the released entries' trace records are appended to
+	// `r_dropped_traces` (none by default, so every existing caller keeps its
+	// old call). A dropped request's capture cannot be finished - there is no
+	// response to hang a verdict on - but the *slot* it armed has to be released,
+	// and only the record still names it. Without this the armed `before` frame
+	// would live until the process exits.
+	void drop_connection(uint64_t p_connection_id, Vector<MCPTrace::Record> *r_dropped_traces = nullptr);
 
 	void clear();
 
@@ -216,6 +240,12 @@ private:
 		// The transport's clock reading when the request was read, used only for
 		// the trace line's two wall times (0 when the trace is off).
 		uint64_t trace_start_ms = 0;
+		// TASK-092 (item B2): the rows collected in every frame this entry's task
+		// was ticked in (see `Completion::file_effects`). `effects_observed` says
+		// whether at least one tick was observed at all - the one difference
+		// between "nothing was mutated" and "nothing was watched".
+		Array file_effects;
+		bool effects_observed = false;
 	};
 
 	Vector<Entry> entries;
