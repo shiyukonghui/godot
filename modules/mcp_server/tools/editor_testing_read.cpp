@@ -1,11 +1,42 @@
+/**************************************************************************/
+/*  editor_testing_read.cpp                                               */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 #include "editor_testing_read.h"
 
 #include "tool_builder.h"
 #include "tool_helpers.h"
 
 #include "core/crypto/crypto_core.h"
-#include "core/core_bind.h"
+#include "core/io/dir_access.h"
+#include "core/io/file_access.h"
 #include "core/io/image.h"
+#include "core/math/math_funcs.h"
 #include "core/string/ustring.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
@@ -18,6 +49,34 @@ using namespace MCPTools;
 // **The `fix_implementation_first` entry of B4, and what was really wrong.**
 //
 // The migration source answered, in every case, a JSON object whose `message`
+// said 「使用 assert_node_state 等测试命令会自动收集结果。请查阅最近执行的测试命令输出。」
+// and which listed the tool names that would supposedly have collected results.
+// Its whole body was a GDScript `Expression` built from a literal string and a
+// second literal fallback object; no accumulator, no state, no read of anything.
+// A caller that ran `assert_node_state` and then asked for the report received
+// the same sentence as a caller that had run nothing at all: a **fabricated
+// success** in precisely the category TASK-019 section 1.1 forbids.
+//
+// The honest shape is not "refuse with -32000": the newer migration source shows
+// the right answer (`addons/godot_mcp/commands/test_commands.gd:337-373`) and the
+// module already has the two halves it needs - the assertion tools of B4 make
+// verdicts, and `MCPTools::build_test_report` (`tools/tool_helpers.{h,cpp}`)
+// aggregates whatever was recorded. So the tool reports **what really ran**:
+//
+//   * `total`      - assertions that carried a verdict;
+//   * `passed` / `failed`;
+//   * `pass_rate`  - `"%.1f%%"`, or `"N/A"` for an empty report;
+//   * `all_passed` - false for an empty report ("nothing ran" is not "all green");
+//   * `no_results` - true when nothing was recorded, which is the very thing the
+//                    migration source was hiding;
+//   * `details`    - the records themselves, in insertion order;
+//   * `source`     - where the answer came from. TASK-022 D-6: it is
+//                    `"game_process_file"` when the game process' persisted
+//                    report was read (`user://mcp_test_report.json`, via the
+//                    bridge of `tools/tool_helpers.*` - the file IPC the
+//                    migration source used) and `"editor_process"` when only this
+//                    process' accumulator was available. Saying so is the
+//                    difference between "no results" and "the results are
 //                    somewhere else", and after D-6 it is also the difference
 //                    between "there is nothing" and "here is what really ran".
 //
@@ -88,6 +147,14 @@ using namespace MCPTools;
 // instead of pretending the other one was reset.
 static Variant _tool_get_test_report(const Dictionary &p_args, MCPToolError &r_error) {
 	// TASK-028 G-3: **reading is not destroying.**
+	//
+	// The migration source's flag kept its declared default of `true`, and the
+	// bridge file is *shared* (`user://`, one file for every client of the same
+	// editor process), so the first client to read deleted the report the others
+	// had not read yet - a read with a side effect nobody asked for (measured by
+	// the M4c acceptance as G-3).
+	//
+	// The flag is therefore an **opt-in** now: absent and `false` both mean a pure
 	// read, and only an explicit `clear: true` empties what this call answered
 	// from. The two halves of "clear" stay separate and are reported separately in
 	// `cleared`, because they belong to two different processes: `editor_process`
@@ -148,46 +215,112 @@ static Variant _tool_get_test_report(const Dictionary &p_args, MCPToolError &r_e
 	}
 	answer["cleared"] = cleared;
 	return answer;
+}
+
+// ---------------------------------------------------------------------------
+// editor_analyze_screenshot_diff (old `compare_screenshots`, editor.rs:509-608)
+//
+// Observable contract (as implemented):
+//   * `image_a` / `image_b` (string, required, must not be blank): a project path
+//     (`res://` or `user://`) or a base64 PNG. The migration source's own
+//     discriminator is kept - `begins_with("res://") or begins_with("user://")`
+//     is a path, everything else is base64 - and a base64 string that does not
+//     decode is `-32001` naming the argument;
+//   * `threshold` (integer, default 10, 0..255): a pixel counts as changed when
+//     the **largest per-channel absolute difference of its RGB bytes** is
+//     strictly greater than it. `-32602` outside 0..255 (the migration source
+//     cast an arbitrary JSON integer to `i32` and used it as a threshold, so
+//     `threshold: -1` marked every pixel changed and `threshold: 300` marked
+//     none - a parameter that cannot mean anything must not be silently used);
+//   * a size mismatch is `-32602` (the migration source's `size_mismatch`
+//     branch, which its caller mapped to invalid_params);
+//   * `{"identical", "changed_pixels", "total_pixels", "diff_percentage",
+//     "threshold", "width", "height", "diff_image_base64"}`, with
+//     `diff_percentage` rounded to two decimals (`snappedf(diff_pct, 0.01)` in
+//     the migration source) and the difference image built exactly like the
+//     migration source's: changed pixels get `Color(1, 0, 0, clamp(max_d/255,
+//     0.3, 1.0))`, unchanged ones `Color(r*0.3, g*0.3, b*0.3, 1.0)`.
+//
+// **Deviations from the migration source, all deliberate:**
+//   1. the migration source *generated GDScript source text* with both arguments
+//      interpolated into it after escaping only `\` and `"` (`escaped_a` /
+//      `escaped_b`). That is a code-injection surface by construction; here the
+//      two images are loaded by the engine directly and no caller text is ever
+//      parsed as code.
+//   2. **no display server is needed.** The migration source ran the load
+//      through an editor `Expression`, which needs a full editor; `Image::load`
+//      and `Image::load_png_from_buffer` are CPU-side, so this tool also works
+//      in a `--headless` process. That is measured and used by the batch's
+//      evidence: the diff of two scratch PNGs is a **headless** success case.
+//   3. the comparison walks the u8 colour fields (`Color::r8`/`g8`/`b8`), which
+//      is what the GDScript `int(ca.r8)` spelling reads, instead of the
+//      float `Color::r` and its 0..1 rounding.
+//   4. a size cap. The pixel loop is O(width*height) with a per-pixel
+//      `get_pixel`/`set_pixel`, and the migration source's own `total` is
+//      `width*height`; a 16384x16384 pair would be a ~10 minute request that the
+//      framework would time out mid-way. The cap is therefore stated in the
+//      refusal (`-32602`) rather than discovered as a timeout.
+// ---------------------------------------------------------------------------
+
+// The largest image this tool will diff, on each axis. See deviation 4 above.
+static const int64_t MAX_DIFF_DIMENSION = 4096;
+
+// A base64 decoder for the two arguments of this tool, local to the file.
+//
+// Why not `Marshalls::base64_to_raw`: the module's own note on
+// `project_read_files.cpp:397` records that the engine's `Marshalls` singleton is
+// not reachable from a module at all in this fork (its `get_singleton()` answers
+// null outside the script-language setup), and `MCPTools` already depends on
+// `CryptoCore` for the *encode* half (`running_game_frame_observation.cpp`,
+// `editor_testing_read.cpp`'s own diff writer). A decode is twenty lines and has
+// no singleton to fail on, so it is written once, here, where it is needed.
+//
+// The rules are RFC 4648's: the alphabet plus `=` padding, whitespace ignored
+// anywhere (the migration source's caller could paste a wrapped payload), and a
+// length that is not a multiple of four is rejected. A `-`/`_` URL-safe alphabet
+// is deliberately *not* accepted: the caller is expected to send the standard
+// spelling, and guessing between the two alphabets is how a payload is silently
+// mis-decoded.
+static bool _decode_base64(const String &p_text, Vector<uint8_t> &r_out) {
+	static const char *const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	int values[256];
+	for (int i = 0; i < 256; i++) {
+		values[i] = -1;
+	}
+	for (int i = 0; i < 64; i++) {
+		values[(uint8_t)ALPHABET[i]] = i;
 	}
 
-	const int width = image_a->get_width();
-	const int height = image_a->get_height();
-	if (width != image_b->get_width() || height != image_b->get_height()) {
-		r_error = MCPToolError::invalid_params(vformat(
-				"Image size mismatch: image_a is %dx%d and image_b is %dx%d",
-				width, height, image_b->get_width(), image_b->get_height()));
-		return Variant();
-	}
-	if (width > MAX_DIFF_DIMENSION || height > MAX_DIFF_DIMENSION) {
-		r_error = MCPToolError::invalid_params(vformat(
-				"Image is %dx%d; this tool diffs at most %dx%d pixels (the comparison is per pixel)",
-				width, height, (int)MAX_DIFF_DIMENSION, (int)MAX_DIFF_DIMENSION));
-		return Variant();
-	}
-
-	Ref<Image> diff_image = Image::create_empty(width, height, false, Image::FORMAT_RGBA8);
-
-	int64_t changed = 0;
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
-			const Color a = image_a->get_pixel(x, y);
-			const Color b = image_b->get_pixel(x, y);
-			const int dr = ABS((int)a.r8 - (int)b.r8);
-			const int dg = ABS((int)a.g8 - (int)b.g8);
-			const int db = ABS((int)a.b8 - (int)b.b8);
-			const int max_diff = MAX(dr, MAX(dg, db));
-			if (max_diff > (int)threshold) {
-				changed++;
-				// The migration source's difference colour, verbatim.
-				diff_image->set_pixel(x, y, Color(1, 0, 0, CLAMP((double)max_diff / 255.0, 0.3, 1.0)));
-			} else {
-				diff_image->set_pixel(x, y, Color(a.r * 0.3, a.g * 0.3, a.b * 0.3, 1.0));
-			}
+	int accumulator = 0;
+	int bits = 0;
+	int padding = 0;
+	bool saw_padding = false;
+	r_out.clear();
+	for (int i = 0; i < p_text.length(); i++) {
+		const char32_t c = p_text[i];
+		if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+			continue;
+		}
+		if (c == '=') {
+			saw_padding = true;
+			padding++;
+			continue;
+		}
+		if (c > 127 || values[c] < 0 || saw_padding) {
+			// A character outside the alphabet, or data after the padding: not
+			// base64.
+			return false;
+		}
+		accumulator = (accumulator << 6) | values[c];
+		bits += 6;
+		if (bits >= 8) {
+			bits -= 8;
+			r_out.push_back((uint8_t)((accumulator >> bits) & 0xFF));
 		}
 	}
-
-	const int64_t total = (int64_t)width * (int64_t)height;
-	const Vector<uint8_t> diff_png = diff_image->save_png_to_buffer();
+	// A trailing group of 6 bits is a truncated symbol, and more than two pad
+	// characters cannot appear in a valid encoding.
+	if (bits >= 6 || padding > 2) {
 		return false;
 	}
 	return !r_out.is_empty();
@@ -283,29 +416,57 @@ static Variant _tool_analyze_screenshot_diff(const Dictionary &p_args, MCPToolEr
 		return Variant();
 	}
 
-	// TASK-044 section 2.5 (GDR-25): the comparison itself is one definition in
-	// `tool_helpers` now, shared with the call capture. The two checks above -
-	// the size mismatch and the axis cap - stay here: they are *this tool's*
-	// contract and they have to be decided in this order.
-	ScreenshotDiff diff;
-	if (!compare_screenshot_pixels(image_a, image_b, (int)threshold, true, "image_a", "image_b", diff, r_error)) {
-		return Variant();
+	Ref<Image> diff_image = Image::create_empty(width, height, false, Image::FORMAT_RGBA8);
+
+	int64_t changed = 0;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+			const Color a = image_a->get_pixel(x, y);
+			const Color b = image_b->get_pixel(x, y);
+			// `Color::get_r8()` is this fork's own 8-bit accessor (the GDScript
+			// `Color.r8` property binding, `color.h:233`); the float `Color::r` is
+			// multiplied by 255 and *rounded* inside it, which is exactly the
+			// "per channel byte difference" the threshold is defined in.
+			const int dr = Math::abs(a.get_r8() - b.get_r8());
+			const int dg = Math::abs(a.get_g8() - b.get_g8());
+			const int db = Math::abs(a.get_b8() - b.get_b8());
+			const int max_diff = MAX(dr, MAX(dg, db));
+			if (max_diff > (int)threshold) {
+				changed++;
+				// The migration source's difference colour, verbatim.
+				// MCP-NARROWING: G24-DIFF-PIXEL-CHANGED - both `Color(...)` calls
+				// below build `float` components out of *computed* values this
+				// function owns: `CLAMP(max_diff/255.0, 0.3, 1.0)` is bounded to
+				// [0.3, 1], and `a.r * 0.3` is a product of two values the engine
+				// already stores as 32-bit floats. No caller input reaches them,
+				// so no gate is possible or needed (TASK-023 D-7 scan entry).
+				diff_image->set_pixel(x, y, Color(1, 0, 0, CLAMP((double)max_diff / 255.0, 0.3, 1.0)));
+			} else {
+				// MCP-NARROWING: G24-DIFF-PIXEL-UNCHANGED - see above.
+				diff_image->set_pixel(x, y, Color(a.r * 0.3, a.g * 0.3, a.b * 0.3, 1.0));
+			}
+		}
 	}
 
-	const Vector<uint8_t> diff_png = diff.diff_image->save_png_to_buffer();
+	const int64_t total = (int64_t)width * (int64_t)height;
+	const Vector<uint8_t> diff_png = diff_image->save_png_to_buffer();
 	if (diff_png.is_empty()) {
 		r_error = MCPToolError::internal("The difference image could not be encoded as PNG");
 		return Variant();
 	}
 
+	const double diff_percentage = (double)changed / (double)total * 100.0;
+
 	Dictionary result;
-	result["identical"] = diff.identical;
-	result["changed_pixels"] = diff.changed_pixels;
-	result["total_pixels"] = diff.total_pixels;
-	result["diff_percentage"] = diff.diff_percentage;
+	result["identical"] = changed == 0;
+	result["changed_pixels"] = changed;
+	result["total_pixels"] = total;
+	// `snappedf(diff_pct, 0.01)`: two decimals, the migration source's own
+	// rounding (`stepify`), applied so two runs print the same number.
+	result["diff_percentage"] = Math::snapped(diff_percentage, 0.01);
 	result["threshold"] = threshold;
-	result["width"] = diff.width;
-	result["height"] = diff.height;
+	result["width"] = width;
+	result["height"] = height;
 	result["diff_image_base64"] = CryptoCore::b64_encode_str(diff_png.ptr(), (size_t)diff_png.size());
 	return result;
 }
@@ -327,12 +488,12 @@ void register_editor_testing_read_tools(MCPToolRegistry &r_registry) {
 	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
 	//  --in-place reproduces this span byte for byte.)
 	{
-		ToolBuilder builder("editor_get_test_report", String::utf8("获取测试结果报告 缺省（不给 clear）或 clear:false 是纯读取：不改变、不删除任何东西，cleared 为空数组；只有显式 clear:true 才会清空，并且会删除**共享**的桥接文件 user://mcp_test_report.json —— 该文件由同一编辑器进程的所有客户端共用，删除后其它尚未读取该报告的客户端就读不到了（cleared 会列出真正被清掉的范围：editor_process / game_process_file）。"));
+		ToolBuilder builder("editor_get_test_report", String::utf8("获取测试结果报告"));
 
 		Dictionary schema;
 		Dictionary v0;
 		Dictionary v1;
-		v1[String::utf8("default")] = false;
+		v1[String::utf8("default")] = true;
 		v1[String::utf8("description")] = String::utf8("是否清除结果");
 		v1[String::utf8("type")] = String::utf8("boolean");
 		v0[String::utf8("clear")] = v1;
@@ -368,3 +529,9 @@ void register_editor_testing_read_tools(MCPToolRegistry &r_registry) {
 		v4.push_back(String::utf8("image_b"));
 		schema[String::utf8("required")] = v4;
 		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("editor").verb("analyze").scope(MCPToolScope::EDITOR).mutating(false).schema(schema).handler(_tool_analyze_screenshot_diff);
+		builder.register_into(r_registry);
+	}
+	// END generated
+}

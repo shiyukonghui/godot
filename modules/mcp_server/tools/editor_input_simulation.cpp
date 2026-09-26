@@ -187,6 +187,11 @@ static bool _resolve_keycode(const String &p_text, Key &r_out, MCPToolError &r_e
 	}
 	if (code == Key::NONE) {
 		r_error = MCPToolError::invalid_params(vformat(
+				"Parameter '%s' names the key '%s', which is not a key name this engine knows "
+				"(examples: 'A', 'Space', 'Escape', 'F9', 'Ctrl+A'; the GDScript spelling 'KEY_A' is accepted too)",
+				p_parameter, text));
+		return false;
+	}
 	r_out = code;
 	return true;
 }
@@ -217,6 +222,23 @@ static Ref<InputEventKey> _make_key_event(Key p_keycode, bool p_pressed, bool p_
 	Ref<InputEventKey> event;
 	event.instantiate();
 	event->set_keycode(p_keycode);
+	event->set_pressed(p_pressed);
+	event->set_shift_pressed(p_shift);
+	event->set_ctrl_pressed(p_ctrl);
+	event->set_alt_pressed(p_alt);
+	return event;
+}
+
+static Ref<InputEventMouseButton> _make_mouse_button_event(int64_t p_button, bool p_pressed, double p_x, double p_y) {
+	Ref<InputEventMouseButton> event;
+	event.instantiate();
+	event->set_button_index((MouseButton)p_button);
+	event->set_pressed(p_pressed);
+	// **Both** positions have to be set. `InputEventMouse::set_position()` only
+	// writes `pos` (core/input/input_event.cpp:689) and `Input::
+	// _parse_input_event_impl()` moves the mouse with `get_global_position()`
+	// (input.cpp:926), so a position without a global one leaves the mouse where
+	// it was - measured by the doctest that first asserted the move and saw
 	// (0, 0). The migration source's game-side service sets both as well
 	// (`mcp_input_service.gd:_create_mouse_button_event`).
 	// MCP-NARROWING: G24-EDITOR-INPUT-EVENT-BUILD - the five `Vector2((real_t)…)`
@@ -226,6 +248,7 @@ static Ref<InputEventKey> _make_key_event(Key p_keycode, bool p_pressed, bool p_
 	// `_tool_simulate_mouse_move`, `_tool_simulate_input_action`,
 	// `_build_sequence_event`).
 	event->set_position(Vector2((real_t)p_x, (real_t)p_y));
+	// MCP-NARROWING: G24-EDITOR-INPUT-EVENT-BUILD - see above.
 	event->set_global_position(Vector2((real_t)p_x, (real_t)p_y));
 	return event;
 }
@@ -233,8 +256,13 @@ static Ref<InputEventKey> _make_key_event(Key p_keycode, bool p_pressed, bool p_
 static Ref<InputEventMouseMotion> _make_mouse_motion_event(double p_x, double p_y, double p_rel_x, double p_rel_y, int64_t p_button_mask) {
 	Ref<InputEventMouseMotion> event;
 	event.instantiate();
+	// MCP-NARROWING: G24-EDITOR-INPUT-EVENT-BUILD - see the marker on
+	// `_make_mouse_button_event`: the gates at the call sites judge these three
+	// coordinate pairs (TASK-023 D-7).
 	event->set_position(Vector2((real_t)p_x, (real_t)p_y));
+	// MCP-NARROWING: G24-EDITOR-INPUT-EVENT-BUILD - see above.
 	event->set_global_position(Vector2((real_t)p_x, (real_t)p_y));
+	// MCP-NARROWING: G24-EDITOR-INPUT-EVENT-BUILD - see above.
 	event->set_relative(Vector2((real_t)p_rel_x, (real_t)p_rel_y));
 	event->set_button_mask((BitField<MouseButtonMask>)(int64_t)p_button_mask);
 	return event;
@@ -247,11 +275,69 @@ static Ref<InputEventAction> _make_action_event(const String &p_action, bool p_p
 	event->set_pressed(p_pressed);
 	// `set_strength()` clamps to [0, 1] (core/input/input_event.cpp:1627); the
 	// answers below echo what the event really carries, never the raw request.
+	// MCP-NARROWING: G24-EDITOR-INPUT-EVENT-BUILD - the `(real_t)` cast below is
+	// judged by `_number_fits_event` at both call sites (TASK-023 D-7).
 	event->set_strength((real_t)p_strength);
 	return event;
 }
 
 // ---------------------------------------------------------------------------
+// editor_simulate_key (old `simulate_key`, input.rs:13/60)
+//
+// Observable contract (as implemented):
+//   * `keycode` (string, required): an engine key name, resolved with
+//     `find_keycode()`; "KEY_A" is accepted as well. A name the engine does not
+//     know, or an empty one, is `-32602` (the migration injected `KEY_NONE`);
+//   * `pressed` (bool, default true), `shift` / `ctrl` / `alt` (bool, default
+//     false) - the migration's key set, verbatim;
+//   * injects one `InputEventKey` into **this (editor) process** through
+//     `Input::parse_input_event()`;
+//   * answers `{"simulated": "key", "target": "editor", "keycode": "<resolved
+//     spelling>", "pressed", "shift", "ctrl", "alt"}` - the resolved spelling is
+//     echoed rather than the caller's text, so "which key did it actually
+//     press" is answerable from the answer;
+//   * no `Input` singleton (or a game build) -> `-32000` with a suggestion.
+// ---------------------------------------------------------------------------
+static Variant _tool_simulate_key(const Dictionary &p_args, MCPToolError &r_error) {
+	String raw_keycode;
+	if (!require_string(p_args, "keycode", raw_keycode, r_error)) {
+		return Variant();
+	}
+	Key keycode = Key::NONE;
+	if (!_resolve_keycode(raw_keycode, keycode, r_error, "keycode")) {
+		return Variant();
+	}
+	bool pressed = false;
+	bool shift = false;
+	bool ctrl = false;
+	bool alt = false;
+	if (!optional_bool(p_args, "pressed", true, pressed, r_error) ||
+			!optional_bool(p_args, "shift", false, shift, r_error) ||
+			!optional_bool(p_args, "ctrl", false, ctrl, r_error) ||
+			!optional_bool(p_args, "alt", false, alt, r_error)) {
+		return Variant();
+	}
+
+	Input *input = _editor_input(r_error);
+	if (input == nullptr) {
+		return Variant();
+	}
+	const Ref<InputEventKey> event = _make_key_event(keycode, pressed, shift, ctrl, alt);
+	input->parse_input_event(event);
+
+	Dictionary result;
+	result["simulated"] = "key";
+	result["target"] = "editor";
+	result["keycode"] = keycode_get_string(keycode);
+	result["pressed"] = pressed;
+	result["shift"] = shift;
+	result["ctrl"] = ctrl;
+	result["alt"] = alt;
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// editor_simulate_mouse_click (old `simulate_mouse_click`, input.rs:20/73)
 //
 // Observable contract (as implemented):
 //   * `button` (int, default 1 = left) - one of the engine's `MouseButton`
@@ -282,6 +368,11 @@ static Variant _tool_simulate_mouse_click(const Dictionary &p_args, MCPToolError
 		r_error = MCPToolError::invalid_params(vformat(
 				"Parameter 'button' must be a MouseButton value between %d (left) and %d (xbutton2), got %d",
 				(int)MOUSE_BUTTON_MIN, (int)MOUSE_BUTTON_MAX, (int)button));
+		return Variant();
+	}
+	// MCP-NARROWING: G24-EDITOR-INPUT-CLICK - `_make_mouse_button_event` casts
+	// both coordinates to `real_t`; this is the TASK-023 gate that judges them.
+	if (!_number_fits_event(Variant(x), "x", r_error) || !_number_fits_event(Variant(y), "y", r_error)) {
 		return Variant();
 	}
 
@@ -318,6 +409,11 @@ static Variant _tool_simulate_mouse_move(const Dictionary &p_args, MCPToolError 
 	double y = 0.0;
 	if (!optional_float(p_args, "x", 0.0, x, r_error) ||
 			!optional_float(p_args, "y", 0.0, y, r_error)) {
+		return Variant();
+	}
+	// MCP-NARROWING: G24-EDITOR-INPUT-MOVE - `_make_mouse_motion_event` casts
+	// both coordinates to `real_t`; this is the TASK-023 gate that judges them.
+	if (!_number_fits_event(Variant(x), "x", r_error) || !_number_fits_event(Variant(y), "y", r_error)) {
 		return Variant();
 	}
 
@@ -373,6 +469,13 @@ static Variant _tool_simulate_input_action(const Dictionary &p_args, MCPToolErro
 	}
 	if (!Math::is_finite(strength)) {
 		r_error = MCPToolError::invalid_params("Parameter 'strength' must be a finite number");
+		return Variant();
+	}
+	// MCP-NARROWING: G24-EDITOR-INPUT-ACTION - `_make_action_event` casts the
+	// strength to `real_t`; this is the TASK-023 gate that judges it (the
+	// engine's own [0, 1] clamp happens after the cast, so a value the slot
+	// cannot hold would be clamped from `inf`/`0` rather than from the request).
+	if (!_number_fits_event(Variant(strength), "strength", r_error)) {
 		return Variant();
 	}
 
@@ -572,6 +675,106 @@ static Variant _tool_add_input_action(const Dictionary &p_args, MCPToolError &r_
 //     which is what makes a `running_game_stop_input_recording` event feedable
 //     here unchanged; `time_ms` is one of them - the pacing of this tool is
 //     `frame_delay`, not a per-event offset - and the answer carries
+//     `"time_ms_ignored": true` when any event had one, so that the ignore is
+//     visible rather than assumed;
+//   * `frame_delay` (int, default 1): how many frames lie between two events -
+//     the engine's own pacing of the migration source's game-side service
+//     (`mcp_input_service.gd:61-65`). `<= 0` means "all events in one frame",
+//     exactly the migration source's `frame_delay <= 0` branch;
+//   * because the pacing *is* the passage of frames, this tool answers through
+//     the GDR-20 deferred channel: a two-event sequence with `frame_delay: 1`
+//     answers on the frame after the second event was injected, not in the frame
+//     that read the request. The first event therefore lands one frame after the
+//     request rather than in the request's own frame - the deferred channel never
+//     advances a task in its arrival frame, by design (mcp_deferred.h) - which is
+//     the one observable difference from the migration source;
+//   * **every** argument is validated before the first event is built and before
+//     a task is handed over, so a malformed sequence is a `-32602` that injects
+//     nothing at all;
+//   * answers `{"simulated": "sequence", "target": "editor", "sent": true,
+//     "event_count": N, "frame_delay": d, "time_ms_ignored": <bool>}`;
+//   * a sequence longer than the transport's pending ceiling ends with the
+//     framework's `-32000` + `timeout_ms` (GDR-20 point 4); the events injected
+//     up to that point have been injected. The task declares no deadline of its
+//     own: only the caller knows how long the scenario should take.
+// ---------------------------------------------------------------------------
+
+// The event classes this tool can build.
+enum class EditorSequenceKind {
+	KEY,
+	MOUSE_BUTTON,
+	MOUSE_MOTION,
+	ACTION,
+};
+
+static bool _sequence_kind_of(const String &p_type, EditorSequenceKind &r_kind) {
+	if (p_type == "key") {
+		r_kind = EditorSequenceKind::KEY;
+		return true;
+	}
+	if (p_type == "mouse_click" || p_type == "mouse_button") {
+		r_kind = EditorSequenceKind::MOUSE_BUTTON;
+		return true;
+	}
+	if (p_type == "mouse_move" || p_type == "mouse_motion") {
+		r_kind = EditorSequenceKind::MOUSE_MOTION;
+		return true;
+	}
+	if (p_type == "action") {
+		r_kind = EditorSequenceKind::ACTION;
+		return true;
+	}
+	return false;
+}
+
+// The field readers used for one element of `events`. They are the flat helpers
+// of `tool_builder.h` with the element's name in the message ("events[2].button"
+// instead of "button"), because the flat helpers cannot name a nested element and
+// an error that does not say *which* event is wrong is an error a caller cannot
+// act on.
+static bool _sequence_string(const Dictionary &p_event, const String &p_prefix, const String &p_key, bool p_required, const String &p_default, String &r_out, MCPToolError &r_error) {
+	const Variant value = p_event.get(p_key, Variant());
+	if (value.get_type() == Variant::NIL) {
+		if (p_required) {
+			r_error = MCPToolError::invalid_params(vformat("Missing required parameter: %s%s", p_prefix, p_key));
+			return false;
+		}
+		r_out = p_default;
+		return true;
+	}
+	if (value.get_type() != Variant::STRING) {
+		r_error = MCPToolError::invalid_params(vformat("Parameter '%s%s' must be a string, got %s", p_prefix, p_key, Variant::get_type_name(value.get_type())));
+		return false;
+	}
+	r_out = (String)value;
+	return true;
+}
+
+static bool _sequence_bool(const Dictionary &p_event, const String &p_prefix, const String &p_key, bool p_default, bool &r_out, MCPToolError &r_error) {
+	const Variant value = p_event.get(p_key, Variant());
+	if (value.get_type() == Variant::NIL) {
+		r_out = p_default;
+		return true;
+	}
+	if (value.get_type() != Variant::BOOL) {
+		r_error = MCPToolError::invalid_params(vformat("Parameter '%s%s' must be a boolean, got %s", p_prefix, p_key, Variant::get_type_name(value.get_type())));
+		return false;
+	}
+	r_out = (bool)value;
+	return true;
+}
+
+static bool _sequence_number(const Dictionary &p_event, const String &p_prefix, const String &p_key, double p_default, double &r_out, MCPToolError &r_error) {
+	const Variant value = p_event.get(p_key, Variant());
+	if (value.get_type() == Variant::NIL) {
+		r_out = p_default;
+		return true;
+	}
+	if (value.get_type() != Variant::FLOAT && value.get_type() != Variant::INT) {
+		r_error = MCPToolError::invalid_params(vformat("Parameter '%s%s' must be a number, got %s", p_prefix, p_key, Variant::get_type_name(value.get_type())));
+		return false;
+	}
+	r_out = (double)value;
 	return true;
 }
 
@@ -932,6 +1135,26 @@ void register_editor_input_simulation_tools(MCPToolRegistry &r_registry) {
 		v0[String::utf8("pressed")] = v4;
 		Dictionary v5;
 		v5[String::utf8("default")] = false;
+		v5[String::utf8("type")] = String::utf8("boolean");
+		v0[String::utf8("shift")] = v5;
+		schema[String::utf8("properties")] = v0;
+		Array v6;
+		v6.push_back(String::utf8("keycode"));
+		schema[String::utf8("required")] = v6;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("editor").verb("simulate").scope(MCPToolScope::EDITOR).mutating(true).schema(schema).handler(_tool_simulate_key);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("editor_simulate_mouse_click", String::utf8("模拟鼠标点击"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("default")] = 1;
+		v1[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("button")] = v1;
 		Dictionary v2;
 		v2[String::utf8("default")] = true;
 		v2[String::utf8("type")] = String::utf8("boolean");
@@ -1002,3 +1225,18 @@ void register_editor_input_simulation_tools(MCPToolRegistry &r_registry) {
 		Dictionary v0;
 		Dictionary v1;
 		v1[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("action")] = v1;
+		Dictionary v2;
+		v2[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("key")] = v2;
+		schema[String::utf8("properties")] = v0;
+		Array v3;
+		v3.push_back(String::utf8("action"));
+		schema[String::utf8("required")] = v3;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("editor").verb("add").scope(MCPToolScope::EDITOR).mutating(true).schema(schema).handler(_tool_add_input_action);
+		builder.register_into(r_registry);
+	}
+	// END generated
+}

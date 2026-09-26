@@ -1,3 +1,32 @@
+/**************************************************************************/
+/*  tool_registry.cpp                                                     */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 
 #include "tool_registry.h"
 
@@ -176,6 +205,85 @@ bool MCPToolRegistry::parse_tool_name(const String &p_name, String &r_channel, S
 		r_channel = channel;
 		// `editor_get` is legal: the object segment is not required (D-E4).
 		r_verb = separator < 0 ? rest : rest.substr(0, separator);
+		return true;
+	}
+	return false;
+}
+
+bool MCPToolRegistry::validate_tool_name(const String &p_name, const String &p_declared_channel, const String &p_declared_verb, String &r_error) {
+	if (p_name.is_empty()) {
+		r_error = "MCPToolRegistry: refusing to register a tool without a name (GDR-16 L1).";
+		return false;
+	}
+	// L4 runs before L1/L2/L3 so that the banned verb stays independently
+	// observable: `editor_update_node_property` is otherwise fully legal.
+	if (p_name.contains("update_")) {
+		r_error = vformat("MCPToolRegistry: tool name '%s' contains the banned verb 'update_' (GDR-16 L4).", p_name);
+		return false;
+	}
+	String channel;
+	String verb;
+	if (!parse_tool_name(p_name, channel, verb)) {
+		r_error = vformat("MCPToolRegistry: tool name '%s' must match ^(editor|running_game|project|os)_[a-z0-9_]+$ (GDR-16 L1).", p_name);
+		return false;
+	}
+	if (!_is_closed_verb(verb)) {
+		r_error = vformat("MCPToolRegistry: tool name '%s' has verb '%s', which is not in the closed verb set (GDR-16 L2).", p_name, verb);
+		return false;
+	}
+	if (p_declared_channel != channel) {
+		r_error = vformat("MCPToolRegistry: tool name '%s' declares channel '%s' but the name says '%s' (GDR-16 L3).", p_name, p_declared_channel, channel);
+		return false;
+	}
+	if (p_declared_verb != verb) {
+		r_error = vformat("MCPToolRegistry: tool name '%s' declares verb '%s' but the name says '%s' (GDR-16 L3).", p_name, p_declared_verb, verb);
+		return false;
+	}
+	return true;
+}
+
+// Private by design (GDR-19 / TASK-003 section 1.6): `MCPTools::ToolBuilder` is
+// the only friend of `MCPToolRegistry`, so the only way in is
+// `ToolBuilder::register_into()` - which has already forced channel / verb /
+// scope / mutating to be declared and has applied the editor-process guard. The
+// lint below stays as the registry's own invariant, independent of its caller.
+bool MCPToolRegistry::register_tool(const MCPToolDef &p_def) {
+	String reason;
+	if (!validate_tool_name(String(p_def.name), p_def.channel, p_def.verb, reason)) {
+		ERR_PRINT(reason);
+		return false;
+	}
+	if (!tools.has(p_def.name)) {
+		order.push_back(p_def.name);
+	}
+	tools[p_def.name] = p_def;
+	return true;
+}
+
+bool MCPToolRegistry::has_tool(const StringName &p_name) const {
+	return tools.has(p_name);
+}
+
+bool MCPToolRegistry::scope_matches(MCPToolScope p_scope, bool p_is_editor) {
+	switch (p_scope) {
+		case MCPToolScope::EDITOR:
+			return p_is_editor;
+		case MCPToolScope::GAME:
+			return !p_is_editor;
+		case MCPToolScope::BOTH:
+			return true;
+	}
+	return false;
+}
+
+MCPToolScope MCPToolRegistry::scope_from_string(const String &p_scope, bool &r_ok) {
+	// The spelling of docs/tool-rename-map.json (`scope_enum`).
+	if (p_scope == "editor") {
+		r_ok = true;
+		return MCPToolScope::EDITOR;
+	}
+	if (p_scope == "game") {
+		r_ok = true;
 		return MCPToolScope::GAME;
 	}
 	if (p_scope == "both") {
@@ -556,6 +664,12 @@ static bool _reject_unknown_arguments(const MCPToolDef &p_def, const Dictionary 
 		return true;
 	}
 
+	Vector<String> accepted;
+	const Array accepted_keys = declared.keys();
+	for (int i = 0; i < accepted_keys.size(); i++) {
+		accepted.push_back((String)accepted_keys[i]);
+	}
+
 	String message;
 	if (unknown.size() == 1) {
 		message = vformat("Unknown parameter '%s' for tool '%s'", unknown[0], String(p_def.name));
@@ -591,3 +705,33 @@ Variant MCPToolRegistry::call_tool(const StringName &p_name, const Dictionary &p
 		// through `call_deferred_tool()`.
 		r_error = MCPToolError::internal(vformat("Tool '%s' answers across frames and must be called through the deferred channel", String(p_name)));
 		return Variant();
+	}
+	if (def->handler == nullptr) {
+		r_error = MCPToolError::internal(vformat("Tool has no handler: %s", String(p_name)));
+		return Variant();
+	}
+	return def->handler(p_args, r_error);
+}
+
+bool MCPToolRegistry::is_deferred_tool(const StringName &p_name) const {
+	const MCPToolDef *def = tools.getptr(p_name);
+	return def != nullptr && def->is_deferred();
+}
+
+MCPDeferred::Task *MCPToolRegistry::call_deferred_tool(const StringName &p_name, const Dictionary &p_args, MCPToolError &r_error) const {
+	const MCPToolDef *def = tools.getptr(p_name);
+	if (def == nullptr) {
+		r_error = MCPToolError::invalid_params(vformat("Unknown tool: %s", String(p_name)));
+		return nullptr;
+	}
+	// TASK-032 D4: the deferred half of the same gate, before the tool is handed
+	// over to the transport (a task that was never demanded must not be created).
+	if (!_reject_unknown_arguments(*def, p_args, r_error)) {
+		return nullptr;
+	}
+	if (!def->is_deferred()) {
+		r_error = MCPToolError::internal(vformat("Tool is not deferred: %s", String(p_name)));
+		return nullptr;
+	}
+	return def->pending_handler(p_args, r_error);
+}

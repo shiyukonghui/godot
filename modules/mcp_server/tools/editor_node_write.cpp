@@ -207,6 +207,49 @@ bool apply_node_properties(Node *p_node, const Dictionary &p_properties, MCPTool
 		const Variant written = write_node_property(p_node, key, p_properties[key], r_error);
 		if (written.get_type() == Variant::NIL) {
 			return false;
+		}
+	}
+	return true;
+}
+
+Variant set_node_property_on(Node *p_root, Node *p_node, const String &p_property, const Variant &p_raw_value, MCPToolError &r_error) {
+	const Variant written = write_node_property(p_node, p_property, p_raw_value, r_error);
+	if (written.get_type() == Variant::NIL) {
+		return Variant();
+	}
+	// `write_node_property` spells the node as its absolute path (its own group's
+	// migration source did). This group answers with the path relative to the
+	// edited scene root, which is how every other tool here addresses a node.
+	Dictionary result = written;
+	result["node_path"] = relative_path(p_root, p_node);
+	return result;
+}
+
+String rename_node_to(Node *p_node, const String &p_name, bool &r_sanitized) {
+	p_node->set_name(p_name);
+	const String actual = String(p_node->get_name());
+	r_sanitized = actual != p_name;
+	return actual;
+}
+
+// TASK-040 D-2: does the connection that exists right now carry
+// `CONNECT_PERSIST`? `PackedScene` serialises exactly the connections with that
+// bit (`scene/resources/packed_scene.cpp:1238`) and restores them with it
+// (`:760`), so this flag - read from the live `Object::Connection` list, never
+// from what this call intended - is what the answer's `persisted` field must
+// report. A connection made by a script or by an earlier tool carries flags 0 and
+// is dropped by the next save.
+static bool _connection_is_persistent(Node *p_source, const StringName &p_signal, const Callable &p_callable) {
+	List<Object::Connection> connections;
+	p_source->get_signal_connection_list(p_signal, &connections);
+	for (const Object::Connection &connection : connections) {
+		if (connection.callable == p_callable) {
+			return (connection.flags & Object::CONNECT_PERSIST) != 0;
+		}
+	}
+	return false;
+}
+
 bool connect_signal_on(Node *p_source, const StringName &p_signal, Object *p_target, const String &p_method, bool &r_already_connected, bool &r_persisted, MCPToolError &r_error) {
 	r_already_connected = false;
 	r_persisted = false;
@@ -257,6 +300,62 @@ bool connect_signal_on(Node *p_source, const StringName &p_signal, Object *p_tar
 bool disconnect_signal_from(Node *p_source, const StringName &p_signal, Object *p_target, const String &p_method, bool &r_was_persistent, MCPToolError &r_error) {
 	r_was_persistent = false;
 	// -----------------------------------------------------------------------
+	// GREEN - the fix. Every step below replaces one half of the defect the red
+	// test above pinned:
+	//
+	//   * the `Callable` is built from the node the caller named, not from the
+	//     scene root;
+	//   * the source really has to expose the signal;
+	//   * the connection really has to exist before anything is touched, so a
+	//     wrong target / method / signal is a -32001 instead of a silent
+	//     "disconnected";
+	//   * `Object::disconnect()` is only called on a connection that exists,
+	//     which is also what keeps the engine's error channel clean (its
+	//     `_disconnect` is an ERR_FAIL for anything else).
+	// -----------------------------------------------------------------------
+	if (p_target == nullptr) {
+		// Unreachable through the tools below (the target is always resolved to a
+		// real node first); kept so the helper is total.
+		r_error = MCPToolError::not_found("Target object for the connection",
+				"Name a node that exists in the edited scene with 'target_path'");
+		return false;
+	}
+	if (!p_source->has_signal(p_signal)) {
+		r_error = MCPToolError::not_found(vformat("Signal '%s' on node '%s'", p_signal, p_source->get_name()),
+				"Use editor_get_node_signals to list the signals this node has");
+		return false;
+	}
+	const Callable callable(p_target, p_method);
+	if (!p_source->is_connected(p_signal, callable)) {
+		r_error = MCPToolError::not_found(vformat("Connection from signal '%s' to method '%s'", p_signal, p_method),
+				"Use editor_list_signal_connections to list the connections of this node");
+		return false;
+	}
+	// TASK-040 D-2: `is_connected` matches the callable and ignores the flags, so
+	// a *persistent* connection is found by exactly the same test as an ordinary
+	// one - which is what makes this tool able to break a connection the scene
+	// file kept. `r_was_persistent` reports which kind it was, so the answer can
+	// say whether the removal also changes what the next save contains.
+	r_was_persistent = _connection_is_persistent(p_source, p_signal, callable);
+	p_source->disconnect(p_signal, callable);
+	return true;
+}
+
+} // namespace MCPTools
+
+// ---------------------------------------------------------------------------
+// editor_add_node (old `add_node`, node.rs:167)
+//
+// Observable contract:
+//   * `type` (string, required, non-empty), `name` (string, optional; defaults to
+//     `type`), `parent_path` (string, optional; defaults to "."), `properties`
+//     (object, optional; defaults to the empty map);
+//   * the parent is resolved with the editor `find_node` semantics above;
+//   * an unknown / non-Node / abstract `type` is `-32602`;
+//   * a `properties` key the node does not have is `-32001` (the TASK-014 shape)
+//     and the half-built node is destroyed again, so a refused call leaves no
+//     orphan behind;
+//   * the answer is `{"node_path", "name", "type"}` with the path relative to the
 //     edited scene root and `name` / `type` read back from the created node (the
 //     migration source echoed the request, which hides a sanitised name).
 // ---------------------------------------------------------------------------
@@ -387,6 +486,177 @@ static Variant _tool_delete_node(const Dictionary &p_args, MCPToolError &r_error
 // (`Node::DUPLICATE_GROUPS | DUPLICATE_SIGNALS | DUPLICATE_SCRIPTS`), which is
 // the migration source's behaviour as well.
 // ---------------------------------------------------------------------------
+static Variant _tool_duplicate_node(const Dictionary &p_args, MCPToolError &r_error) {
+	String path;
+	if (!_require_node_path(p_args, "path", path, r_error)) {
+		return Variant();
+	}
+	String new_name;
+	if (!optional_string(p_args, "new_name", path, new_name, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+	Node *root = MCPTools::edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	Node *node = MCPTools::find_node(root, path);
+	if (node == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Node '%s'", path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+	Node *parent = node->get_parent();
+	if (parent == nullptr) {
+		r_error = MCPToolError::internal(vformat("Node '%s' has no parent to duplicate it under", path));
+		return Variant();
+	}
+	Node *copy = node->duplicate();
+	if (copy == nullptr) {
+		r_error = MCPToolError::internal(vformat("Duplicating node '%s' failed", path));
+		return Variant();
+	}
+	copy->set_name(new_name);
+	parent->add_child(copy);
+	copy->set_owner(root);
+
+	Dictionary result;
+	result["node_path"] = relative_path(root, copy);
+	result["name"] = String(copy->get_name());
+	result["duplicated"] = true;
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// editor_rename_node (old `rename_node`, node.rs:211)
+//
+// `Node::set_name()` sanitises the name instead of failing, so the answer carries
+// the name the engine really applied. When it differs from the request the
+// argument is echoed next to it (`requested_name`) together with
+// `name_sanitized: true`; the migration source answered `{"renamed": true,
+// "new_name": <the requested string>}`, i.e. a name the node does not have.
+// ---------------------------------------------------------------------------
+static Variant _tool_rename_node(const Dictionary &p_args, MCPToolError &r_error) {
+	String path;
+	if (!_require_node_path(p_args, "path", path, r_error)) {
+		return Variant();
+	}
+	String name;
+	if (!require_string(p_args, "name", name, r_error)) {
+		return Variant();
+	}
+	if (name.strip_edges().is_empty()) {
+		r_error = MCPToolError::invalid_params("Parameter 'name' must not be empty");
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+	Node *root = MCPTools::edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	Node *node = MCPTools::find_node(root, path);
+	if (node == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Node '%s'", path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+	bool sanitized = false;
+	const String actual = rename_node_to(node, name, sanitized);
+
+	Dictionary result;
+	result["renamed"] = true;
+	result["new_name"] = actual;
+	result["node_path"] = relative_path(root, node);
+	if (sanitized) {
+		result["requested_name"] = name;
+		result["name_sanitized"] = true;
+	}
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// editor_reparent_node (old `move_node`, node.rs:291)
+//
+// The migration source removes the node from its old parent, adds it to the new
+// one, sets the owner and optionally renames it. It checks nothing else - moving
+// a node under its own descendant is a corrupt tree, and moving the edited scene
+// root would detach the whole scene - so both are refused here with `-32602`
+// before anything is touched. `new_parent` that is not there is `-32001`.
+//
+// The answer is the node's *final* path, read back after the move.
+// ---------------------------------------------------------------------------
+static Variant _tool_reparent_node(const Dictionary &p_args, MCPToolError &r_error) {
+	String path;
+	if (!_require_node_path(p_args, "path", path, r_error)) {
+		return Variant();
+	}
+	String new_parent_path;
+	if (!_require_node_path(p_args, "new_parent", new_parent_path, r_error)) {
+		return Variant();
+	}
+	bool has_new_name = false;
+	String new_name;
+	if (!_optional_node_path(p_args, "new_name", has_new_name, new_name, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+	Node *root = MCPTools::edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	Node *node = MCPTools::find_node(root, path);
+	if (node == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Node '%s'", path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+	Node *new_parent = MCPTools::find_node(root, new_parent_path);
+	if (new_parent == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Parent '%s'", new_parent_path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+	if (node == root) {
+		r_error = MCPToolError::invalid_params("The edited scene root cannot be reparented");
+		return Variant();
+	}
+	if (new_parent == node || node->is_ancestor_of(new_parent)) {
+		r_error = MCPToolError::invalid_params(vformat("Cannot move node '%s' under its own descendant '%s'", path, new_parent_path));
+		return Variant();
+	}
+	Node *old_parent = node->get_parent();
+	if (old_parent != nullptr) {
+		old_parent->remove_child(node);
+	}
+	new_parent->add_child(node);
+	node->set_owner(root);
+	if (has_new_name) {
+		node->set_name(new_name);
+	}
+
+	Dictionary result;
+	result["node_path"] = relative_path(root, node);
+	result["moved"] = true;
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// editor_set_node_property (old `update_property`, node.rs:221)
+//
+// The editor-side member of the node-write family, and therefore the TASK-014
+// shape: the property must exist on the node (`-32001` otherwise), the JSON value
 // is coerced to the property's declared type, and the answer carries the value
 // read *back* from the object after the write - `{"node_path", "property",
 // "old_value", "new_value"}` - so a setter that refused or clamped the value is
@@ -517,6 +787,38 @@ static Variant _tool_set_node_groups(const Dictionary &p_args, MCPToolError &r_e
 		if (current.has(name) || added.has(name)) {
 			continue;
 		}
+		added.push_back(name);
+	}
+
+	for (const String &name : added) {
+		node->add_to_group(StringName(name));
+	}
+	for (const String &name : removed) {
+		node->remove_from_group(StringName(name));
+	}
+
+	Array desired_array;
+	for (const String &name : desired) {
+		desired_array.push_back(name);
+	}
+	Array added_array;
+	for (const String &name : added) {
+		added_array.push_back(name);
+	}
+	Array removed_array;
+	for (const String &name : removed) {
+		removed_array.push_back(name);
+	}
+
+	Dictionary result;
+	result["node_path"] = relative_path(root, node);
+	result["groups"] = desired_array;
+	result["added"] = added_array;
+	result["removed"] = removed_array;
+	return result;
+}
+
+// ---------------------------------------------------------------------------
 // editor_connect_signal (old `connect_signal`, node.rs:319)
 //
 // `source_path` / `signal` / `method` are required, `target_path` is optional and
@@ -637,6 +939,72 @@ static Variant _tool_connect_signal(const Dictionary &p_args, MCPToolError &r_er
 // `[MCPServer] editor_disconnect_signal disconnects the named connection, not the scene root` in
 // tests/test_mcp_server.h; see REPORT-015 section 3 for its before/after output.
 // ---------------------------------------------------------------------------
+static Variant _tool_disconnect_signal(const Dictionary &p_args, MCPToolError &r_error) {
+	SignalRequest request;
+	if (!_require_node_path(p_args, "source_path", request.source_path, r_error)) {
+		return Variant();
+	}
+	String signal;
+	if (!require_string(p_args, "signal", signal, r_error)) {
+		return Variant();
+	}
+	if (signal.strip_edges().is_empty()) {
+		r_error = MCPToolError::invalid_params("Parameter 'signal' must not be empty");
+		return Variant();
+	}
+	if (!require_string(p_args, "method", request.method, r_error)) {
+		return Variant();
+	}
+	if (request.method.strip_edges().is_empty()) {
+		r_error = MCPToolError::invalid_params("Parameter 'method' must not be empty");
+		return Variant();
+	}
+	bool has_target = false;
+	if (!_optional_node_path(p_args, "target_path", has_target, request.target_path, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+	Node *root = MCPTools::edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	request.source = MCPTools::find_node(root, request.source_path);
+	if (request.source == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Node '%s'", request.source_path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+	if (has_target) {
+		request.target = MCPTools::find_node(root, request.target_path);
+		if (request.target == nullptr) {
+			r_error = MCPToolError::not_found(vformat("Node '%s'", request.target_path),
+					"Use editor_get_scene_tree to list the nodes of the edited scene");
+			return Variant();
+		}
+	} else {
+		request.target = root;
+	}
+	request.signal = StringName(signal);
+
+	bool was_persistent = false;
+	if (!disconnect_signal_from(request.source, request.signal, request.target, request.method, was_persistent, r_error)) {
+		return Variant();
+	}
+
+	Dictionary result;
+	result["disconnected"] = true;
+	result["signal"] = signal;
+	result["source"] = relative_path(root, request.source);
+	result["target"] = relative_path(root, request.target);
+	// TASK-040 D-2: a persistent connection is removable like any other; saying
+	// which kind was removed is what lets the caller know that the next
+	// `editor_save_scene` will no longer write this `[connection]` block.
+	result["was_persistent"] = was_persistent;
+	return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -692,6 +1060,61 @@ static Variant _tool_set_auto_dismiss_dialogs(const Dictionary &p_args, MCPToolE
 			"than dismissing the dialog. Use the per-dialog behaviour from a script "
 			"(editor_execute_gdscript), or an editor tool that acts on a named dialog.");
 	return Variant();
+}
+
+// ---------------------------------------------------------------------------
+// Registration
+// ---------------------------------------------------------------------------
+
+// The authoritative `description` and `inputSchema` of each tool are the contract
+// entries of docs/tools_list.renamed.json, character for character; the schemas
+// are *parsed* from the exact contract JSON instead of being rebuilt as a
+// hand-written Dictionary, because the gate compares all three fields verbatim.
+//
+// This group's schemas contain no numbers (no `minimum`, no numeric `default`),
+// so the integral-number folding `editor_read_scene_inspector.cpp` needs to
+// survive Godot's single number type has nothing to fold here and is not
+// repeated.
+static Dictionary _schema_from_json(const char *p_json) {
+	JSON json;
+	if (json.parse(String::utf8(p_json)) != OK) {
+		ERR_PRINT("MCPTools: invalid inputSchema literal in editor_node_write.cpp");
+		return Dictionary();
+	}
+	return json.get_data();
+}
+
+void register_editor_node_write_tools(MCPToolRegistry &r_registry) {
+	{
+		ToolBuilder builder("editor_add_node", String::utf8(R"desc(向场景添加新节点)desc"));
+		builder.channel("editor").verb("add").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"name":{"type":"string"},"parent_path":{"default":".","type":"string"},"properties":{"default":{},"type":"object"},"type":{"type":"string"}},"required":["type"],"type":"object"})schema"));
+		builder.handler(_tool_add_node).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_delete_node", String::utf8(R"desc(删除节点)desc"));
+		builder.channel("editor").verb("delete").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"type":"string"}},"required":["path"],"type":"object"})schema"));
+		builder.handler(_tool_delete_node).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_duplicate_node", String::utf8(R"desc(复制指定节点及其子节点)desc"));
+		builder.channel("editor").verb("duplicate").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"new_name":{"description":"新节点名称 (可选)","type":"string"},"path":{"description":"源节点路径","type":"string"}},"required":["path"],"type":"object"})schema"));
+		builder.handler(_tool_duplicate_node).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_rename_node", String::utf8(R"desc(重命名节点)desc"));
+		builder.channel("editor").verb("rename").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"name":{"type":"string"},"path":{"type":"string"}},"required":["path","name"],"type":"object"})schema"));
+		builder.handler(_tool_rename_node).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_reparent_node", String::utf8(R"desc(将节点移动到新的父节点下)desc"));
 		builder.channel("editor").verb("reparent").scope(MCPToolScope::EDITOR).mutating(true);
 		builder.schema(_schema_from_json(R"schema({"properties":{"new_name":{"description":"移动后的新名称 (可选)","type":"string"},"new_parent":{"description":"目标父节点路径","type":"string"},"path":{"description":"要移动的节点路径","type":"string"}},"required":["path","new_parent"],"type":"object"})schema"));
 		builder.handler(_tool_reparent_node).register_into(r_registry);
@@ -703,3 +1126,32 @@ static Variant _tool_set_auto_dismiss_dialogs(const Dictionary &p_args, MCPToolE
 		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"type":"string"},"property":{"type":"string"},"value":{}},"required":["path","property","value"],"type":"object"})schema"));
 		builder.handler(_tool_set_node_property).register_into(r_registry);
 	}
+
+	{
+		ToolBuilder builder("editor_set_node_groups", String::utf8(R"desc(设置节点的分组)desc"));
+		builder.channel("editor").verb("set").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"groups":{"description":"目标分组列表","items":{"type":"string"},"type":"array"},"node_path":{"description":"节点路径","type":"string"}},"required":["node_path","groups"],"type":"object"})schema"));
+		builder.handler(_tool_set_node_groups).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_connect_signal", String::utf8(R"desc(连接节点的信号到目标方法)desc"));
+		builder.channel("editor").verb("connect").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"method":{"description":"目标方法名","type":"string"},"signal":{"description":"信号名称","type":"string"},"source_path":{"description":"源节点路径","type":"string"},"target_path":{"description":"目标节点路径","type":"string"}},"required":["source_path","signal","method"],"type":"object"})schema"));
+		builder.handler(_tool_connect_signal).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_disconnect_signal", String::utf8(R"desc(断开节点的信号连接)desc"));
+		builder.channel("editor").verb("disconnect").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"method":{"description":"目标方法名","type":"string"},"signal":{"description":"信号名称","type":"string"},"source_path":{"description":"源节点路径","type":"string"},"target_path":{"description":"目标节点路径","type":"string"}},"required":["source_path","signal","method"],"type":"object"})schema"));
+		builder.handler(_tool_disconnect_signal).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_set_auto_dismiss_dialogs", String::utf8(R"desc(设置编辑器自动关闭对话框行为)desc"));
+		builder.channel("editor").verb("set").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"enabled":{"description":"是否启用自动关闭","type":"boolean"}},"required":["enabled"],"type":"object"})schema"));
+		builder.handler(_tool_set_auto_dismiss_dialogs).register_into(r_registry);
+	}
+}

@@ -1,3 +1,32 @@
+/**************************************************************************/
+/*  editor_write_scene_editor.cpp                                         */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 #include "editor_write_scene_editor.h"
 
 #include "tool_builder.h"
@@ -48,6 +77,16 @@ using namespace MCPTools;
 // documented here is preserved next to that single definition.
 
 // The edited scene root and the migration source's node resolution were hoisted
+// into `tools/tool_helpers.*` by TASK-016 section 1 (`MCPTools::edited_scene_root`
+// / `MCPTools::find_node`), together with the `SceneTree` vs `EditorInterface`
+// reasoning that used to be documented here. This file now calls the one
+// definition instead of keeping a file-private copy of either.
+
+// The selection entry of one node, with the migration source's serialisation
+// rules (node.rs:601-622): the root is spelled ".", a node that is neither the
+// root nor a descendant of it is skipped.
+static bool _selection_entry(Node *p_root, Node *p_node, Dictionary &r_out) {
+	if (p_node == nullptr) {
 		return false;
 	}
 	if (p_node != p_root && !p_root->is_ancestor_of(p_node)) {
@@ -167,6 +206,36 @@ static Variant _tool_open_scene(const Dictionary &p_args, MCPToolError &r_error)
 	}
 	String path;
 	if (!normalize_project_path(raw_path, path, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+	if (!FileAccess::exists(path)) {
+		r_error = MCPToolError::not_found(vformat("Scene '%s'", path),
+				"Use project_get_filesystem_tree to list the .tscn files of the project");
+		return Variant();
+	}
+#ifdef MCP_EDITOR_TOOLS_ENABLED
+	EditorInterface *editor = EditorInterface::get_singleton();
+	if (editor == nullptr) {
+		r_error = MCPToolError::not_implemented("the editor UI (no EditorInterface in this process)",
+				"Start the MCP server inside the Godot editor to open scenes");
+		return Variant();
+	}
+	editor->open_scene_from_path(path);
+
+	Node *root = MCPTools::edited_scene_root();
+	if (root == nullptr || root->get_scene_file_path() != path) {
+		// The file exists but the editor did not end up editing it: the scene is
+		// not *loadable* (a missing script, a dead ext_resource path). That is
+		// the same "the file is there but the loadable object is not" shape the
+		// write group established for `project_edit_resource`
+		// (REPORT-007 deviation 7), so it is `-32001` with a suggestion rather
+		// than an internal error.
+		r_error = MCPToolError::not_found(vformat("Loadable scene '%s'", path),
+				"The file exists but the editor could not open it as a scene; check its dependencies (missing scripts, resources or ext_resource paths)");
 		return Variant();
 	}
 
@@ -352,6 +421,95 @@ static Variant _tool_rescan_project_filesystem(const Dictionary &p_args, MCPTool
 	}
 #ifdef MCP_EDITOR_TOOLS_ENABLED
 	EditorInterface *editor = EditorInterface::get_singleton();
+	EditorFileSystem *filesystem = editor != nullptr ? editor->get_resource_filesystem() : nullptr;
+	if (filesystem == nullptr) {
+		r_error = MCPToolError::internal("Failed to get the editor resource filesystem");
+		return Variant();
+	}
+	filesystem->scan();
+
+	Dictionary result;
+	result["reloaded"] = true;
+	result["message"] = String::utf8("文件系统已重新扫描");
+	return result;
+#endif
+	return Variant();
+}
+
+// ---------------------------------------------------------------------------
+// editor_set_node_selection (old `select_nodes`, node.rs:651)
+//
+// `node_paths` (array) and `node_path` (single) are alternatives; the reference
+// accepted an array only in `node_paths`, so a `node_paths` that is not an array
+// of strings could not be expressed there and is -32602 here. `mode` is one of
+// replace/add/remove, `inspect` defaults to true and `focus` defaults to
+// `inspect`. The single-node focus/inspect convenience is kept.
+// ---------------------------------------------------------------------------
+
+// The reference's path list extraction (node.rs:656-669).
+static bool _node_paths_argument(const Dictionary &p_args, Vector<String> &r_paths, MCPToolError &r_error) {
+	const Variant list = p_args.get("node_paths", Variant());
+	if (list.get_type() == Variant::ARRAY) {
+		const Array array = list;
+		for (int i = 0; i < array.size(); i++) {
+			if (array[i].get_type() != Variant::STRING) {
+				r_error = MCPToolError::invalid_params(vformat("Parameter 'node_paths[%d]' must be a string, got %s",
+						i, Variant::get_type_name(array[i].get_type())));
+				return false;
+			}
+			r_paths.push_back((String)array[i]);
+		}
+		return true;
+	}
+	if (list.get_type() != Variant::NIL) {
+		r_error = MCPToolError::invalid_params(vformat("Parameter 'node_paths' must be an array of strings, got %s",
+				Variant::get_type_name(list.get_type())));
+		return false;
+	}
+
+	const Variant single = p_args.get("node_path", Variant());
+	if (single.get_type() == Variant::STRING) {
+		r_paths.push_back((String)single);
+		return true;
+	}
+	if (single.get_type() != Variant::NIL) {
+		r_error = MCPToolError::invalid_params(vformat("Parameter 'node_path' must be a string, got %s",
+				Variant::get_type_name(single.get_type())));
+		return false;
+	}
+
+	r_error = MCPToolError::invalid_params("Missing required parameter: node_paths or node_path");
+	return false;
+}
+
+static Variant _tool_set_node_selection(const Dictionary &p_args, MCPToolError &r_error) {
+	Vector<String> node_paths;
+	if (!_node_paths_argument(p_args, node_paths, r_error)) {
+		return Variant();
+	}
+	String mode;
+	if (!optional_string(p_args, "mode", String("replace"), mode, r_error)) {
+		return Variant();
+	}
+	if (mode != "replace" && mode != "add" && mode != "remove") {
+		r_error = MCPToolError::invalid_params("mode must be one of: replace, add, remove");
+		return Variant();
+	}
+	bool inspect = true;
+	if (!optional_bool(p_args, "inspect", true, inspect, r_error)) {
+		return Variant();
+	}
+	bool focus = inspect;
+	if (!optional_bool(p_args, "focus", inspect, focus, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+#ifdef MCP_EDITOR_TOOLS_ENABLED
+	Node *root = MCPTools::edited_scene_root();
+	if (root == nullptr) {
 		r_error = MCPToolError::no_scene();
 		return Variant();
 	}
@@ -392,6 +550,53 @@ static Variant _tool_rescan_project_filesystem(const Dictionary &p_args, MCPTool
 				editor->edit_node(resolved[0]);
 			}
 			if (inspect) {
+				editor->inspect_object(resolved[0]);
+			}
+		}
+	}
+
+	Dictionary result;
+	result["mode"] = mode;
+	result["selected"] = _selection_entries(root, selection->get_full_selected_node_list());
+	result["count"] = ((Array)result["selected"]).size();
+	return result;
+#endif
+	return Variant();
+}
+
+// ---------------------------------------------------------------------------
+// editor_remove_node_selection (old `clear_editor_selection`, node.rs:722)
+//
+// Returns how many nodes were selected *before* the clear, under the reference's
+// key `cleared` (node.rs:733-737).
+// ---------------------------------------------------------------------------
+static Variant _tool_remove_node_selection(const Dictionary &p_args, MCPToolError &r_error) {
+	(void)p_args;
+	if (!require_editor_ui(r_error, "editor writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+#ifdef MCP_EDITOR_TOOLS_ENABLED
+	Node *root = MCPTools::edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	EditorNode *editor_node = EditorNode::get_singleton();
+	EditorSelection *selection = editor_node != nullptr ? editor_node->get_editor_selection() : nullptr;
+	if (selection == nullptr) {
+		r_error = MCPToolError::internal("Failed to get editor selection");
+		return Variant();
+	}
+
+	const int before = selection->get_full_selected_node_list().size();
+	selection->clear();
+
+	Dictionary result;
+	result["cleared"] = before;
+	result["selected"] = Array();
+	result["count"] = 0;
+	return result;
 #endif
 	return Variant();
 }
@@ -712,6 +917,77 @@ static RichTextLabel *_find_rich_text_label(Node *p_node) {
 			continue;
 		}
 		RichTextLabel *label = Object::cast_to<RichTextLabel>(child);
+		if (label != nullptr) {
+			return label;
+		}
+		label = _find_rich_text_label(child);
+		if (label != nullptr) {
+			return label;
+		}
+	}
+	return nullptr;
+}
+#endif
+
+static Variant _tool_remove_output_log(const Dictionary &p_args, MCPToolError &r_error) {
+	(void)p_args;
+	// (b) runs before anything else: with no editor UI there is nothing that
+	// could have been cleared, so no success may be reported.
+	if (!require_editor_ui(r_error, "editor writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+#ifdef MCP_EDITOR_TOOLS_ENABLED
+	EditorNode *editor_node = EditorNode::get_singleton();
+	EditorLog *log = editor_node != nullptr ? EditorNode::get_log() : nullptr;
+	if (log == nullptr) {
+		r_error = MCPToolError::not_implemented("the editor output log (this process has no EditorLog)",
+				"Start the MCP server inside the Godot editor to clear the Output panel");
+		return Variant();
+	}
+
+	RichTextLabel *view = _find_rich_text_label(log);
+	const bool measured = view != nullptr;
+	const bool was_empty = measured ? view->get_parsed_text().is_empty() : false;
+
+	// (a) the real clearing path: exactly what the panel's Clear button calls.
+	log->clear();
+
+	const bool is_empty = measured ? view->get_parsed_text().is_empty() : false;
+
+	Dictionary result;
+	result["cleared"] = true;
+	result["log_was_empty"] = measured ? Variant(was_empty) : Variant();
+	result["log_is_empty"] = measured ? Variant(is_empty) : Variant();
+	return result;
+#endif
+	return Variant();
+}
+
+// ---------------------------------------------------------------------------
+// Registration
+// ---------------------------------------------------------------------------
+
+// The authoritative `description` and `inputSchema` of each tool are the contract
+// entries of docs/tools_list.renamed.json, character for character. The schemas
+// are *parsed* from the exact contract JSON instead of being rebuilt as a
+// hand-written Dictionary, because the gate compares all three fields verbatim.
+//
+// Unlike `editor_read_scene_inspector.cpp` this group's schemas contain no
+// numbers at all (no `default`, no `minimum`), so the integral-number folding
+// that file needs to survive Godot's single number type has nothing to fold here
+// and is not repeated.
+static Dictionary _schema_from_json(const char *p_json) {
+	JSON json;
+	if (json.parse(String::utf8(p_json)) != OK) {
+		ERR_PRINT("MCPTools: invalid inputSchema literal in editor_write_scene_editor.cpp");
+		return Dictionary();
+	}
+	return json.get_data();
+}
+
+void register_editor_write_scene_editor_tools(MCPToolRegistry &r_registry) {
+	{
 		ToolBuilder builder("editor_open_scene", String::utf8(R"desc(在编辑器中打开场景)desc"));
 		builder.channel("editor").verb("open").scope(MCPToolScope::EDITOR).mutating(true);
 		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"description":"res:// 路径","type":"string"}},"required":["path"],"type":"object"})schema"));
@@ -722,3 +998,62 @@ static RichTextLabel *_find_rich_text_label(Node *p_node) {
 		ToolBuilder builder("editor_save_scene", String::utf8(R"desc(保存当前场景)desc"));
 		builder.channel("editor").verb("save").scope(MCPToolScope::EDITOR).mutating(true);
 		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"description":"保存路径 (可选)","type":"string"}},"required":[],"type":"object"})schema"));
+		builder.handler(_tool_save_scene).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_reload_plugin", String::utf8(R"desc(重新加载 MCP 插件 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.)desc"));
+		builder.channel("editor").verb("reload").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{},"required":[],"type":"object"})schema"));
+		builder.handler(_tool_reload_plugin).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_rescan_project_filesystem", String::utf8(R"desc(重新扫描项目文件系统)desc"));
+		builder.channel("editor").verb("rescan").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{},"required":[],"type":"object"})schema"));
+		builder.handler(_tool_rescan_project_filesystem).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_set_node_selection", String::utf8(R"desc(选中/取消选中场景中的节点)desc"));
+		builder.channel("editor").verb("set").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"focus":{"description":"是否聚焦节点 (可选，默认同 inspect)","type":"boolean"},"inspect":{"description":"是否在检查器中显示 (可选，默认 true)","type":"boolean"},"mode":{"description":"模式: replace, add, remove (可选，默认 replace)","type":"string"},"node_path":{"description":"单个节点路径 (与 node_paths 二选一)","type":"string"},"node_paths":{"description":"节点路径数组","items":{"type":"string"},"type":"array"}},"type":"object"})schema"));
+		builder.handler(_tool_set_node_selection).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_remove_node_selection", String::utf8(R"desc(清除编辑器中的所有选中)desc"));
+		builder.channel("editor").verb("remove").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{},"type":"object"})schema"));
+		builder.handler(_tool_remove_node_selection).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_add_resource_to_node_property", String::utf8(R"desc(创建资源并附加到节点属性)desc"));
+		builder.channel("editor").verb("add").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"node_path":{"description":"节点路径","type":"string"},"property":{"description":"属性名称","type":"string"},"resource_properties":{"description":"要设置的资源属性 (可选)","type":"object"},"resource_type":{"description":"资源类型 (如 GradientTexture1D, StyleBoxFlat)","type":"string"}},"required":["node_path","property","resource_type"],"type":"object"})schema"));
+		builder.handler(_tool_add_resource_to_node_property).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_set_viewport_3d_camera", String::utf8(R"desc(设置编辑器 3D 视口相机参数)desc"));
+		builder.channel("editor").verb("set").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"fov":{"description":"视场角 (度)","type":"number"},"look_at":{"additionalProperties":true,"description":"看向目标 {x, y, z}","type":"object"},"position":{"additionalProperties":true,"description":"位置 {x, y, z}","type":"object"},"rotation_degrees":{"additionalProperties":true,"description":"旋转角度 {x, y, z}","type":"object"}},"required":[],"type":"object"})schema"));
+		builder.handler(_tool_set_viewport_3d_camera).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_capture_screenshot", String::utf8(R"desc(获取编辑器视口截图 (返回 base64 PNG 或保存到文件))desc"));
+		builder.channel("editor").verb("capture").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{"save_path":{"description":"保存路径 (res:// 或 user://, 可选)","type":"string"}},"required":[],"type":"object"})schema"));
+		builder.handler(_tool_capture_screenshot).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_remove_output_log", String::utf8(R"desc(清除编辑器输出面板)desc"));
+		builder.channel("editor").verb("remove").scope(MCPToolScope::EDITOR).mutating(true);
+		builder.schema(_schema_from_json(R"schema({"properties":{},"required":[],"type":"object"})schema"));
+		builder.handler(_tool_remove_output_log).register_into(r_registry);
+	}
+}

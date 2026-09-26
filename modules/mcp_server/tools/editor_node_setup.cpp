@@ -97,6 +97,36 @@ static bool _is_3d_context(Node *p_node) {
 	return true;
 }
 
+// A `{"r":..,"g":..,"b":..}` object as a `Color`, with each absent component
+// taking `p_default_component` (the migration source's `unwrap_or(0.3)` for
+// `bg_color` and `unwrap_or(1.0)` for `ambient_color`). A present non-numeric
+// component is a `-32602`, never a silently defaulted one (PLAYBOOK section
+// 6.2): the migration source's `and_then(as_f64)` could not tell the two apart.
+//
+// **Every present component is judged before the `Color` is built** (GDR-24,
+// TASK-023 D-7). The result of this helper goes to `Environment::set_bg_color` /
+// `set_ambient_light_color` - dedicated setters, not `Object::set()` - so
+// `coerce_to_property_type` never saw it: the M4c audit measured
+// `bg_color={"r":1e300}` answering `code=0` and `Color(inf, 0, 0, 1)` landing in
+// the saved `.tscn`. The slot is `FLOAT32` because `Color`'s components are
+// `float r,g,b,a` (`core/math/color.h:39-42`) in every build (TASK-023 D-15).
+// All three components are judged before the caller writes anything at all.
+//
+// Published as `MCPTools::color_from_json` (TASK-023) for the reason the sibling
+// vector helper is published: the doctest asserts **this** function.
+namespace MCPTools {
+
+bool color_from_json(const Variant &p_value, double p_default_component, const String &p_key,
+		Color &r_out, MCPToolError &r_error) {
+	if (p_value.get_type() != Variant::DICTIONARY) {
+		r_error = MCPToolError::invalid_params(vformat(
+				"Parameter '%s' must be an object with numeric r, g, b components, got %s",
+				p_key, Variant::get_type_name(p_value.get_type())));
+		return false;
+	}
+	const Dictionary components = p_value;
+	static const char *const COMPONENT_NAMES[3] = { "r", "g", "b" };
+	double values[3] = { p_default_component, p_default_component, p_default_component };
 	for (int i = 0; i < 3; i++) {
 		const Variant component = components.get(COMPONENT_NAMES[i], Variant());
 		if (component.get_type() == Variant::NIL) {
@@ -121,6 +151,8 @@ static bool _is_3d_context(Node *p_node) {
 	return true;
 }
 
+} // namespace MCPTools
+
 // A `number` argument is `MCPTools::optional_float` (`tools/tool_helpers.*`):
 // `INT` is accepted because Godot's JSON parser has one number type, and the
 // repair pass hoisted this file's reader together with the two other spellings
@@ -137,6 +169,66 @@ static bool _optional_parent_path(const Dictionary &p_args, String &r_out, MCPTo
 	}
 	if (r_out.strip_edges().is_empty()) {
 		r_out = ".";
+	}
+	return true;
+}
+
+// ---------------------------------------------------------------------------
+// MCPTools:: the testable entry points.
+// ---------------------------------------------------------------------------
+namespace MCPTools {
+
+// `node_path` names **either** the existing `Camera3D` to configure **or** the
+// parent to create one under. That is the migration source's rule
+// (`scene_3d.rs:85-102`: `root.has_node(path)` -> configure, else
+// `find_parent(path)` -> create), with the class test made explicit instead of
+// the `get_node_as::<Camera3D>` hard failure it has there. The two halves are
+// separated by the *class of the hit*, which is the only boundary the single
+// `node_path` parameter offers (the contract has no `parent_path`; every other
+// setup tool's parent path is its own parameter):
+//
+//   hit is a `Camera3D`            -> configure it            (`created:false`)
+//   hit is a `Node3D` (not camera) -> create under it         (`created:true`)
+//   hit is anything else           -> `-32602`, naming the real class; a
+//                                     `Camera3D` is a `Node3D`, so such a node
+//                                     is neither the camera nor a legal parent
+//   miss                           -> `-32001` `Parent '<path>' not found`
+//
+// A hit is never silently used as a parent: the create answer says
+// `created:true` and carries the new node's root-relative path read back from
+// the engine. Both refusals run **before** `memnew`, so a refused call leaves
+// no orphan behind.
+Variant setup_camera_3d_on(Node *p_root, const String &p_path, MCPToolError &r_error) {
+	Node *target = find_node(p_root, p_path);
+	if (target == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Parent '%s'", p_path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+	const bool create = !target->is_class(StringName("Camera3D"));
+	if (create && !target->is_class(StringName("Node3D"))) {
+		r_error = MCPToolError::invalid_params(vformat(
+				"Node '%s' is not a Camera3D (is %s) and cannot host one: a Camera3D's parent must be a Node3D",
+				relative_path(p_root, target), target->get_class()));
+		return Variant();
+	}
+	Camera3D *camera = create ? memnew(Camera3D) : Object::cast_to<Camera3D>(target);
+	if (create) {
+		add_typed_child(p_root, target, "Camera3D", camera);
+	}
+	camera->set_current(true);
+	Dictionary result;
+	result["setup"] = true;
+	result["created"] = create;
+	// Read back from the engine, never echoed from the request.
+	result["node_path"] = relative_path(p_root, camera);
+	result["type"] = camera->get_class();
+	result["current"] = camera->is_current();
+	return result;
+}
+
+Variant setup_collision_shape_on(Node *p_root, const String &p_node_path, const String &p_shape_type,
+		const Dictionary &p_shape_params, MCPToolError &r_error) {
 	Node *target = find_node(p_root, p_node_path);
 	if (target == nullptr) {
 		r_error = MCPToolError::not_found(vformat("Node '%s'", p_node_path),
@@ -215,6 +307,51 @@ Variant setup_world_environment_on(Node *p_root, bool p_path_given, const String
 	// where the node is guaranteed to exist.
 	const bool has_bg_color = p_bg_color.get_type() != Variant::NIL;
 	const bool has_ambient_color = p_ambient_color.get_type() != Variant::NIL;
+	Color bg_color;
+	if (has_bg_color && !color_from_json(p_bg_color, 0.3, "bg_color", bg_color, r_error)) {
+		return Variant();
+	}
+	Color ambient_color;
+	if (has_ambient_color && !color_from_json(p_ambient_color, 1.0, "ambient_color", ambient_color, r_error)) {
+		return Variant();
+	}
+
+	// `world_env_path` is a **node path only**; the migration source's contract
+	// says "path of the WorldEnvironment node", so a `res://` value is not loaded
+	// as a resource here (recorded in REPORT-017).
+	Node *world_env = nullptr;
+	if (p_path_given) {
+		world_env = find_node(p_root, p_world_env_path);
+		if (world_env != nullptr && !world_env->is_class(StringName("WorldEnvironment"))) {
+			r_error = MCPToolError::invalid_params(vformat("Node '%s' is not a WorldEnvironment (is %s)",
+					relative_path(p_root, world_env), world_env->get_class()));
+			return Variant();
+		}
+	}
+	if (world_env == nullptr && !p_path_given) {
+		// First in child order, which is deterministic (the migration source
+		// scanned the same way, scene_3d.rs:181-191).
+		const int child_count = p_root->get_child_count();
+		for (int i = 0; i < child_count; i++) {
+			Node *child = p_root->get_child(i);
+			if (child->get_class() == String("WorldEnvironment")) {
+				world_env = child;
+				break;
+			}
+		}
+	}
+
+	bool world_env_created = false;
+	if (world_env == nullptr) {
+		// The migration source always named it `WorldEnvironment` and ignored the
+		// path (scene_3d.rs:170-176); the last segment of a supplied path is the
+		// name a caller would look for.
+		String create_name = "WorldEnvironment";
+		if (p_path_given) {
+			const String last_segment = p_world_env_path.get_file();
+			if (!last_segment.is_empty() && last_segment != ".") {
+				create_name = last_segment;
+			}
 		}
 		WorldEnvironment *created = memnew(WorldEnvironment);
 		add_typed_child(p_root, p_root, create_name, created);
@@ -275,6 +412,81 @@ Variant setup_lighting_on(Node *p_root, const String &p_parent_path, const Strin
 	String light_class;
 	if (lowered == "directional") {
 		light_class = "DirectionalLight3D";
+	} else if (lowered == "omni") {
+		light_class = "OmniLight3D";
+	} else if (lowered == "spot") {
+		light_class = "SpotLight3D";
+	} else {
+		r_error = MCPToolError::invalid_params(vformat(
+				"Unknown light_type: '%s'. Available: directional, omni, spot", p_light_type));
+		return Variant();
+	}
+	MCPToolError instantiate_error;
+	Object *created = instantiate_class(light_class, instantiate_error);
+	if (created == nullptr) {
+		r_error = MCPToolError::internal(vformat("Cannot create %s: %s", light_class, instantiate_error.message));
+		return Variant();
+	}
+	Node *light = Object::cast_to<Node>(created);
+	// The real class name, not the migration source's `DirectionalLight` /
+	// `OmniLight` (scene_3d.rs:113/119): the class name is what
+	// editor_find_nodes_by_type can find, which the read-back evidence needs.
+	add_typed_child(p_root, parent, light_class, light);
+
+	Dictionary result;
+	result["setup"] = true;
+	result["light_type"] = p_light_type;
+	result["node_path"] = relative_path(p_root, light);
+	result["type"] = light->get_class();
+	return result;
+}
+
+Variant setup_navigation_region_on(Node *p_root, const String &p_parent_path, const String &p_mode,
+		const String &p_name, double p_agent_radius, double p_agent_height, double p_cell_size,
+		MCPToolError &r_error) {
+	Node *parent = find_node(p_root, p_parent_path);
+	if (parent == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Parent '%s'", p_parent_path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+	const String lowered = p_mode.to_lower();
+	bool is_3d = false;
+	if (lowered == "2d") {
+		is_3d = false;
+	} else if (lowered == "3d") {
+		is_3d = true;
+	} else if (lowered == "auto") {
+		is_3d = _is_3d_context(parent);
+	} else {
+		r_error = MCPToolError::invalid_params(vformat("Unknown mode: '%s'. Available: 2d, 3d, auto", p_mode));
+		return Variant();
+	}
+
+	const String region_class = is_3d ? "NavigationRegion3D" : "NavigationRegion2D";
+	const StringName required_context(is_3d ? "Node3D" : "Node2D");
+	// Refused **before** anything is created: a `Node3D`-derived child under a
+	// plain `Node` is an engine `ERR_FAIL`, and a refused call may not leave an
+	// orphan behind.
+	if (!_has_ancestor_class(parent, required_context)) {
+		r_error = MCPToolError::tool_state(vformat(
+												  "Cannot add a %s under '%s': neither the parent nor any of its ancestors is a %s",
+												  region_class, relative_path(p_root, parent), String(required_context)),
+				"Add or name a Node3D/Node2D parent first (editor_add_node), or pass mode=3d/mode=2d with a parent that has that context");
+		return Variant();
+	}
+
+	MCPToolError instantiate_error;
+	Object *region_object = instantiate_class(region_class, instantiate_error);
+	if (region_object == nullptr) {
+		r_error = MCPToolError::internal(vformat("Cannot create %s: %s", region_class, instantiate_error.message));
+		return Variant();
+	}
+	Node *region = Object::cast_to<Node>(region_object);
+
+	const String resource_class = is_3d ? "NavigationMesh" : "NavigationPolygon";
+	Object *resource_object = instantiate_class(resource_class, instantiate_error);
+	if (resource_object == nullptr) {
 		memdelete(region);
 		r_error = MCPToolError::internal(vformat("Cannot create %s: %s", resource_class, instantiate_error.message));
 		return Variant();
@@ -325,6 +537,65 @@ Variant setup_navigation_agent_on(Node *p_root, const String &p_node_path, const
 	const String agent_class = is_3d ? "NavigationAgent3D" : "NavigationAgent2D";
 	const StringName required_context(is_3d ? "Node3D" : "Node2D");
 	if (!_has_ancestor_class(parent, required_context)) {
+		r_error = MCPToolError::tool_state(vformat(
+												  "Cannot add a %s under '%s': neither the parent nor any of its ancestors is a %s",
+												  agent_class, relative_path(p_root, parent), String(required_context)),
+				"Add or name a Node3D/Node2D parent first (editor_add_node), or pass agent_type=2D/3D with a parent that has that context");
+		return Variant();
+	}
+
+	MCPToolError instantiate_error;
+	Object *agent_object = instantiate_class(agent_class, instantiate_error);
+	if (agent_object == nullptr) {
+		r_error = MCPToolError::internal(vformat("Cannot create %s: %s", agent_class, instantiate_error.message));
+		return Variant();
+	}
+	Node *agent = Object::cast_to<Node>(agent_object);
+	MCPToolError write_error;
+	if (write_node_property(agent, "radius", p_radius, write_error).get_type() == Variant::NIL ||
+			write_node_property(agent, "max_speed", p_max_speed, write_error).get_type() == Variant::NIL) {
+		memdelete(agent);
+		r_error = write_error;
+		return Variant();
+	}
+
+	const String agent_name = p_name.is_empty() ? agent_class : p_name;
+	add_typed_child(p_root, parent, agent_name, agent);
+
+	Dictionary result;
+	result["setup"] = true;
+	result["node_path"] = relative_path(p_root, agent);
+	result["type"] = agent->get_class();
+	result["radius"] = (double)agent->get("radius");
+	result["max_speed"] = (double)agent->get("max_speed");
+	result["created"] = true;
+	return result;
+}
+
+Variant setup_physics_body_on(Node *p_root, const String &p_parent_path, const String &p_body_type,
+		const String &p_name, MCPToolError &r_error) {
+	Node *parent = find_node(p_root, p_parent_path);
+	if (parent == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Parent '%s'", p_parent_path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+	const StringName body_name(p_body_type);
+	if (!ClassDB::class_exists(body_name)) {
+		r_error = MCPToolError::invalid_params(vformat("Unknown body type: '%s': no such class", p_body_type));
+		return Variant();
+	}
+	if (!ClassDB::is_parent_class(body_name, StringName("Node"))) {
+		r_error = MCPToolError::invalid_params(vformat("Body type '%s' is not a Node subclass", p_body_type));
+		return Variant();
+	}
+	// The migration source accepted *any* `Node` subclass (physics.rs:200-204);
+	// that makes the tool name false. A body has to derive from `PhysicsBody2D`
+	// or `PhysicsBody3D`.
+	if (!ClassDB::is_parent_class(body_name, StringName("PhysicsBody2D")) &&
+			!ClassDB::is_parent_class(body_name, StringName("PhysicsBody3D"))) {
+		r_error = MCPToolError::invalid_params(vformat(
+				"Body type '%s' is not a physics body: it must derive from PhysicsBody2D or PhysicsBody3D", p_body_type));
 		return Variant();
 	}
 	MCPToolError instantiate_error;
@@ -445,6 +716,21 @@ static Variant _tool_setup_lighting(const Dictionary &p_args, MCPToolError &r_er
 		return Variant();
 	}
 	String light_type;
+	if (!optional_string(p_args, "light_type", "directional", light_type, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+	Node *root = edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	return setup_lighting_on(root, parent_path, light_type, r_error);
+}
+
 static Variant _tool_setup_navigation_agent(const Dictionary &p_args, MCPToolError &r_error) {
 	String node_path;
 	if (!require_string(p_args, "node_path", node_path, r_error)) {
@@ -510,7 +796,50 @@ static Variant _tool_setup_navigation_region(const Dictionary &p_args, MCPToolEr
 		builder.schema(_schema_from_json(R"schema({"type":"object","properties":{"ambient_color":{"properties":{"b":{"type":"number"},"g":{"type":"number"},"r":{"type":"number"}},"type":"object"},"bg_color":{"properties":{"b":{"type":"number"},"g":{"type":"number"},"r":{"type":"number"}},"type":"object"},"world_env_path":{"type":"string"}},"required":[],"type":"object"})schema"));
 		builder.handler(_tool_setup_world_environment).register_into(r_registry);
 	}
+	double cell_size = 0.0;
+	if (!optional_float(p_args, "cell_size", 0.25, cell_size, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+	Node *root = edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	return setup_navigation_region_on(root, node_path, mode, name, agent_radius, agent_height, cell_size, r_error);
+}
 
+static Variant _tool_setup_physics_body(const Dictionary &p_args, MCPToolError &r_error) {
+	String parent_path;
+	if (!_optional_parent_path(p_args, parent_path, r_error)) {
+		return Variant();
+	}
+	String body_type;
+	if (!optional_string(p_args, "body_type", "RigidBody2D", body_type, r_error)) {
+		return Variant();
+	}
+	String name;
+	if (!optional_string(p_args, "name", "PhysicsBody", name, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
+		return Variant();
+	}
+	Node *root = edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	return setup_physics_body_on(root, parent_path, body_type, name, r_error);
+}
+
+// ---------------------------------------------------------------------------
+// Registration
+// ---------------------------------------------------------------------------
 //
 // The authoritative `description` and `inputSchema` of each tool are the
 // contract entries of docs/tools_list.renamed.json, character for character; the

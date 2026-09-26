@@ -338,6 +338,11 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 		}
 
 		Dictionary properties;
+		const Variant properties_value = entry.get("properties", Variant());
+		if (properties_value.get_type() != Variant::NIL) {
+			if (properties_value.get_type() != Variant::DICTIONARY) {
+				return _transaction_fail(pending, r_error, i, type, String(), String(), "Invalid 'properties'",
+						MCP_ERR_INVALID_PARAMS, vformat("'nodes[%d].properties' must be an object", i), BATCH_ROLLBACK_SUGGESTION);
 			}
 			properties = properties_value;
 		}
@@ -398,6 +403,21 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 		if (node == nullptr) {
 			// Unreachable after the `is_parent_class` check; kept so the cascade
 			// to `memdelete` cannot be reached by accident.
+			memdelete(created);
+			return _transaction_fail(pending, r_error, i, type, String(), parent_path,
+					vformat("'%s' is not a Node subclass", type), MCP_ERR_INVALID_PARAMS,
+					vformat("nodes[%d]: type '%s' is not a Node subclass", i, type), BATCH_ROLLBACK_SUGGESTION);
+		}
+
+		// The name is applied only when the caller gave one: `Node::set_name("")`
+		// is an `ERR_FAIL_COND` (scene/main/node.cpp:1441), and an unnamed node
+		// gets the engine's own `@Type@N` name on `add_child` - which is what the
+		// migration source's `if !node_name.is_empty()` produced.
+		if (!requested_name.is_empty()) {
+			node->set_name(requested_name);
+		}
+
+		// Every property goes through the module's one property write. Its first
 		// action is the existence check, so an undeclared name is refused here
 		// with the element index and the property name instead of being silently
 		// skipped (the migration source's `if exists` at batch.rs:358-387).

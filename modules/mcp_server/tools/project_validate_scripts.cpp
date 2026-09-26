@@ -1,3 +1,32 @@
+/**************************************************************************/
+/*  project_validate_scripts.cpp                                          */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be        */
+/* included in all copies or substantial portions of the Software.       */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
 #include "project_validate_scripts.h"
 
 #include "project_read_files.h"
@@ -52,7 +81,17 @@ bool _is_script_extension(const String &p_extension) {
 			return true;
 		}
 	}
-	return false;
+	return json.get_data();
+}
+
+void register_project_validate_scripts_tools(MCPToolRegistry &r_registry) {
+	{
+		ToolBuilder builder("project_validate_scripts",
+				String::utf8(R"desc(Validate every script of the project in one call and answer a per-file verdict, so a batch of edited scripts can be checked without one call per file. The categories are `ok` (the file's own language compiled it), `invalid` (it did not compile - for a `.cs` file that is a project-level build of its .csproj that project_build_csharp ran and recorded, and the item carries the compiler's own diagnostic text), `not_compiled` (no build of this source is loaded: the file was modified after the loaded .NET assembly was built, or that assembly has no class for the script's path - deliberately not `invalid`, because the engine has no C# compiler and CSharpScript::reload() returns OK unconditionally), `language_unavailable` (this build has no script backend for the extension) and `unverifiable` (the engine could not load the file as a Script resource); `valid` is published only for `ok` and `invalid`, and `count` is always the sum of the per-category counters.)desc"));
+		builder.channel("project").verb("validate").scope(MCPToolScope::BOTH).mutating(false);
+		builder.schema(_schema_from_json(R"schema({"properties":{"include_errors_only":{"default":false,"type":"boolean"},"paths":{"items":{"type":"string"},"type":"array"}},"required":[],"type":"object"})schema"));
+		builder.handler(_tool_validate_scripts).register_into(r_registry);
+	}
 }
 
 Array _discover_scripts() {
@@ -122,24 +161,16 @@ Dictionary _item(const String &p_path, const MCPValidateScriptVerdict &p_verdict
 	// build, and saying "gd" would hide why).
 	entry["language"] = p_verdict.language;
 	entry["category"] = p_verdict.category;
-	if (p_verdict.category == "unverifiable" || p_verdict.category == "not_compiled" ||
-			p_verdict.category == "language_unavailable") {
-		// TASK-054/TASK-055/TASK-056: every category that cannot answer "is this
-		// file valid" is a file this process cannot judge: `unverifiable` (the
-		// engine could not load it as a `Script`), `not_compiled` (no build of
-		// this source is loaded) and `language_unavailable` (this build has no
-		// script backend for the extension - TASK-056 D1, REPORT-AUDIT-ADDED: it
-		// used to publish `valid: false` here). The `valid` key is published as
-		// `null`, never `false` - `false` is the verdict "it does not compile",
-		// which is exactly what nobody can say here (the same reason the singular
-		// tool refuses instead of answering). The engine basis travels in
-		// `reason`, and the caller's next step in `suggestion`.
+	if (p_verdict.category == "unverifiable" || p_verdict.category == "not_compiled") {
+		// TASK-054/TASK-055: a file this process cannot judge (`unverifiable`) or
+		// whose source no build has compiled (`not_compiled`). The `valid` key is
+		// published as `null`, not `false` - `false` is the verdict "it does not
+		// compile", which is exactly what nobody can say here (the same reason the
+		// singular tool refuses instead of answering).
 		entry["valid"] = Variant();
 		entry["reason"] = truncate_marked(p_verdict.reason, MAX_REASON_BYTES);
 		entry["message"] = truncate_marked(p_verdict.message, MAX_TEXT_BYTES);
-		const MCPToolError refusal = p_verdict.category == "language_unavailable"
-				? validate_script_language_unavailable_error(p_path, p_verdict.language)
-				: validate_script_verdict_refusal(p_path, p_verdict);
+		const MCPToolError refusal = validate_script_verdict_refusal(p_path, p_verdict);
 		if (refusal.data.get_type() == Variant::DICTIONARY) {
 			entry["suggestion"] = ((Dictionary)refusal.data).get("suggestion", Variant());
 		}
@@ -150,6 +181,16 @@ Dictionary _item(const String &p_path, const MCPValidateScriptVerdict &p_verdict
 		entry["error_text"] = truncate_marked(p_verdict.error_text, MAX_TEXT_BYTES);
 	}
 	entry["message"] = truncate_marked(p_verdict.message, MAX_TEXT_BYTES);
+	if (p_verdict.category == "language_unavailable") {
+		// The missing half of "this build cannot answer this file": what to do
+		// instead. The single-file tool carries the same sentence in
+		// `data.suggestion`, and a batch item that only said "unavailable" would
+		// send the caller to the tool's description to find it.
+		const MCPToolError refusal = validate_script_language_unavailable_error(p_path, p_verdict.language);
+		if (refusal.data.get_type() == Variant::DICTIONARY) {
+			entry["suggestion"] = ((Dictionary)refusal.data).get("suggestion", Variant());
+		}
+	}
 	return entry;
 }
 
@@ -335,7 +376,7 @@ static Dictionary _schema_from_json(const char *p_json) {
 void register_project_validate_scripts_tools(MCPToolRegistry &r_registry) {
 	{
 		ToolBuilder builder("project_validate_scripts",
-				String::utf8(R"desc(Validate every script of the project in one call and answer a per-file verdict, so a batch of edited scripts can be checked without one call per file. The categories are `ok` (the file's own language compiled it), `invalid` (it did not compile - for a `.cs` file that is a project-level build of its .csproj that project_build_csharp ran and recorded, and the item carries the compiler's own diagnostic text), `not_compiled` (no build of this source is loaded: the file was modified after the loaded .NET assembly was built, or that assembly has no class for the script's path - deliberately not `invalid`, because the engine has no C# compiler and CSharpScript::reload() returns OK unconditionally), `language_unavailable` (this build has no script backend for the extension) and `unverifiable` (the engine could not load the file as a Script resource); `valid` is published only for `ok` and `invalid`, and `count` is always the sum of the per-category counters.)desc"));
+				String::utf8(R"desc(Validate every script of the project in one call and answer a per-file verdict, so a batch of edited scripts can be checked without one call per file. A file this process can load but cannot compile through the script API is reported as `unverifiable` with a `reason` and no `valid` value at all: Godot's CSharpScript::reload() returns OK unconditionally and never compiles the source (modules/mono/csharp_script.cpp:2588-2621), so a `.cs` file in a Mono build gets no verdict here (the single-file project_validate_script refuses the same file with -32000); use project_build_csharp for a C# verdict.)desc"));
 		builder.channel("project").verb("validate").scope(MCPToolScope::BOTH).mutating(false);
 		builder.schema(_schema_from_json(R"schema({"properties":{"include_errors_only":{"default":false,"type":"boolean"},"paths":{"items":{"type":"string"},"type":"array"}},"required":[],"type":"object"})schema"));
 		builder.handler(_tool_validate_scripts).register_into(r_registry);
