@@ -1,3 +1,54 @@
+/**************************************************************************/
+/*  mcp_server.cpp                                                        */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
+
+#include "mcp_server.h"
+
+#include "mcp_jsonrpc.h"
+#include "tools/registration.h"
+#include "tools/tool_builder.h"
+
+#include "core/config/engine.h"
+#include "core/config/project_settings.h"
+#include "core/core_bind.h"
+#include "core/io/json.h"
+#include "core/object/callable_mp.h"
+#include "core/object/class_db.h"
+#include "core/object/message_queue.h"
+#include "core/os/os.h"
+#include "scene/main/scene_tree.h"
+#include "scene/main/window.h"
+
+MCPServer *MCPServer::singleton = nullptr;
+
+namespace MCPPort {
+
 static const int DEFAULT_EDITOR_PORT = 9877;
 static const int MAX_PORT = 65535;
 
@@ -117,7 +168,81 @@ Dictionary MCPServer::debug_endpoint_state() const {
 	state["tool_count"] = registry.get_visible_tool_count(is_editor);
 	return state;
 }
+void MCPServer::_notification(int p_what) {
+	switch (p_what) {
+		case NOTIFICATION_PROCESS: {
+			pump_frame(get_process_delta_time());
+		} break;
+		case NOTIFICATION_EXIT_TREE: {
+			_shutdown();
+		} break;
+		case NOTIFICATION_PREDELETE: {
+			if (singleton == this) {
+				singleton = nullptr;
+				if (CoreBind::Engine::get_singleton() != nullptr && CoreBind::Engine::get_singleton()->has_singleton("MCPServer")) {
+					CoreBind::Engine::get_singleton()->unregister_singleton("MCPServer");
+				}
+			}
+			_shutdown();
+		} break;
+		default: {
+			Node::_notification(p_what);
+		} break;
+	}
+}
 
+void MCPServer::_retire_unattached() {
+	// Disable the module for good and release the instance. A Node that can
+	// never enter a tree must not stay alive: `Node::print_orphan_nodes()`
+	// reports every tree-less Node in ObjectDB and the engine's own unit-test
+	// suite asserts on the exact output of one such probe, so leaving this
+	// instance behind makes an unrelated engine test fail.
+	MCPServer *server = singleton;
+	singleton = nullptr;
+	if (CoreBind::Engine::get_singleton() != nullptr && CoreBind::Engine::get_singleton()->has_singleton("MCPServer")) {
+		CoreBind::Engine::get_singleton()->unregister_singleton("MCPServer");
+	}
+	if (server != nullptr) {
+		server->_shutdown();
+		memdelete(server);
+	}
+}
+
+void MCPServer::bootstrap() {
+	if (service_started) {
+		return;
+	}
+
+	SceneTree *tree = SceneTree::get_singleton();
+	if (tree == nullptr || tree->get_root() == nullptr) {
+		// SCENE level initialization happens before the SceneTree exists, so
+		// the very first frames may still be too early.
+		bootstrap_attempts++;
+		if (bootstrap_attempts > 600) {
+			ERR_PRINT("[MCP] SceneTree never became available; MCP server disabled.");
+			// This is the engine's `--test` harness, which has no SceneTree at
+			// all: retire the instance instead of leaving a tree-less Node
+			// behind (see _retire_unattached).
+			if (MessageQueue::get_singleton() != nullptr) {
+				MessageQueue::get_singleton()->push_callable(callable_mp_static(&MCPServer::_retire_unattached));
+			} else {
+				_retire_unattached();
+			}
+			return;
+		}
+		if (MessageQueue::get_singleton() != nullptr) {
+			MessageQueue::get_singleton()->push_callable(callable_mp(this, &MCPServer::bootstrap));
+		}
+		return;
+	}
+
+	set_name("MCPServer");
+	tree->get_root()->add_child(this);
+	set_process(true);
+
+	_start_service();
+}
+void MCPServer::pump_frame(double p_delta) {
 	(void)p_delta;
 	// GDR-20 point 7: the frame clock of the deferred channel is the SceneTree's
 	// frame counter, not a private counter of this node - the tools have to see
@@ -151,7 +276,6 @@ Dictionary MCPServer::debug_endpoint_state() const {
 		capture_engine->tick((int64_t)frame_count);
 	}
 }
-
 void MCPServer::_shutdown() {
 	if (http_server != nullptr) {
 		http_server->stop();
@@ -236,71 +360,95 @@ void MCPServer::handle_jsonrpc_request(const String &p_body, MCPHttpOutcome &r_o
 		}
 	}
 }
-
 String MCPServer::build_deferred_body(const MCPDeferred::Completion &p_completion) {
-			has_port_setting = true;
-			setting_port = (int)value;
-		}
+	// The wire shape stays in the JSON-RPC layer, exactly like the immediate
+	// path: a success is the same `content` envelope `content_result()` builds,
+	// and a failure is the same `error` object any tool error becomes.
+	if (p_completion.kind == MCPDeferred::CompletionKind::DONE) {
+		return MCPJsonRpc::build_result_raw(p_completion.id_json, MCPTools::content_result(p_completion.result));
 	}
-
-	Vector<String> cmdline_args;
-	if (OS::get_singleton() != nullptr) {
-		const List<String> args = OS::get_singleton()->get_cmdline_args();
-		for (const String &arg : args) {
-			cmdline_args.push_back(arg);
-		}
-	}
-
-	port_config = MCPPort::parse(cmdline_args, has_port_setting, setting_port, is_editor);
-	const bool listen = MCPPort::should_listen(is_editor, port_config, enabled_in_game);
-
-	const char *source = "default";
-	if (port_config.explicit_cmdline) {
-		source = "cmdline";
-	} else if (port_config.from_project_setting) {
-		source = "project_setting";
-	}
-
-	print_line(vformat("[MCP] role=%s configured_port=%d source=%s listen=%s",
-			is_editor ? "editor" : "game", port_config.port, source, listen ? "true" : "false"));
-
-	if (!listen) {
-		port = 0;
-		listening = false;
-		print_line("[MCP] not listening (get_port()=0)");
-		return;
-	}
-
-	http_server = memnew(MCPHttpServer);
-	http_server->set_sink(this);
-	http_server->set_max_body_bytes(max_body_bytes);
-	http_server->set_connection_idle_seconds(connection_idle_seconds);
-
-	const Error err = http_server->listen((uint16_t)port_config.port);
-	if (err != OK) {
-		// Binding failures must never take the engine down; the endpoint
-		// simply stays disabled and get_port() reports 0.
-		print_line(vformat("[MCP] bind failed on 127.0.0.1:%d (error=%d)", port_config.port, (int)err));
-		WARN_PRINT(vformat("[MCP] bind failed on 127.0.0.1:%d; MCP server disabled", port_config.port));
-		print_line("[MCP] get_port()=0 (MCP server disabled)");
-
-		memdelete(http_server);
-		http_server = nullptr;
-		port = 0;
-		listening = false;
-		return;
-	}
-
-	port = port_config.port;
-	listening = true;
-	print_line(vformat("[MCP] listening on 127.0.0.1:%d (editor=%s, tools=%d)",
-			port, is_editor ? "true" : "false", registry.get_visible_tool_count(is_editor)));
+	return MCPJsonRpc::build_error_raw(p_completion.id_json, p_completion.error.code, p_completion.error.message, p_completion.error.data);
 }
+String MCPServer::get_status_body() {
+	Dictionary status;
+	status["status"] = "ok";
+	status["server"] = "godot-mcp-rs";
+	status["transport"] = "streamable-http";
+	status["tools"] = registry.get_visible_tool_count(is_editor);
+	status["port"] = port;
+	status["is_editor"] = is_editor;
+	status["frame_count"] = frame_count;
+	status["listening"] = listening;
+	status["connections"] = http_server != nullptr ? http_server->get_connection_count() : 0;
+	// GDR-20 point 5: both counts the cleanup rule is judged by are observable.
+	status["pending"] = http_server != nullptr ? http_server->get_pending_count() : 0;
+	status["pending_connections"] = http_server != nullptr ? http_server->get_pending_connection_count() : 0;
+	return JSON::stringify(status);
+}
+
+int MCPServer::_get_int_setting(const String &p_name, int p_default) const {
+	ProjectSettings *settings = ProjectSettings::get_singleton();
+	if (settings == nullptr) {
+		return p_default;
+	}
+
+	// Both the section style name (`mcp_server/max_body_bytes`) and the dotted
+	// alias (`mcp_server.max_body_bytes`) are accepted.
+	Vector<String> names;
+	names.push_back(p_name);
+	const String alias = p_name.replace("/", ".");
+	if (alias != p_name) {
+		names.push_back(alias);
+	}
+
+	for (int i = 0; i < names.size(); i++) {
+		if (!settings->has_setting(names[i])) {
+			continue;
+		}
+		const Variant value = settings->get_setting(names[i]);
+		if (value.get_type() == Variant::INT || value.get_type() == Variant::FLOAT) {
+			return (int)value;
+		}
+	}
+	return p_default;
+}
+
+bool MCPServer::_get_bool_setting(const String &p_name, bool p_default) const {
+	ProjectSettings *settings = ProjectSettings::get_singleton();
+	if (settings == nullptr) {
+		return p_default;
+	}
+
+	Vector<String> names;
+	names.push_back(p_name);
+	const String alias = p_name.replace("/", ".");
+	if (alias != p_name) {
+		names.push_back(alias);
+	}
+
+	for (int i = 0; i < names.size(); i++) {
+		if (!settings->has_setting(names[i])) {
+			continue;
+		}
+		const Variant value = settings->get_setting(names[i]);
+		if (value.get_type() == Variant::BOOL) {
+			return (bool)value;
+		}
+	}
+	return p_default;
+}
+
+void MCPServer::_register_tools() {
+	if (registry.get_tool_count() > 0) {
+		return;
+	}
+
+	// Every implemented group registers itself through the single shared entry
+	// point; the group files own their tools (TASK-002 section 2.2.1). Tools that
 	// have not been ported yet are not registered at all, so they can never show
 	// up in `tools/list` (GDR-7).
 	register_all_tools(registry);
 }
-
 void MCPServer::_start_service() {
 	if (service_started) {
 		return;

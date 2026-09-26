@@ -1,3 +1,62 @@
+/**************************************************************************/
+/*  editor_node_read.cpp                                                  */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                             GODOT ENGINE                               */
+/*                        https://godotengine.org                         */
+/**************************************************************************/
+/* Copyright (c) 2014-present Godot Engine contributors (see AUTHORS.md). */
+/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                  */
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation the rights to use, copy, modify, merge, publish,    */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE     */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/
+#include "editor_node_read.h"
+
+#include "tool_builder.h"
+#include "tool_helpers.h"
+
+#include "core/io/json.h"
+#include "core/object/object.h"
+#include "core/string/node_path.h"
+#include "core/string/string_name.h"
+#include "core/variant/callable.h"
+#include "core/variant/dictionary.h"
+#include "core/variant/variant.h"
+#include "scene/main/node.h"
+#include "scene/main/scene_tree.h"
+
+using namespace MCPTools;
+
+// The runtime half of the editor guard lives in `tools/tool_helpers.*` and is
+// called below as `require_editor_ui(r_error, <non-editor wording>,
+// <suggestion>)`; the `EditorInterface` / `EditorNode` null-check reasoning is
+// documented next to that single definition. The edited scene root
+// (`MCPTools::edited_scene_root()`) and the migration source's node resolution
+// (`MCPTools::find_node()`) were hoisted there by TASK-016 section 1, so this
+// group file keeps no copy of either.
+//
+// Nothing in this file needs an editor-only engine header: the six tools read
+// `Node` / `SceneTree` only. The editor/package split is still enforced twice -
+// `ToolBuilder` does not even register a `scope = EDITOR` tool in a game process
+// (GDR-19 section 17.3), and `require_editor_ui` refuses every call in one.
+
 // ---------------------------------------------------------------------------
 // The six argument shapes.
 // ---------------------------------------------------------------------------
@@ -243,6 +302,41 @@ Array signal_entries(Node *p_root, Node *p_node) {
 		}
 		entry["connections"] = connections;
 
+		out.push_back(entry);
+	}
+	return out;
+}
+
+void collect_signal_connections(Node *p_node, Node *p_root,
+		const String &p_node_filter, const String &p_signal_filter, Array &r_out) {
+	// The migration source compares against `root.get_path_to(node).to_string()`
+	// (batch.rs:235), i.e. the root-relative spelling, and both filters are
+	// substring tests (`find() >= 0`).
+	const String node_path = String(p_root->get_path_to(p_node));
+	if (p_node_filter.is_empty() || node_path.find(p_node_filter) >= 0) {
+		List<MethodInfo> signal_list;
+		p_node->get_signal_list(&signal_list);
+		for (const MethodInfo &signal : signal_list) {
+			const StringName signal_name = signal.name;
+			const String signal_text = String(signal_name);
+			if (!p_signal_filter.is_empty() && signal_text.find(p_signal_filter) < 0) {
+				continue;
+			}
+			// `get_signal_connection_list()` answers **every** connection of the
+			// signal. It is deliberately not filtered by `CONNECT_PERSIST`: that
+			// filter is what `editor_analyze_signal_flow` does, and it is the
+			// discriminator GDR-17 kept this tool for.
+			List<Object::Connection> signal_connections;
+			p_node->get_signal_connection_list(signal_name, &signal_connections);
+			for (const Object::Connection &connection : signal_connections) {
+				Dictionary entry;
+				entry["source"] = node_path;
+				entry["signal"] = signal_text;
+				entry["target"] = _connection_target(p_root, connection.callable);
+				entry["method"] = String(connection.callable.get_method());
+				r_out.push_back(entry);
+			}
+		}
 	}
 	const int child_count = p_node->get_child_count();
 	for (int i = 0; i < child_count; i++) {
@@ -363,6 +457,124 @@ Dictionary count_signal_connections_by_scope(const Array &p_all) {
 static Variant _tool_get_node_properties(const Dictionary &p_args, MCPToolError &r_error) {
 	String path;
 	if (!_require_node_path(p_args, "path", path, r_error)) {
+		return Variant();
+	}
+	bool has_filter = false;
+	Vector<String> filter;
+	if (!_optional_string_array(p_args, "properties", has_filter, filter, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor inspectors outside a running editor",
+				"Start the MCP server inside the Godot editor to inspect the editor scene")) {
+		return Variant();
+	}
+	Node *root = edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	Node *node = find_node(root, path);
+	if (node == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Node '%s'", path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+	Dictionary properties;
+	if (!node_properties(node, has_filter ? &filter : nullptr, properties, r_error)) {
+		return Variant();
+	}
+
+	Dictionary result;
+	result["node_path"] = String(root->get_path_to(node));
+	result["type"] = node->get_class();
+	result["properties"] = properties;
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// editor_get_node_groups (old `get_node_groups`, node.rs:471)
+//
+// The internal-group filter (`!group.starts_with('_')`, node.rs:486) is kept:
+// Godot's own editor marks its bookkeeping groups that way, and the write side
+// of this batch (`editor_set_node_groups`) uses exactly the same rule, so the
+// two halves of the read/write pair agree about what is visible.
+// ---------------------------------------------------------------------------
+static Variant _tool_get_node_groups(const Dictionary &p_args, MCPToolError &r_error) {
+	String node_path;
+	if (!_require_node_path(p_args, "node_path", node_path, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor inspectors outside a running editor",
+				"Start the MCP server inside the Godot editor to inspect the editor scene")) {
+		return Variant();
+	}
+	Node *root = edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	Node *node = find_node(root, node_path);
+	if (node == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Node '%s'", node_path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
+
+	Array groups;
+	// `Node::get_groups()` fills a `List<GroupInfo>`; the GDScript binding
+	// `get_groups()` serialises the same list into an Array.
+	List<Node::GroupInfo> current;
+	node->get_groups(&current);
+	for (const Node::GroupInfo &info : current) {
+		const String group = String(info.name);
+		if (group.begins_with("_")) {
+			continue;
+		}
+		groups.push_back(group);
+	}
+
+	Dictionary result;
+	result["node_path"] = String(root->get_path_to(node));
+	result["groups"] = groups;
+	result["count"] = groups.size();
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// editor_find_nodes_in_group (old `find_nodes_in_group`, node.rs:584)
+// ---------------------------------------------------------------------------
+static Variant _tool_find_nodes_in_group(const Dictionary &p_args, MCPToolError &r_error) {
+	String group;
+	if (!require_string(p_args, "group", group, r_error)) {
+		return Variant();
+	}
+	if (group.strip_edges().is_empty()) {
+		r_error = MCPToolError::invalid_params("Parameter 'group' must not be empty");
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor inspectors outside a running editor",
+				"Start the MCP server inside the Godot editor to inspect the editor scene")) {
+		return Variant();
+	}
+	Node *root = edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+
+	Array nodes;
+	collect_nodes(root, root, String(), group, nodes);
+
+	Dictionary result;
+	result["group"] = group;
+	result["nodes"] = nodes;
+	result["count"] = nodes.size();
+	return result;
+}
+
+// ---------------------------------------------------------------------------
+// editor_find_nodes_by_type (old `find_nodes_by_type`, batch.rs:130)
+// ---------------------------------------------------------------------------
 static Variant _tool_find_nodes_by_type(const Dictionary &p_args, MCPToolError &r_error) {
 	String type;
 	if (!require_string(p_args, "type", type, r_error)) {
@@ -393,6 +605,35 @@ static Variant _tool_find_nodes_by_type(const Dictionary &p_args, MCPToolError &
 
 // ---------------------------------------------------------------------------
 // editor_get_node_signals (old `get_signals`, editor.rs:460)
+//
+// The node is addressed the same way as in the rest of the editor node family
+// (`MCPTools::find_node`, i.e. the migration source's `node.rs:148` resolution).
+// The migration source's own GDScript used `root.find_node(path, true, false)`
+// there, a *by-name* recursive search, because it had to reach the node from a
+// script string; inside the module the shared resolution is both stricter and
+// consistent with every neighbouring tool (REPORT-016 section 2 records this as
+// a deviation).
+// ---------------------------------------------------------------------------
+static Variant _tool_get_node_signals(const Dictionary &p_args, MCPToolError &r_error) {
+	String node_path;
+	if (!_require_node_path(p_args, "node_path", node_path, r_error)) {
+		return Variant();
+	}
+	if (!require_editor_ui(r_error, "editor inspectors outside a running editor",
+				"Start the MCP server inside the Godot editor to inspect the editor scene")) {
+		return Variant();
+	}
+	Node *root = edited_scene_root();
+	if (root == nullptr) {
+		r_error = MCPToolError::no_scene();
+		return Variant();
+	}
+	Node *node = find_node(root, node_path);
+	if (node == nullptr) {
+		r_error = MCPToolError::not_found(vformat("Node '%s'", node_path),
+				"Use editor_get_scene_tree to list the nodes of the edited scene");
+		return Variant();
+	}
 
 	const Array signals = signal_entries(root, node);
 
@@ -498,3 +739,39 @@ void register_editor_node_read_tools(MCPToolRegistry &r_registry) {
 		builder.schema(_schema_from_json(R"schema({"properties":{"path":{"type":"string"},"properties":{"items":{"type":"string"},"type":"array"}},"required":["path"],"type":"object"})schema"));
 		builder.handler(_tool_get_node_properties).register_into(r_registry);
 	}
+
+	{
+		ToolBuilder builder("editor_get_node_groups", String::utf8(R"desc(获取节点所属的分组列表)desc"));
+		builder.channel("editor").verb("get").scope(MCPToolScope::EDITOR).mutating(false);
+		builder.schema(_schema_from_json(R"schema({"properties":{"node_path":{"description":"节点路径","type":"string"}},"required":["node_path"],"type":"object"})schema"));
+		builder.handler(_tool_get_node_groups).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_find_nodes_in_group", String::utf8(R"desc(按组名查找所有节点)desc"));
+		builder.channel("editor").verb("find").scope(MCPToolScope::EDITOR).mutating(false);
+		builder.schema(_schema_from_json(R"schema({"properties":{"group":{"description":"组名","type":"string"}},"required":["group"],"type":"object"})schema"));
+		builder.handler(_tool_find_nodes_in_group).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_find_nodes_by_type", String::utf8(R"desc(按类型查找所有节点)desc"));
+		builder.channel("editor").verb("find").scope(MCPToolScope::EDITOR).mutating(false);
+		builder.schema(_schema_from_json(R"schema({"properties":{"type":{"type":"string"}},"required":["type"],"type":"object"})schema"));
+		builder.handler(_tool_find_nodes_by_type).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_get_node_signals", String::utf8(R"desc(获取指定节点的信号列表及连接信息)desc"));
+		builder.channel("editor").verb("get").scope(MCPToolScope::EDITOR).mutating(false);
+		builder.schema(_schema_from_json(R"schema({"properties":{"node_path":{"description":"节点路径 (相对于场景根节点)","type":"string"}},"required":["node_path"],"type":"object"})schema"));
+		builder.handler(_tool_get_node_signals).register_into(r_registry);
+	}
+
+	{
+		ToolBuilder builder("editor_list_signal_connections", String::utf8(R"desc(递归查找场景中所有信号连接 判别点：扁平返回 connections[]（每项 {source,signal,target,method}）与 count，收全部连接（不过滤非持久连接）、node_path 与 signal_name 均按子串匹配；要按节点嵌套的流向分析请用 editor_analyze_signal_flow。)desc"));
+		builder.channel("editor").verb("list").scope(MCPToolScope::EDITOR).mutating(false);
+		builder.schema(_schema_from_json(R"schema({"properties":{"node_path":{"description":"节点路径过滤（可选，包含匹配）","type":"string"},"signal_name":{"description":"信号名过滤（可选，包含匹配）","type":"string"}},"required":[],"type":"object"})schema"));
+		builder.handler(_tool_list_signal_connections).register_into(r_registry);
+	}
+}
