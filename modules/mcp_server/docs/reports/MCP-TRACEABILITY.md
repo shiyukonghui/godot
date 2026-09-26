@@ -531,7 +531,25 @@ seq=26 req_id=326  result_json = {"all_passed":false,"passed":0,"failed":1,...}
 
 ---
 
-## 7. 当像素证据不可得时的替代证据链（TASK-096）
+## 7. 当像素证据不可得时的替代证据链（TASK-096；TASK-097 结案；TASK-098 对齐口径）
+
+> **结案说明（TASK-097 做完，TASK-098 把本节的措辞与它对齐）。**
+> 本节 §7.0–§7.2 写下的是 **D-1 尚未结案时**的读法。D-1 的根因是工具缺陷 **D-3**
+> （`editor_add_nodes_batch` 对「目标父节点下已有同名子节点」既不拒绝也不报告，Godot 按既有
+> 规则把新节点自动改名成 `@Type@N`，`editor_save_scene` 随后把两份都写进 `.tscn`；副本排在
+> 场景树最后，因此绘制在最上层，把真实节点的移动挡在下面）。
+>
+> **TASK-097 已把它修在根上**：`editor_add_nodes_batch` 新增 `on_name_conflict`，默认
+> `"refuse"` —— 命中同名时**整批拒绝、一个节点都不写**，回 `-32000` + `data.conflicts`
+> （每条给出 `node_path` 与 `existing_node_path`）+ `data.suggestion`；显式
+> `on_name_conflict:"rename"` 才保留引擎改名，且 `editor_save_scene` 会报告
+> `duplicates` / `duplicates_count` / `note`。三个老游戏场景里的副本层已用
+> `editor_delete_node` 逐个删除并复核（`recovery\work\task097\check_cleanup.py`），
+> 像素差列已回填**真实数值**：Pong **14/74**、Breakout **14/89**、Snake **13/102**，
+> 独立复算（`pixel_recompute.py`）与报告**逐对一致、0 处不符**。
+>
+> 所以：**「不可得（D-1）」是历史记录，描述的是副本层被删掉之前的那些旧运行，不是当前状态。**
+> 当前状态由 §7.3 的条件与边界决定。
 
 ### 7.0 为什么这一节存在
 
@@ -551,9 +569,16 @@ D138 的「操作有效性」要求每一款游戏都有可复算的像素差。
 
 | 场景 | 具名节点 | 多出的副本 | 副本首行 |
 |---|---|---|---|
-| `projects\pong\scenes\main.tscn` | Background / Ball / Paddle×2 / Label×3 | **5** | `@ColorRect@20995`（800×600 不透明底） |
-| `projects\breakout\scenes\main.tscn` | … | **18** | 同上 |
-| `projects\snake\scenes\main.tscn` | Background / GridLine×14 / SnakeSeg×20 / Food / Status | **37** | 同上 |
+| `projects\pong\scenes\main.tscn` | Background / Ball / Paddle×2 / Label×3 | **8**（5 个 `@ColorRect@` + 3 个 `@Label@`） | `@ColorRect@20995`（800×600 不透明底） |
+| `projects\breakout\scenes\main.tscn` | … | **20**（18 + 2） | 同上 |
+| `projects\snake\scenes\main.tscn` | Background / GridLine×14 / SnakeSeg×20 / Food / Status | **37**（37 + 0） | 同上 |
+
+> **口径注（TASK-098 复核）**：TASK-096 当时写的 **5 / 18 / 37** 是**只数 `@ColorRect@*`** 的结果，
+> 与上表的差别**只在口径**，不是前后矛盾。清理会话自己从盘上读回来的**清理前场景原文**
+> （`runs\<game>\<game>-clean-task097\c03-read-before.json`）里 `[node name="@..."]` 逐个可数：
+> Pong 5 个 `@ColorRect@` + 3 个 `@Label@` = 8，Breakout 18 + 2 = 20，Snake 37 + 0 = 37；三份场景的
+> 字节数 3391 / 8553 / 13284 B 与 TASK-097 报告的清理前尺寸逐一吻合。
+> 复核脚本：`recovery\work\task098\copy_count_evidence.py`。
 
 后果：真实节点照常移动、照常重绘（属性读回全部正确、`Engine.get_frames_drawn()` 照常增长），
 但**画面上那一层是副本**，副本的初值不变 → 屏幕确实是静止的。回读通道**无辜**。
@@ -594,3 +619,32 @@ D138 的「操作有效性」要求每一款游戏都有可复算的像素差。
    「游戏画面上屏了」与「capture 自己动了」。
 4. `0` 与 `不可得` 是两个不同的断言。前者在像素链**已验证是通的**之后才有意义；后者出现在
    `GAME-LOOP-LOG.md` 与人读的报告里，指向本节。
+
+### 7.3 结案之后这一节什么时候还适用（TASK-098 写明条件与边界）
+
+D-1 结案不等于「像素证据从此永远可得」，也不等于「列上的 `0` 可以随便读」。本节继续生效的
+**条件**与**边界**如下；读出 `0`、读出数字、还是读「不可得」，取决于这四条有没有被检查过。
+
+| # | 条件 | 怎么查 | 不满足时列上写什么 |
+|---|---|---|---|
+| 1 | **场景是干净的**：`main.tscn` 里没有 `@Type@N` 自动名节点 | `editor_get_scene_tree` 的名字里没有以 `@` 开头的项，**且**重放编辑器相时那一次 `editor_add_nodes_batch` 回 `-32000`；`projects\_template` 起的新工程天然满足 | 先按 D-3 的路子查副本层，再谈像素 |
+| 2 | **画面真的有东西在动**：至少一个**运行期新建**的画布项在改变外观（或静态节点真的改了色/位置） | 多帧属性采样里同一属性出现**多个不同的值**（TASK-098 的 `g08` 冻结基线对 `g10`/`g12` 移动采样就是这个对照） | 全静态且不动的场景会得到一串**真正为 0** 的差值 —— 那时 `0` 是一个**结论**，不是「不可得」 |
+| 3 | **一条看得见的数字必须带对照**：`before/after` 的 sha256 + 独立复算的 `changed_pixels` + 一个运行期新建画布项 | 见下面「TASK-098 的实证」 | 只有数字没有对照，无法区分「游戏上屏了」与「capture 自己动了」 |
+| 4 | **`tools\game_report.py --pixel-evidence` 的三档**已经选对 | `auto`（默认：整轮全 0 才判不可得）、`available`（条件 1–3 都查过，允许把 `0` 当结论）、`unavailable`（明知链断了仍要出报告） | 选错档会把「没有证据」写成「有反证据」，或反过来 |
+
+**TASK-098 的实证（条件 1–4 在同一轮里全部成立）**：第六款游戏 Asteroids 与第七款游戏
+Pac-Man 的场景都只有 3 个静态节点，编辑器相里同一批节点**故意再跑一次**并都被 `-32000`
+拒绝（`e06`，`data.conflicts` 逐条列出），重放后的树里**没有任何 `@Type@N`**；两款游戏的主体
+（飞船 / 子弹 / 岩石 / 迷宫 / 豆子 / 幽灵 / 吃豆人）都是 `_Ready()` 里**运行期新建**的
+`ColorRect`，其坐标是根节点上的真导出属性，所以多帧采样能逐帧看见它们移动。两轮的像素列
+因此是**数字**：Asteroids **16/71** 非零（编辑器 1/16、游戏 15/55），`user://` 六帧逐对
+14774 / 996 / 6346 / 7072 / 8960 px；Pac-Man 见其报告。两份都由
+`recovery\work\task098\pixel_recompute.py` 与 `frames_recompute.py` 独立复算，与
+`report.json` **0 处不符**。
+
+**边界（把话说死）**：(a) 本节不承诺「任何场景都能拿到非零像素差」——条件 2 不满足时正确答案
+就是 `0`；(b) 本节不承诺像素差能证明**游戏逻辑**正确，它只证明**可见结果确实变了**，逻辑由
+多帧采样与断言钉住；(c) 三个老游戏在 TASK-096 期间留下的「不可得（D-1）」字样**不再更新**，
+它们是那一段时间的忠实记录，`GAME-LOOP-LOG.md` 在对应行里同时给出清理后的真实数值与
+「D-1 时期」的旧值。
+
