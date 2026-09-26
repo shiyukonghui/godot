@@ -80,73 +80,73 @@ struct _PendingNode {
 	String actual_class;
 	String requested_parent_path;
 	String pending_path;
+	// TASK-051 C-3: true when `parent` is a node an *earlier element of this same
+	// request* prepared (so it is still detached and `relative_path()` cannot
+	// answer for it), false when it came out of the scene tree.
+	bool parent_from_batch = false;
 };
 
-// `{"index":N,"type":"...","property":"...","parent_path":"...","reason":"..."}`.
-static Dictionary _batch_error_entry(int p_index, const String &p_type, const String &p_property,
-		const String &p_parent_path, const String &p_reason) {
-	Dictionary entry;
-	entry["index"] = p_index;
-	entry["type"] = p_type;
-	entry["property"] = p_property;
-	entry["parent_path"] = p_parent_path;
-	entry["reason"] = p_reason;
-	return entry;
+// TASK-051 C-3: the path a prepared-but-not-yet-attached node will have once the
+// commit phase attaches it. This is the expression the prepare phase always
+// used, extracted so that the within-batch parent lookup and the rollback
+// envelope spell a path the same way:
+//
+//   * the root itself is "."; a child of the root is its own name;
+//   * an unnamed child of a non-root parent answers the parent's path (an
+//     unnamed node is only named by the engine on `add_child`);
+//   * otherwise parent + "/" + name.
+static String _pending_path_for(const String &p_parent_relative, const String &p_name) {
+	if (p_parent_relative == ".") {
+		return p_name;
+	}
+	if (p_name.is_empty()) {
+		return p_parent_relative;
+	}
+	return p_parent_relative + "/" + p_name;
 }
 
-// The `data.batch` envelope of a rolled-back call. Its `status` is never "ok",
-// its `created` list is empty and it names both the refusal and everything that
-// was taken back, so the wire cannot be read as a partial success.
-static Dictionary _rollback_envelope(const Array &p_errors, const Array &p_rolled_back) {
-	Dictionary envelope;
-	envelope["status"] = "rolled_back";
-	envelope["created"] = Array();
-	envelope["count"] = 0;
-	envelope["errors"] = p_errors;
-	envelope["rolled_back"] = p_rolled_back;
-	envelope["on_error"] = "all_or_nothing";
-	return envelope;
+// TASK-051 C-3: does the requested `parent_path` name this prepared node?
+// `find_node()` (`tools/tool_helpers.cpp:1337`) accepts a path relative to the
+// root *and* the same path prefixed with the root's own name
+// (`"Root/P1"`), so both spellings have to be recognised here or the batch would
+// answer "not found" for a parent it did prepare.
+static bool _pending_path_matches(const String &p_pending, const String &p_requested, const String &p_root_name) {
+	return p_pending == p_requested || (p_root_name + "/" + p_pending) == p_requested;
 }
 
-// The chosen wire shape (documented in REPORT-017 section 5): the JSON-RPC
-// `error` carries the failure code and a readable message naming the element
-// index, `error.data.suggestion` explains the rollback, and `error.data.batch`
-// is the full `{"status":"rolled_back", ...}` envelope. `result` is null because
-// a tool that fills `r_error` answers no payload (mcp_jsonrpc.cpp:296-303), so
-// a rolled-back call is impossible to read as a success.
-static MCPToolError _attach_batch_envelope(MCPToolError p_error, const Dictionary &p_envelope,
-		const String &p_suggestion) {
-	Dictionary data;
-	if (p_error.data.get_type() == Variant::DICTIONARY) {
-		data = p_error.data;
+// TASK-051 C-3: the parent lookup of one batch element. The scene tree is asked
+// first and wins when it can answer, so the default mode's answer is
+// byte-for-byte the `find_node()` call it always was; the prepared nodes of this
+// same request are the second source and are only consulted in
+// `resolve_within_batch` mode.
+//
+// `r_parent_relative` is the path the new node's `pending_path` is built from:
+// for a tree parent it is `relative_path()`, for a batch parent it is that
+// element's own `pending_path` (the node is detached, so the engine cannot be
+// asked).
+static Node *_resolve_batch_parent(Node *p_root, const String &p_parent_path,
+		const Vector<_PendingNode> &p_pending, bool p_resolve_within_batch,
+		String &r_parent_relative, bool &r_from_batch) {
+	Node *parent = find_node(p_root, p_parent_path);
+	if (parent != nullptr) {
+		r_from_batch = false;
+		r_parent_relative = (parent == p_root) ? String(".") : relative_path(p_root, parent);
+		return parent;
 	}
-	data["batch"] = p_envelope;
-	data["suggestion"] = p_suggestion;
-	p_error.data = data;
-	return p_error;
+	if (!p_resolve_within_batch) {
+		return nullptr;
+	}
+	const String root_name = String(p_root->get_name());
+	for (int i = 0; i < p_pending.size(); i++) {
+		if (!_pending_path_matches(p_pending[i].pending_path, p_parent_path, root_name)) {
+			continue;
+		}
+		r_from_batch = true;
+		r_parent_relative = p_pending[i].pending_path;
+		return p_pending[i].node;
+	}
+	return nullptr;
 }
-
-// Rolls the prepare phase back (reverse order, `memdelete`, nothing is attached
-// yet) and builds the single refusal of the call.
-static Variant _transaction_fail(Vector<_PendingNode> &p_pending, MCPToolError &r_error,
-		int p_index, const String &p_type, const String &p_property, const String &p_parent_path,
-		const String &p_reason, int p_code, const String &p_message, const String &p_suggestion) {
-	Array rolled_back;
-	for (int i = p_pending.size() - 1; i >= 0; i--) {
-		Dictionary entry;
-		entry["index"] = p_pending[i].index;
-		entry["type"] = p_pending[i].actual_class;
-		entry["node_path"] = p_pending[i].pending_path;
-		entry["reason"] = "transaction rollback";
-		rolled_back.push_back(entry);
-	}
-	for (int i = p_pending.size() - 1; i >= 0; i--) {
-		memdelete(p_pending[i].node);
-	}
-	p_pending.clear();
-
-	Array errors;
-	errors.push_back(_batch_error_entry(p_index, p_type, p_property, p_parent_path, p_reason));
 
 // TASK-051 C-3: is the parent this element cannot find the *requested* path of a
 // later element of the same batch? Only used to improve the refusal message -
@@ -347,11 +347,11 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 		}
 
 		Dictionary properties;
-	result["count"] = created.size();
-	result["errors"] = Array();
-	return result;
-}
-
+		const Variant properties_value = entry.get("properties", Variant());
+		if (properties_value.get_type() != Variant::NIL) {
+			if (properties_value.get_type() != Variant::DICTIONARY) {
+				return _transaction_fail(pending, r_error, i, type, String(), String(), "Invalid 'properties'",
+						MCP_ERR_INVALID_PARAMS, vformat("'nodes[%d].properties' must be an object", i), BATCH_ROLLBACK_SUGGESTION);
 			}
 			properties = properties_value;
 		}
@@ -412,21 +412,21 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 		if (node == nullptr) {
 			// Unreachable after the `is_parent_class` check; kept so the cascade
 			// to `memdelete` cannot be reached by accident.
+			memdelete(created);
+			return _transaction_fail(pending, r_error, i, type, String(), parent_path,
+					vformat("'%s' is not a Node subclass", type), MCP_ERR_INVALID_PARAMS,
+					vformat("nodes[%d]: type '%s' is not a Node subclass", i, type), BATCH_ROLLBACK_SUGGESTION);
+		}
 
-	Vector<Node *> written;
-	Vector<Variant> previous_values;
-	// TASK-037 D2 (self-audit): the same read-back question the single-node
-	// writer answers, asked per matched node. `write_node_property` returns the
-	// engine's `ignored` bag for the node it just wrote; a batch that answered
-	// only `{"updated": N, "status": "ok"}` hid the fact that the engine's own
-	// setter clamped the value on some (or every) node - the exact shape
-	// `editor_set_node_property(path=Sprite, property=hframes, value=0)` exposes
-	// live (`new_value: 1`). The bag is keyed by the node's relative path so one
-	// entry is still readable, and `ignored_count` says at a glance whether the
-	// call stored the request everywhere.
-	Dictionary ignored;
-	for (Node *node : matched) {
-		// TASK-028 G-1: the value to put back is read through the same property
+		// The name is applied only when the caller gave one: `Node::set_name("")`
+		// is an `ERR_FAIL_COND` (scene/main/node.cpp:1441), and an unnamed node
+		// gets the engine's own `@Type@N` name on `add_child` - which is what the
+		// migration source's `if !node_name.is_empty()` produced.
+		if (!requested_name.is_empty()) {
+			node->set_name(requested_name);
+		}
+
+		// Every property goes through the module's one property write. Its first
 		// action is the existence check, so an undeclared name is refused here
 		// with the element index and the property name instead of being silently
 		// skipped (the migration source's `if exists` at batch.rs:358-387).

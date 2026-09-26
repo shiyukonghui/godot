@@ -1,0 +1,252 @@
+WARNING: The ANGLE rendering driver requires dependencies to be installed.
+You can install them by running `python misc\scripts\install_angle.py`.
+See the documentation for more information:
+	https://docs.godotengine.org/en/latest/engine_details/development/compiling/compiling_for_windows.html#compiling-with-angle-support
+Alternatively, disable this driver by compiling with `angle=no` explicitly.
+modules\mcp_server\tool_registry.cpp(490): error C2065: “marker�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(491): error C2065: “marker�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(491): error C2737: “start�\ufffd: 必须初�\ufffd�化 const 对象
+modules\mcp_server\tool_registry.cpp(492): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(492): error C2737: “close�\ufffd: 必须初�\ufffd�化 const 对象
+modules\mcp_server\tool_registry.cpp(494): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(500): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(500): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(500): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(502): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(503): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(503): error C2737: “c�\ufffd: 必须初�\ufffd�化 const 对象
+modules\mcp_server\tool_registry.cpp(511): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(517): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(518): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(518): error C2737: “close�\ufffd: 必须初�\ufffd�化 const 对象
+modules\mcp_server\tool_registry.cpp(520): error C2065: “p_message�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(530): error C2267: “_declared_leading_word�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tool_registry.cpp(530): error C2601: “_declared_leading_word�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tool_registry.cpp(479): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(545): error C2267: “_invalid_params_suggestion�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tool_registry.cpp(545): error C2601: “_invalid_params_suggestion�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tool_registry.cpp(479): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(591): error C2267: “_add_invalid_params_suggestion�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tool_registry.cpp(591): error C2601: “_add_invalid_params_suggestion�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tool_registry.cpp(479): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(605): error C2267: “_unknown_tool_suggestion_data�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tool_registry.cpp(605): error C2601: “_unknown_tool_suggestion_data�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tool_registry.cpp(479): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(639): error C2267: “_reject_unknown_arguments�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tool_registry.cpp(639): error C2601: “_reject_unknown_arguments�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tool_registry.cpp(479): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(690): error C2601: “MCPToolRegistry::call_tool�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tool_registry.cpp(479): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(716): error C2601: “MCPToolRegistry::is_deferred_tool�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tool_registry.cpp(479): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(721): error C2601: “MCPToolRegistry::call_deferred_tool�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tool_registry.cpp(479): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tool_registry.cpp(479): fatal error C1075: “{�\ufffd: �\ufffd找到匹配令牌
+scons: *** [bin\obj\modules\mcp_server\tool_registry.windows.editor.x86_64.obj] Error 2
+H:\rebuild\godot\modules\mcp_server\tools\editor_node_setup.h(36): warning C4099: “Color�\ufffd: 类型名称以前使用“struct”现在使用的�\ufffd“class�\ufffd
+.\core/math/color.h(38): note: 参�\ufffd��\ufffd�Color”的声明
+modules\mcp_server\tools\editor_node_write.cpp(390): error C3861: “_edited_scene_root�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(395): error C3861: “_find_node�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(418): error C3861: “_relative_path�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(448): error C3861: “_edited_scene_root�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(453): error C3861: “_find_node�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(464): error C3861: “_relative_path�\ufffd: 找不到标识�\ufffd\ufffd
+scons: *** [bin\obj\modules\mcp_server\tools\editor_node_write.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\editor_write_scene_editor.cpp(749): error C2039: "get_singleton": 不是 "ClassDB" 的成�\ufffd
+.\core/object/class_db.h(97): note: 参�\ufffd��\ufffd�ClassDB”的声明
+modules\mcp_server\tools\editor_write_scene_editor.cpp(749): error C3861: “get_singleton�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(765): error C3861: “_edited_scene_root�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(770): error C2065: “node_path�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(770): error C3861: “_find_node�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(772): error C2065: “node_path�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(813): error C2267: “_tool_capture_screenshot�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(813): error C2601: “_tool_capture_screenshot�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(780): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(913): error C2267: “_find_rich_text_label�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(913): error C2601: “_find_rich_text_label�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(780): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(933): error C2267: “_tool_remove_output_log�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(933): error C2601: “_tool_remove_output_log�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(780): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(981): error C2267: “_schema_from_json�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(981): error C2601: “_schema_from_json�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(780): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(990): error C2601: “register_editor_write_scene_editor_tools�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(780): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\editor_write_scene_editor.cpp(1061): fatal error C1070: 文件“H:\rebuild\godot\modules\mcp_server\tools\editor_write_scene_editor.cpp”中�\ufffd #if/#endif 对不匹配
+scons: *** [bin\obj\modules\mcp_server\tools\editor_write_scene_editor.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\project.cpp(273): error C2440: �\ufffd=�\ufffd: 无法从�\ufffd�Variant (__cdecl *)(const Dictionary &,String &)”转�\ufffd为�\ufffd�Variant (__cdecl *)(const Dictionary &,MCPToolError &)�\ufffd
+modules\mcp_server\tools\project.cpp(273): note: 此转换需�\ufffd reinterpret_cast、C 样式强制�\ufffd换或带圆�\ufffd号函数样式强制转�\ufffd
+modules\mcp_server\tools\project.cpp(274): error C2248: “MCPToolRegistry::register_tool�\ufffd: 无法访问 private 成员(在�\ufffd�MCPToolRegistry”类�\ufffd声明)
+H:\rebuild\godot\modules\mcp_server\tools\../tool_registry.h(141): note: 参�\ufffd��\ufffd�MCPToolRegistry::register_tool”的声明
+H:\rebuild\godot\modules\mcp_server\tools\../tool_registry.h(125): note: 参�\ufffd��\ufffd�MCPToolRegistry”的声明
+modules\mcp_server\tools\project.cpp(301): error C2440: �\ufffd=�\ufffd: 无法从�\ufffd�Variant (__cdecl *)(const Dictionary &,String &)”转�\ufffd为�\ufffd�Variant (__cdecl *)(const Dictionary &,MCPToolError &)�\ufffd
+modules\mcp_server\tools\project.cpp(301): note: 此转换需�\ufffd reinterpret_cast、C 样式强制�\ufffd换或带圆�\ufffd号函数样式强制转�\ufffd
+modules\mcp_server\tools\project.cpp(302): error C2248: “MCPToolRegistry::register_tool�\ufffd: 无法访问 private 成员(在�\ufffd�MCPToolRegistry”类�\ufffd声明)
+H:\rebuild\godot\modules\mcp_server\tools\../tool_registry.h(141): note: 参�\ufffd��\ufffd�MCPToolRegistry::register_tool”的声明
+H:\rebuild\godot\modules\mcp_server\tools\../tool_registry.h(125): note: 参�\ufffd��\ufffd�MCPToolRegistry”的声明
+scons: *** [bin\obj\modules\mcp_server\tools\project.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\project_validate_scripts.cpp(84): error C2065: “json�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\project_validate_scripts.cpp(92): error C3861: “_schema_from_json�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\project_validate_scripts.cpp(93): error C2065: “_tool_validate_scripts�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+scons: *** [bin\obj\modules\mcp_server\tools\project_validate_scripts.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\project_write_resource_scene.cpp(375): error C3861: “_require_properties�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(480): error C3861: “_property_table�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(508): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd)�\ufffd(在�\ufffd�const”的前面)
+modules\mcp_server\tools\project_write_resource_scene.cpp(507): error C2672: “vformat�\ufffd: �\ufffd找到匹配的重载函�\ufffd
+.\core/variant/variant.h(916): note: �\ufffd能是“String vformat(const String &,const VarArgs...)�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(507): note: “String vformat(const String &,const VarArgs...)�\ufffd: 应输�\ufffd 2 �\ufffd参数，却提供�\ufffd 0 �\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(508): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在�\ufffd�const”的前面)
+modules\mcp_server\tools\project_write_resource_scene.cpp(564): error C2267: “_require_properties�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(564): error C2601: “_require_properties�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(579): error C2267: “_tool_edit_resource�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(579): error C2601: “_tool_edit_resource�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(661): error C2267: “_fold_integral_numbers�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(661): error C2601: “_fold_integral_numbers�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(695): error C2267: “_schema_from_json�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(695): error C2601: “_schema_from_json�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(704): error C2601: “register_project_write_resource_scene_tools�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): fatal error C1075: “{�\ufffd: �\ufffd找到匹配令牌
+scons: *** [bin\obj\modules\mcp_server\tools\project_write_resource_scene.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\running_game_frame_observation.cpp(204): error C2065: “node_id�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2059: �\ufffd法错�\ufffd:“if�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在�\ufffd�{”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2447: “{�\ufffd: 缺少函数标�\ufffd\ufffd(�\ufffd否是老式的形式表?)
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2057: 应输入常量表达式
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C4430: 缺少类型说明�\ufffd - 假定�\ufffd int。注�\ufffd: C++ 不支持默�\ufffd int
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2040: “sample�\ufffd:“int []”与“Dictionary”的间接寻址级别不同
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2065: “collected�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: �\ufffd法错�\ufffd:“for�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd)�\ufffd(在�\ufffd\ufffd;”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在�\ufffd\ufffd<”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C4430: 缺少类型说明�\ufffd - 假定�\ufffd int。注�\ufffd: C++ 不支持默�\ufffd int
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: �\ufffd法错�\ufffd:�\ufffd<�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在�\ufffd\ufffd++”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C4430: 缺少类型说明�\ufffd - 假定�\ufffd int。注�\ufffd: C++ 不支持默�\ufffd int
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2086: “int i�\ufffd: 重定�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): note: 参�\ufffd��\ufffd�i”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: �\ufffd法错�\ufffd:�\ufffd++�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: �\ufffd法错�\ufffd:�\ufffd)�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在�\ufffd�{”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2447: “{�\ufffd: 缺少函数标�\ufffd\ufffd(�\ufffd否是老式的形式表?)
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2061: �\ufffd法错�\ufffd: 标识符�\ufffd�NodePropertySamplesTask�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2672: “_post_initialize�\ufffd: �\ufffd找到匹配的重载函�\ufffd
+.\core/os/memory.h(142): note: �\ufffd能是“memnew_result<T,void>::class_name _post_initialize(T *)�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在�\ufffd\ufffd)”的前面)
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2059: �\ufffd法错�\ufffd:�\ufffd)�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(478): error C2059: �\ufffd法错�\ufffd:“if�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(478): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(483): error C2059: �\ufffd法错�\ufffd:“if�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(483): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(487): error C2059: �\ufffd法错�\ufffd:“if�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(487): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(492): error C2059: �\ufffd法错�\ufffd:“if�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(492): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2059: �\ufffd法错�\ufffd:“return�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2334: “{”的前面有意外标记；跳过明显的函数体
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2059: �\ufffd法错�\ufffd:�\ufffd)�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2238: 意�\ufffd�的标�\ufffd�位于�\ufffd\ufffd;”之�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(529): error C2236: 意�\ufffd�的标�\ufffd��\ufffd�class”�\ufffd�是否忘记了�\ufffd;�\ufffd?
+modules\mcp_server\tools\running_game_frame_observation.cpp(529): error C2011: “CaptureFramesTask�\ufffd:“class”类型重定义
+modules\mcp_server\tools\running_game_frame_observation.cpp(470): note: 参�\ufffd��\ufffd�CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(475): error C2059: �\ufffd法错�\ufffd:“if�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(473): error C2614: “CaptureFramesTask�\ufffd: 非法的成员初始化:“count”不�\ufffd基或成员
+modules\mcp_server\tools\running_game_frame_observation.cpp(474): error C2614: “CaptureFramesTask�\ufffd: 非法的成员初始化:“frame_interval”不�\ufffd基或成员
+modules\mcp_server\tools\running_game_frame_observation.cpp(476): error C2534: “CaptureFramesTask�\ufffd: 构�\ufffd�函数无法返回�\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(470): note: 参�\ufffd��\ufffd�CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(476): error C2562: “CaptureFramesTask::CaptureFramesTask�\ufffd:“void”函数返回�\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(472): note: 参�\ufffd��\ufffd�CaptureFramesTask::CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(615): error C2027: 使用了未定义类型“CaptureFramesTask�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(470): note: 参�\ufffd��\ufffd�CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(615): error C3861: “framebuffer_error�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(619): error C2027: 使用了未定义类型“CaptureFramesTask�\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(470): note: 参�\ufffd��\ufffd�CaptureFramesTask”的声明
+modules\mcp_server\tools\running_game_frame_observation.cpp(619): error C2672: “_post_initialize�\ufffd: �\ufffd找到匹配的重载函�\ufffd
+.\core/os/memory.h(142): note: �\ufffd能是“memnew_result<T,void>::class_name _post_initialize(T *)�\ufffd
+scons: *** [bin\obj\modules\mcp_server\tools\running_game_frame_observation.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\running_game_node_write.cpp(119): error C2601: “vector_from_dictionary�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(118): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\running_game_node_write.cpp(646): error C2084: 函数“String MCPTools::MCPTools::_node_path_for_result(const Object *)”已有主�\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(612): note: 参�\ufffd��\ufffd�MCPTools::MCPTools::_node_path_for_result”的前一�\ufffd定义
+modules\mcp_server\tools\running_game_node_write.cpp(977): error C2264: “MCPTools::MCPTools::_node_path_for_result�\ufffd: 函数定义或声明中有错�\ufffd；未调用函数
+modules\mcp_server\tools\running_game_node_write.cpp(1002): error C2084: 函数“Variant MCPTools::MCPTools::write_node_property(Object *,const String &,const Variant &,MCPToolError &)”已有主�\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(616): note: 参�\ufffd��\ufffd�MCPTools::MCPTools::write_node_property”的前一�\ufffd定义
+modules\mcp_server\tools\running_game_node_write.cpp(1039): error C2264: “MCPTools::MCPTools::_node_path_for_result�\ufffd: 函数定义或声明中有错�\ufffd；未调用函数
+modules\mcp_server\tools\running_game_node_write.cpp(1101): error C2264: “MCPTools::MCPTools::_node_path_for_result�\ufffd: 函数定义或声明中有错�\ufffd；未调用函数
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: “base_object�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: “base_object�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: “p_segments�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: “p_segments�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C7732: expected an expression before ']'
+modules\mcp_server\tools\running_game_node_write.cpp(1137): error C2059: �\ufffd法错�\ufffd:“return�\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1147): error C3861: “_prepare_sub_property_value�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1160): error C3861: “_node_path_for_result�\ufffd: 找不到标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1160): error C2672: “vformat�\ufffd: �\ufffd找到匹配的重载函�\ufffd
+.\core/variant/variant.h(916): note: �\ufffd能是“String vformat(const String &,const VarArgs...)�\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1160): note: �\ufffd能使函数模板“String vformat(const String &,const VarArgs...)”专用化
+modules\mcp_server\tools\running_game_node_write.cpp(1160): note: 用下列模板参�\ufffd:
+modules\mcp_server\tools\running_game_node_write.cpp(1160): note: “VarArgs={String, unknown-type}�\ufffd
+scons: *** [bin\obj\modules\mcp_server\tools\running_game_node_write.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\running_game_test_execution.cpp(424): error C2059: �\ufffd法错�\ufffd:“else�\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(424): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在�\ufffd�{”的前面)
+modules\mcp_server\tools\running_game_test_execution.cpp(414): error C2614: “TestScenarioTask�\ufffd: 非法的成员初始化:“steps”不�\ufffd基或成员
+modules\mcp_server\tools\running_game_test_execution.cpp(414): error C2614: “TestScenarioTask�\ufffd: 非法的成员初始化:“start_ms”不�\ufffd基或成员
+modules\mcp_server\tools\running_game_test_execution.cpp(414): error C2614: “TestScenarioTask�\ufffd: 非法的成员初始化:“timeout_ms”不�\ufffd基或成员
+modules\mcp_server\tools\running_game_test_execution.cpp(418): error C2065: “next�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(418): error C2065: “steps�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(419): error C2065: “entry�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(420): error C2065: “entry�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(420): error C2065: “found�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(421): error C2065: “wait_deadline_ms�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(424): error C2447: “{�\ufffd: 缺少函数标�\ufffd\ufffd(�\ufffd否是老式的形式表?)
+modules\mcp_server\tools\running_game_test_execution.cpp(589): error C2270: “build_result�\ufffd: 非成员函数上不允许修饰�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(591): error C2065: “steps�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(592): error C2065: “results�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(593): error C2065: “pass_count�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(594): error C2065: “fail_count�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(595): error C2065: “error_count�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(599): error C2065: “fail_count�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(599): error C2065: “error_count�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(599): error C2065: “pass_count�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(600): error C2065: “start_ms�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(601): error C2065: “results�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(615): error C2059: �\ufffd法错�\ufffd:“}�\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(615): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在�\ufffd�}”的前面)
+modules\mcp_server\tools\running_game_test_execution.cpp(655): error C2065: “p_now_ms�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C2065: “actions�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C2065: “iterations�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C2065: “actions�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C7732: expected an expression before ']'
+modules\mcp_server\tools\running_game_test_execution.cpp(662): error C2065: “input�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(663): error C2065: “input�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(664): error C2065: “events_sent�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(665): error C2065: “total_iteration_ms�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(666): error C2065: “iterations�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(668): error C2065: “iterations�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(668): error C2065: “count�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(669): error C2065: “p_now_ms�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(757): error C2267: “_tool_run_stress_test�\ufffd: 具有块范围的静�\ufffd�函数非�\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(757): error C2601: “_tool_run_stress_test�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(668): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\running_game_test_execution.cpp(820): error C2601: “register_running_game_test_execution_tools�\ufffd: �\ufffd地函数定义是非法�\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(668): note: 此�\ufffd�有�\ufffd�\ufffd“{”没有匹配项
+modules\mcp_server\tools\running_game_test_execution.cpp(668): fatal error C1075: “{�\ufffd: �\ufffd找到匹配令牌
+scons: *** [bin\obj\modules\mcp_server\tools\running_game_test_execution.windows.editor.x86_64.obj] Error 2
+modules\mcp_server\tools\tool_helpers.cpp(254): error C2196: case 值�\ufffd\ufffd12”已使用
+modules\mcp_server\tools\tool_helpers.cpp(263): error C2196: case 值�\ufffd\ufffd13”已使用
+modules\mcp_server\tools\tool_helpers.cpp(415): error C2196: case 值�\ufffd\ufffd29”已使用
+modules\mcp_server\tools\tool_helpers.cpp(423): error C2196: case 值�\ufffd\ufffd30”已使用
+modules\mcp_server\tools\tool_helpers.cpp(431): error C2196: case 值�\ufffd\ufffd31”已使用
+modules\mcp_server\tools\tool_helpers.cpp(439): error C2196: case 值�\ufffd\ufffd32”已使用
+modules\mcp_server\tools\tool_helpers.cpp(447): error C2196: case 值�\ufffd\ufffd33”已使用
+modules\mcp_server\tools\tool_helpers.cpp(455): error C2196: case 值�\ufffd\ufffd34”已使用
+modules\mcp_server\tools\tool_helpers.cpp(463): error C2196: case 值�\ufffd\ufffd35”已使用
+modules\mcp_server\tools\tool_helpers.cpp(475): error C2196: case 值�\ufffd\ufffd36”已使用
+modules\mcp_server\tools\tool_helpers.cpp(488): error C2196: case 值�\ufffd\ufffd38”已使用
+modules\mcp_server\tools\tool_helpers.cpp(502): error C2196: case 值�\ufffd\ufffd37”已使用
+scons: *** [bin\obj\modules\mcp_server\tools\tool_helpers.windows.editor.x86_64.obj] Error 2

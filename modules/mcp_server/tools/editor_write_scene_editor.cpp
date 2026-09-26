@@ -757,7 +757,8 @@ static Variant _tool_set_viewport_3d_camera(const Dictionary &p_args, MCPToolErr
 		return Variant();
 	}
 
-	if (!_require_editor_ui(r_error)) {
+	if (!require_editor_ui(r_error, "editor writes outside a running editor",
+				"Start the MCP server inside the Godot editor to write editor state")) {
 		return Variant();
 	}
 #ifdef MCP_EDITOR_TOOLS_ENABLED

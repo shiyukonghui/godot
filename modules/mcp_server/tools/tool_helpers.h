@@ -1127,7 +1127,82 @@ const char *execute_gdscript_method_name();
 // wire before the fix: every `editor_execute_gdscript` call answered `-32602
 // "does not compile: OK"` - `reload()` succeeded, so the message was nonsense,
 // and the real reason was this predicate.
-bool build_execute_gdscript_source(const String &p_code, bool p_tool_script, String &r_source);
+//
+// TASK-063 (d): `r_body_start_line` (optional) answers "which line of
+// `r_source` is the caller's first line of `p_code`". A parser diagnostic is
+// reported against the **generated** source, so without this number a caller
+// cannot turn the engine's line into a line of its own code. It is derived by
+// counting the newlines of the header, so it cannot drift from the source that
+// is returned.
+bool build_execute_gdscript_source(const String &p_code, bool p_tool_script, String &r_source,
+		int *r_body_start_line = nullptr);
+
+// ---------------------------------------------------------------------------
+// TASK-063 (d): the parser diagnostic of one generated GDScript body.
+//
+// **The engine question, answered from the source.** `GDScript::reload()`
+// (`modules/gdscript/gdscript.cpp:741-913`) answers a bare `Error`
+// (`ERR_PARSE_ERROR` / `ERR_COMPILATION_FAILED`) and keeps the parser - a local
+// `GDScriptParser` - to itself: the error *list* is never published on any
+// `GDScript` or `ScriptLanguage` accessor, and reaching it directly would be a
+// module-to-module dependency on `modules/gdscript/**` that this module
+// deliberately does not have (the executors instantiate GDScript through
+// `ClassDB` for exactly that reason).
+//
+// What *is* reachable is the engine's own error handler
+// (`core/error/error_macros.h:63-77`, `add_error_handler` /
+// `remove_error_handler`). `GDScript::reload()` reports its diagnostics through
+// `_err_print_error("GDScript::reload", <path>, <line>, "Parse Error: <message>",
+// false, ERR_HANDLER_SCRIPT)` (`gdscript.cpp:828` and `:850`, and the compiler
+// half at `:864`), and every registered handler is called with that line
+// (`error_macros.cpp:133-141`) **after** the default printing, so installing one
+// is purely additive: the log keeps every line it printed before.
+//
+// The boundary, stated honestly: the engine hands a handler the **line only**
+// (`int p_line`), while `GDScriptParser::ParserError` also carries
+// `start_column`/`end_column` (`modules/gdscript/gdscript_parser.h:273-288`) -
+// the column is dropped by the call site before any handler can see it, and
+// there is no other public route to it. This module therefore reports a **line**
+// and says nothing about a column.
+// ---------------------------------------------------------------------------
+struct GDScriptReloadReport {
+	// What `Script::reload()` answered.
+	Error error = OK;
+	// True when the engine reported a diagnostic for `GDScript::reload`.
+	bool diagnostic_seen = false;
+	// The engine's own text, e.g. "Parse Error: Expected end of statement".
+	String diagnostic;
+	// The line the engine named, in the **generated** source. 0 when it named none.
+	int generated_line = 0;
+	// 1-based line of the caller's own `code`, or 0 when the diagnostic is not in
+	// the caller's code (it is in the tool's wrapper) or could not be mapped.
+	int caller_line = 0;
+	// True exactly when the diagnostic landed inside the caller's own lines.
+	bool in_caller_code = false;
+	// Every diagnostic captured, bounded. The engine can report more than one
+	// (`gdscript.cpp:848-852` walks the list); only the first is mapped.
+	Vector<String> messages;
+};
+
+// Runs `p_script->reload()` with a temporary error handler installed, so the
+// line the engine reports can be attributed to the caller's code.
+//
+// `p_body_start_line` is `build_execute_gdscript_source`'s answer. The handler
+// is installed and removed around the one call and is never left behind, so no
+// other code in the process is affected; the list itself is global and locked,
+// which is why this is documented as a main-thread-only operation (both
+// executors already run on the main thread).
+GDScriptReloadReport reload_gdscript_capturing(Script *p_script, int p_body_start_line);
+
+// The `-32602` message a refused body gets, built from the capture above.
+//
+// One definition, so `editor_execute_gdscript` and
+// `running_game_execute_gdscript` cannot describe the same parse error two
+// different ways - which is the whole reason the capture lives here rather than
+// in one of the two group files. The text always contains "does not compile"
+// (every existing doctest and the migration source's own phrasing key on it) and
+// adds the line when the engine named one.
+String gdscript_reload_failure_text(const GDScriptReloadReport &p_report);
 
 // ---------------------------------------------------------------------------
 // Screen-text observation (TASK-019, `running_game_assert_screen_text`).

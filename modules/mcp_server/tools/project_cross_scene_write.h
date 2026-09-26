@@ -34,6 +34,10 @@
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
 
+// Only ever used through a pointer by the declaration below, so the class name is
+// forward declared instead of dragging `scene/` into this header.
+class Node;
+
 // TASK-018 section 3, group `project_cross_scene_write` of
 // docs/tool-groups-b3.json: one property written into every scene that contains
 // a node of a given type.
@@ -147,4 +151,3 @@ bool set_node_property_across_scenes(const String &p_path_filter, const String &
 
 } // namespace MCPTools
 
-void register_project_cross_scene_write_tools(MCPToolRegistry &r_registry);

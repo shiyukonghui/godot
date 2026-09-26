@@ -1,0 +1,191 @@
+modules\mcp_server\tool_registry.cpp(490): error C2065: 鈥渕arker鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(491): error C2065: 鈥渕arker鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(491): error C2737: 鈥渟tart鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+modules\mcp_server\tool_registry.cpp(492): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(492): error C2737: 鈥渃lose鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+modules\mcp_server\tool_registry.cpp(494): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(500): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(500): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(500): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(502): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(503): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(503): error C2737: 鈥渃鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+modules\mcp_server\tool_registry.cpp(511): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(517): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(518): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(518): error C2737: 鈥渃lose鈥\ufffd: 蹇呴』鍒濆\ufffd嬪寲 const 瀵硅薄
+modules\mcp_server\tool_registry.cpp(520): error C2065: 鈥減_message鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tool_registry.cpp(530): error C2267: 鈥淿declared_leading_word鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tool_registry.cpp(530): error C2601: 鈥淿declared_leading_word鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tool_registry.cpp(545): error C2267: 鈥淿invalid_params_suggestion鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tool_registry.cpp(545): error C2601: 鈥淿invalid_params_suggestion鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tool_registry.cpp(591): error C2267: 鈥淿add_invalid_params_suggestion鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tool_registry.cpp(591): error C2601: 鈥淿add_invalid_params_suggestion鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tool_registry.cpp(605): error C2267: 鈥淿unknown_tool_suggestion_data鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tool_registry.cpp(605): error C2601: 鈥淿unknown_tool_suggestion_data鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tool_registry.cpp(639): error C2267: 鈥淿reject_unknown_arguments鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tool_registry.cpp(639): error C2601: 鈥淿reject_unknown_arguments鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tool_registry.cpp(690): error C2601: 鈥淢CPToolRegistry::call_tool鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tool_registry.cpp(716): error C2601: 鈥淢CPToolRegistry::is_deferred_tool鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tool_registry.cpp(721): error C2601: 鈥淢CPToolRegistry::call_deferred_tool鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tool_registry.cpp(479): fatal error C1075: 鈥渰鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤浠ょ墝
+modules\mcp_server\tools\editor_node_write.cpp(390): error C3861: 鈥淿edited_scene_root鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(395): error C3861: 鈥淿find_node鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(418): error C3861: 鈥淿relative_path鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(448): error C3861: 鈥淿edited_scene_root鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(453): error C3861: 鈥淿find_node鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_node_write.cpp(464): error C3861: 鈥淿relative_path鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(749): error C2039: "get_singleton": 涓嶆槸 "ClassDB" 鐨勬垚鍛\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(749): error C3861: 鈥済et_singleton鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(765): error C3861: 鈥淿edited_scene_root鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(770): error C2065: 鈥渘ode_path鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(770): error C3861: 鈥淿find_node鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(772): error C2065: 鈥渘ode_path鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(813): error C2267: 鈥淿tool_capture_screenshot鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(813): error C2601: 鈥淿tool_capture_screenshot鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(913): error C2267: 鈥淿find_rich_text_label鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(913): error C2601: 鈥淿find_rich_text_label鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(933): error C2267: 鈥淿tool_remove_output_log鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(933): error C2601: 鈥淿tool_remove_output_log鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(981): error C2267: 鈥淿schema_from_json鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(981): error C2601: 鈥淿schema_from_json鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(990): error C2601: 鈥渞egister_editor_write_scene_editor_tools鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\editor_write_scene_editor.cpp(1061): fatal error C1070: 鏂囦欢鈥淗:\rebuild\godot\modules\mcp_server\tools\editor_write_scene_editor.cpp鈥濅腑鐨\ufffd #if/#endif 瀵逛笉鍖归厤
+modules\mcp_server\tools\project.cpp(273): error C2440: 鈥\ufffd=鈥\ufffd: 鏃犳硶浠庘\ufffd淰ariant (__cdecl *)(const Dictionary &,String &)鈥濊浆鎹\ufffd涓衡\ufffd淰ariant (__cdecl *)(const Dictionary &,MCPToolError &)鈥\ufffd
+modules\mcp_server\tools\project.cpp(274): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+modules\mcp_server\tools\project.cpp(301): error C2440: 鈥\ufffd=鈥\ufffd: 鏃犳硶浠庘\ufffd淰ariant (__cdecl *)(const Dictionary &,String &)鈥濊浆鎹\ufffd涓衡\ufffd淰ariant (__cdecl *)(const Dictionary &,MCPToolError &)鈥\ufffd
+modules\mcp_server\tools\project.cpp(302): error C2248: 鈥淢CPToolRegistry::register_tool鈥\ufffd: 鏃犳硶璁块棶 private 鎴愬憳(鍦ㄢ\ufffd淢CPToolRegistry鈥濈被涓\ufffd澹版槑)
+modules\mcp_server\tools\project_validate_scripts.cpp(84): error C2065: 鈥渏son鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\project_validate_scripts.cpp(92): error C3861: 鈥淿schema_from_json鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\project_validate_scripts.cpp(93): error C2065: 鈥淿tool_validate_scripts鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(375): error C3861: 鈥淿require_properties鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(480): error C3861: 鈥淿property_table鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(508): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd)鈥\ufffd(鍦ㄢ\ufffd渃onst鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\project_write_resource_scene.cpp(507): error C2672: 鈥渧format鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤鐨勯噸杞藉嚱鏁\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(508): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渃onst鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\project_write_resource_scene.cpp(564): error C2267: 鈥淿require_properties鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(564): error C2601: 鈥淿require_properties鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(579): error C2267: 鈥淿tool_edit_resource鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(579): error C2601: 鈥淿tool_edit_resource鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(661): error C2267: 鈥淿fold_integral_numbers鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(661): error C2601: 鈥淿fold_integral_numbers鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(695): error C2267: 鈥淿schema_from_json鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(695): error C2601: 鈥淿schema_from_json鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(704): error C2601: 鈥渞egister_project_write_resource_scene_tools鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\project_write_resource_scene.cpp(482): fatal error C1075: 鈥渰鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤浠ょ墝
+modules\mcp_server\tools\running_game_frame_observation.cpp(204): error C2065: 鈥渘ode_id鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\running_game_frame_observation.cpp(205): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2057: 搴旇緭鍏ュ父閲忚〃杈惧紡
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2040: 鈥渟ample鈥\ufffd:鈥渋nt []鈥濅笌鈥淒ictionary鈥濈殑闂存帴瀵诲潃绾у埆涓嶅悓
+modules\mcp_server\tools\running_game_frame_observation.cpp(212): error C2065: 鈥渃ollected鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渇or鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd)鈥\ufffd(鍦ㄢ\ufffd\ufffd;鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd\ufffd<鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd<鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd\ufffd++鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C4430: 缂哄皯绫诲瀷璇存槑绗\ufffd - 鍋囧畾涓\ufffd int銆傛敞鎰\ufffd: C++ 涓嶆敮鎸侀粯璁\ufffd int
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2086: 鈥渋nt i鈥\ufffd: 閲嶅畾涔\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd++鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd)鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\running_game_frame_observation.cpp(213): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2061: 璇\ufffd娉曢敊璇\ufffd: 鏍囪瘑绗︹\ufffd淣odePropertySamplesTask鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2672: 鈥淿post_initialize鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤鐨勯噸杞藉嚱鏁\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd\ufffd)鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\running_game_frame_observation.cpp(324): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd)鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(478): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(478): error C2334: 鈥渰鈥濈殑鍓嶉潰鏈夋剰澶栨爣璁帮紱璺宠繃鏄庢樉鐨勫嚱鏁颁綋
+modules\mcp_server\tools\running_game_frame_observation.cpp(483): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(483): error C2334: 鈥渰鈥濈殑鍓嶉潰鏈夋剰澶栨爣璁帮紱璺宠繃鏄庢樉鐨勫嚱鏁颁綋
+modules\mcp_server\tools\running_game_frame_observation.cpp(487): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(487): error C2334: 鈥渰鈥濈殑鍓嶉潰鏈夋剰澶栨爣璁帮紱璺宠繃鏄庢樉鐨勫嚱鏁颁綋
+modules\mcp_server\tools\running_game_frame_observation.cpp(492): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(492): error C2334: 鈥渰鈥濈殑鍓嶉潰鏈夋剰澶栨爣璁帮紱璺宠繃鏄庢樉鐨勫嚱鏁颁綋
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渞eturn鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2334: 鈥渰鈥濈殑鍓嶉潰鏈夋剰澶栨爣璁帮紱璺宠繃鏄庢樉鐨勫嚱鏁颁綋
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥\ufffd)鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(501): error C2238: 鎰忓\ufffd栫殑鏍囪\ufffd颁綅浜庘\ufffd\ufffd;鈥濅箣鍓\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(529): error C2236: 鎰忓\ufffd栫殑鏍囪\ufffd扳\ufffd渃lass鈥濄\ufffd傛槸鍚﹀繕璁颁簡鈥\ufffd;鈥\ufffd?
+modules\mcp_server\tools\running_game_frame_observation.cpp(529): error C2011: 鈥淐aptureFramesTask鈥\ufffd:鈥渃lass鈥濈被鍨嬮噸瀹氫箟
+modules\mcp_server\tools\running_game_frame_observation.cpp(475): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渋f鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(473): error C2614: 鈥淐aptureFramesTask鈥\ufffd: 闈炴硶鐨勬垚鍛樺垵濮嬪寲:鈥渃ount鈥濅笉鏄\ufffd鍩烘垨鎴愬憳
+modules\mcp_server\tools\running_game_frame_observation.cpp(474): error C2614: 鈥淐aptureFramesTask鈥\ufffd: 闈炴硶鐨勬垚鍛樺垵濮嬪寲:鈥渇rame_interval鈥濅笉鏄\ufffd鍩烘垨鎴愬憳
+modules\mcp_server\tools\running_game_frame_observation.cpp(476): error C2534: 鈥淐aptureFramesTask鈥\ufffd: 鏋勯\ufffd犲嚱鏁版棤娉曡繑鍥炲\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(476): error C2562: 鈥淐aptureFramesTask::CaptureFramesTask鈥\ufffd:鈥渧oid鈥濆嚱鏁拌繑鍥炲\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(615): error C2027: 浣跨敤浜嗘湭瀹氫箟绫诲瀷鈥淐aptureFramesTask鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(615): error C3861: 鈥渇ramebuffer_error鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(619): error C2027: 浣跨敤浜嗘湭瀹氫箟绫诲瀷鈥淐aptureFramesTask鈥\ufffd
+modules\mcp_server\tools\running_game_frame_observation.cpp(619): error C2672: 鈥淿post_initialize鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤鐨勯噸杞藉嚱鏁\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(119): error C2601: 鈥渧ector_from_dictionary鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(646): error C2084: 鍑芥暟鈥淪tring MCPTools::MCPTools::_node_path_for_result(const Object *)鈥濆凡鏈変富浣\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(977): error C2264: 鈥淢CPTools::MCPTools::_node_path_for_result鈥\ufffd: 鍑芥暟瀹氫箟鎴栧０鏄庝腑鏈夐敊璇\ufffd锛涙湭璋冪敤鍑芥暟
+modules\mcp_server\tools\running_game_node_write.cpp(1002): error C2084: 鍑芥暟鈥淰ariant MCPTools::MCPTools::write_node_property(Object *,const String &,const Variant &,MCPToolError &)鈥濆凡鏈変富浣\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1039): error C2264: 鈥淢CPTools::MCPTools::_node_path_for_result鈥\ufffd: 鍑芥暟瀹氫箟鎴栧０鏄庝腑鏈夐敊璇\ufffd锛涙湭璋冪敤鍑芥暟
+modules\mcp_server\tools\running_game_node_write.cpp(1101): error C2264: 鈥淢CPTools::MCPTools::_node_path_for_result鈥\ufffd: 鍑芥暟瀹氫箟鎴栧０鏄庝腑鏈夐敊璇\ufffd锛涙湭璋冪敤鍑芥暟
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: 鈥渂ase_object鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: 鈥渂ase_object鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: 鈥減_segments鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C2065: 鈥減_segments鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1136): error C7732: expected an expression before ']'
+modules\mcp_server\tools\running_game_node_write.cpp(1137): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渞eturn鈥\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1147): error C3861: 鈥淿prepare_sub_property_value鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1160): error C3861: 鈥淿node_path_for_result鈥\ufffd: 鎵句笉鍒版爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_node_write.cpp(1160): error C2672: 鈥渧format鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤鐨勯噸杞藉嚱鏁\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(424): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渆lse鈥\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(424): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渰鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\running_game_test_execution.cpp(414): error C2614: 鈥淭estScenarioTask鈥\ufffd: 闈炴硶鐨勬垚鍛樺垵濮嬪寲:鈥渟teps鈥濅笉鏄\ufffd鍩烘垨鎴愬憳
+modules\mcp_server\tools\running_game_test_execution.cpp(414): error C2614: 鈥淭estScenarioTask鈥\ufffd: 闈炴硶鐨勬垚鍛樺垵濮嬪寲:鈥渟tart_ms鈥濅笉鏄\ufffd鍩烘垨鎴愬憳
+modules\mcp_server\tools\running_game_test_execution.cpp(414): error C2614: 鈥淭estScenarioTask鈥\ufffd: 闈炴硶鐨勬垚鍛樺垵濮嬪寲:鈥渢imeout_ms鈥濅笉鏄\ufffd鍩烘垨鎴愬憳
+modules\mcp_server\tools\running_game_test_execution.cpp(418): error C2065: 鈥渘ext鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(418): error C2065: 鈥渟teps鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(419): error C2065: 鈥渆ntry鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(420): error C2065: 鈥渆ntry鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(420): error C2065: 鈥渇ound鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(421): error C2065: 鈥渨ait_deadline_ms鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(424): error C2447: 鈥渰鈥\ufffd: 缂哄皯鍑芥暟鏍囬\ufffd\ufffd(鏄\ufffd鍚︽槸鑰佸紡鐨勫舰寮忚〃?)
+modules\mcp_server\tools\running_game_test_execution.cpp(589): error C2270: 鈥渂uild_result鈥\ufffd: 闈炴垚鍛樺嚱鏁颁笂涓嶅厑璁镐慨楗扮\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(591): error C2065: 鈥渟teps鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(592): error C2065: 鈥渞esults鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(593): error C2065: 鈥減ass_count鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(594): error C2065: 鈥渇ail_count鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(595): error C2065: 鈥渆rror_count鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(599): error C2065: 鈥渇ail_count鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(599): error C2065: 鈥渆rror_count鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(599): error C2065: 鈥減ass_count鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(600): error C2065: 鈥渟tart_ms鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(601): error C2065: 鈥渞esults鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(615): error C2059: 璇\ufffd娉曢敊璇\ufffd:鈥渳鈥\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(615): error C2143: 璇\ufffd娉曢敊璇\ufffd: 缂哄皯鈥\ufffd;鈥\ufffd(鍦ㄢ\ufffd渳鈥濈殑鍓嶉潰)
+modules\mcp_server\tools\running_game_test_execution.cpp(655): error C2065: 鈥減_now_ms鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C2065: 鈥渁ctions鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C2065: 鈥渋terations鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C2065: 鈥渁ctions鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(661): error C7732: expected an expression before ']'
+modules\mcp_server\tools\running_game_test_execution.cpp(662): error C2065: 鈥渋nput鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(663): error C2065: 鈥渋nput鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(664): error C2065: 鈥渆vents_sent鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(665): error C2065: 鈥渢otal_iteration_ms鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(666): error C2065: 鈥渋terations鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(668): error C2065: 鈥渋terations鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(668): error C2065: 鈥渃ount鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(669): error C2065: 鈥減_now_ms鈥\ufffd: 鏈\ufffd澹版槑鐨勬爣璇嗙\ufffd\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(757): error C2267: 鈥淿tool_run_stress_test鈥\ufffd: 鍏锋湁鍧楄寖鍥寸殑闈欐\ufffd佸嚱鏁伴潪娉\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(757): error C2601: 鈥淿tool_run_stress_test鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(820): error C2601: 鈥渞egister_running_game_test_execution_tools鈥\ufffd: 鏈\ufffd鍦板嚱鏁板畾涔夋槸闈炴硶鐨\ufffd
+modules\mcp_server\tools\running_game_test_execution.cpp(668): fatal error C1075: 鈥渰鈥\ufffd: 鏈\ufffd鎵惧埌鍖归厤浠ょ墝
+modules\mcp_server\tools\tool_helpers.cpp(254): error C2196: case 鍊尖\ufffd\ufffd12鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(263): error C2196: case 鍊尖\ufffd\ufffd13鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(415): error C2196: case 鍊尖\ufffd\ufffd29鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(423): error C2196: case 鍊尖\ufffd\ufffd30鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(431): error C2196: case 鍊尖\ufffd\ufffd31鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(439): error C2196: case 鍊尖\ufffd\ufffd32鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(447): error C2196: case 鍊尖\ufffd\ufffd33鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(455): error C2196: case 鍊尖\ufffd\ufffd34鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(463): error C2196: case 鍊尖\ufffd\ufffd35鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(475): error C2196: case 鍊尖\ufffd\ufffd36鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(488): error C2196: case 鍊尖\ufffd\ufffd38鈥濆凡浣跨敤
+modules\mcp_server\tools\tool_helpers.cpp(502): error C2196: case 鍊尖\ufffd\ufffd37鈥濆凡浣跨敤

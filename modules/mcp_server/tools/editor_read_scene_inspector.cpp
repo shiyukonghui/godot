@@ -222,7 +222,8 @@ static Variant _tool_get_output_log(const Dictionary &p_args, MCPToolError &r_er
 
 static Variant _tool_get_open_scripts(const Dictionary &p_args, MCPToolError &r_error) {
 	(void)p_args;
-	if (!_require_editor_ui(r_error)) {
+	if (!require_editor_ui(r_error, "editor inspectors outside a running editor",
+				"Start the MCP server inside the Godot editor to inspect the editor scene")) {
 		return Variant();
 	}
 #ifdef MCP_EDITOR_TOOLS_ENABLED
@@ -319,7 +320,8 @@ static Variant _tool_get_selection(const Dictionary &p_args, MCPToolError &r_err
 	if (!optional_bool(p_args, "top_only", false, top_only, r_error)) {
 		return Variant();
 	}
-	if (!_require_editor_ui(r_error)) {
+	if (!require_editor_ui(r_error, "editor inspectors outside a running editor",
+				"Start the MCP server inside the Godot editor to inspect the editor scene")) {
 		return Variant();
 	}
 #ifdef MCP_EDITOR_TOOLS_ENABLED
@@ -379,7 +381,8 @@ static Variant _tool_get_selection(const Dictionary &p_args, MCPToolError &r_err
 
 static Variant _tool_get_viewport_3d_camera(const Dictionary &p_args, MCPToolError &r_error) {
 	(void)p_args;
-	if (!_require_editor_ui(r_error)) {
+	if (!require_editor_ui(r_error, "editor inspectors outside a running editor",
+				"Start the MCP server inside the Godot editor to inspect the editor scene")) {
 		return Variant();
 	}
 #ifdef MCP_EDITOR_TOOLS_ENABLED

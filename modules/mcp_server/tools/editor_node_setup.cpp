@@ -791,10 +791,12 @@ static Variant _tool_setup_navigation_region(const Dictionary &p_args, MCPToolEr
 	}
 	double agent_height = 0.0;
 	if (!optional_float(p_args, "agent_height", 1.5, agent_height, r_error)) {
-		ToolBuilder builder("editor_setup_world_environment", String::utf8(R"desc(设置 3D 环境)desc"));
-		builder.channel("editor").verb("setup").scope(MCPToolScope::EDITOR).mutating(true);
-		builder.schema(_schema_from_json(R"schema({"type":"object","properties":{"ambient_color":{"properties":{"b":{"type":"number"},"g":{"type":"number"},"r":{"type":"number"}},"type":"object"},"bg_color":{"properties":{"b":{"type":"number"},"g":{"type":"number"},"r":{"type":"number"}},"type":"object"},"world_env_path":{"type":"string"}},"required":[],"type":"object"})schema"));
-		builder.handler(_tool_setup_world_environment).register_into(r_registry);
+		// [REBUILT-2C low-confidence: verify] the 2A/2B splice had dropped this
+		// body and left a *register-tool* block in its place; the sibling checks
+		// above and below answer exactly this, and the register block itself is
+		// the one already present in `register_editor_node_setup_tools`.
+		// [/REBUILT-2C]
+		return Variant();
 	}
 	double cell_size = 0.0;
 	if (!optional_float(p_args, "cell_size", 0.25, cell_size, r_error)) {

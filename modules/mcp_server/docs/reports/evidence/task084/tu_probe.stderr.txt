@@ -1,0 +1,47 @@
+WARNING: The ANGLE rendering driver requires dependencies to be installed.
+You can install them by running `python misc\scripts\install_angle.py`.
+See the documentation for more information:
+	https://docs.godotengine.org/en/latest/engine_details/development/compiling/compiling_for_windows.html#compiling-with-angle-support
+Alternatively, disable this driver by compiling with `angle=no` explicitly.
+modules\mcp_server\tools\tool_helpers.cpp(254): error C2196: case 值�\ufffd\ufffd12”已使用
+modules\mcp_server\tools\tool_helpers.cpp(263): error C2196: case 值�\ufffd\ufffd13”已使用
+modules\mcp_server\tools\tool_helpers.cpp(415): error C2196: case 值�\ufffd\ufffd29”已使用
+modules\mcp_server\tools\tool_helpers.cpp(423): error C2196: case 值�\ufffd\ufffd30”已使用
+modules\mcp_server\tools\tool_helpers.cpp(431): error C2196: case 值�\ufffd\ufffd31”已使用
+modules\mcp_server\tools\tool_helpers.cpp(439): error C2196: case 值�\ufffd\ufffd32”已使用
+modules\mcp_server\tools\tool_helpers.cpp(447): error C2196: case 值�\ufffd\ufffd33”已使用
+modules\mcp_server\tools\tool_helpers.cpp(455): error C2196: case 值�\ufffd\ufffd34”已使用
+modules\mcp_server\tools\tool_helpers.cpp(463): error C2196: case 值�\ufffd\ufffd35”已使用
+modules\mcp_server\tools\tool_helpers.cpp(475): error C2196: case 值�\ufffd\ufffd36”已使用
+modules\mcp_server\tools\tool_helpers.cpp(488): error C2196: case 值�\ufffd\ufffd38”已使用
+modules\mcp_server\tools\tool_helpers.cpp(502): error C2196: case 值�\ufffd\ufffd37”已使用
+modules\mcp_server\tools\tool_helpers.cpp(2842): error C3646: “report�\ufffd: �\ufffd知重写�\ufffd�明�\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2842): error C4430: 缺少类型说明�\ufffd - 假定�\ufffd int。注�\ufffd: C++ 不支持默�\ufffd int
+modules\mcp_server\tools\tool_helpers.cpp(2863): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成�\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参�\ufffd��\ufffd�MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2864): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成�\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参�\ufffd��\ufffd�MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2865): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成�\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参�\ufffd��\ufffd�MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2866): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成�\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参�\ufffd��\ufffd�MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2868): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成�\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参�\ufffd��\ufffd�MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2870): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成�\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参�\ufffd��\ufffd�MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2872): error C2039: "report": 不是 "MCPTools::`anonymous-namespace'::_ReloadCapture" 的成�\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2841): note: 参�\ufffd��\ufffd�MCPTools::`anonymous-namespace'::_ReloadCapture”的声明
+modules\mcp_server\tools\tool_helpers.cpp(2879): error C4430: 缺少类型说明�\ufffd - 假定�\ufffd int。注�\ufffd: C++ 不支持默�\ufffd int
+modules\mcp_server\tools\tool_helpers.cpp(2879): error C2146: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在标识�\ufffd��\ufffd�reload_gdscript_capturing”的前面)
+modules\mcp_server\tools\tool_helpers.cpp(2879): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd;�\ufffd(在�\ufffd�{”的前面)
+modules\mcp_server\tools\tool_helpers.cpp(2879): error C2447: “{�\ufffd: 缺少函数标�\ufffd\ufffd(�\ufffd否是老式的形式表?)
+modules\mcp_server\tools\tool_helpers.cpp(2919): error C4430: 缺少类型说明�\ufffd - 假定�\ufffd int。注�\ufffd: C++ 不支持默�\ufffd int
+modules\mcp_server\tools\tool_helpers.cpp(2919): error C2143: �\ufffd法错�\ufffd: 缺少�\ufffd,�\ufffd(在�\ufffd\ufffd&”的前面)
+modules\mcp_server\tools\tool_helpers.cpp(2925): error C2065: “p_report�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2927): error C2065: “p_report�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2931): error C2065: “p_report�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2933): error C2065: “p_report�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2933): error C2065: “p_report�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2942): error C2065: “p_report�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+modules\mcp_server\tools\tool_helpers.cpp(2942): error C2065: “p_report�\ufffd: �\ufffd声明的标识�\ufffd\ufffd
+scons: *** [bin\obj\modules\mcp_server\tools\tool_helpers.windows.editor.x86_64.obj] Error 2

@@ -120,7 +120,7 @@ bool layout_preset_from_name(const String &p_name, int &r_preset, MCPToolError &
 
 Variant apply_anchor_preset_on(Node *p_root, Node *p_node, const String &p_preset_name, bool p_keep_offsets,
 		MCPToolError &r_error) {
-	const String node_path = _relative_path(p_root, p_node);
+	const String node_path = relative_path(p_root, p_node);
 	if (!p_node->is_class(StringName("Control"))) {
 		r_error = MCPToolError::invalid_params(vformat("Node '%s' is not a Control (is %s)", node_path, p_node->get_class()));
 		return Variant();

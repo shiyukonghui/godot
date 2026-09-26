@@ -214,6 +214,28 @@ static bool _optional_number(const Dictionary &p_args, const String &p_key, doub
 }
 
 // ---------------------------------------------------------------------------
+// TASK-023 D-7 / GDR-24: the four numeric inputs of this group (a mouse `x`/`y`,
+// a relative motion, an action `strength`) reach `InputEventMouse*::set_position`
+// / `set_relative` / `set_strength` as `(real_t)`/`(float)` casts, and an action
+// strength is additionally **clamped to [0, 1]** by `set_strength()`
+// (`core/input/input_event.cpp:1627`). Both facts are narrowing facts, and both
+// used to be silent: `x = 1e300` was injected as `inf` and answered with
+// `"position": null` (`1e300` also passed the group's own `is_finite()` test,
+// which only rejects `inf`/`nan` *inputs*), and `strength = 1e-300` was injected
+// as `0.0`. The one width judgement of the module (`MCPTools::value_fits_slot`)
+// now runs at every one of those call sites, before the event is built.
+//
+// The slot is `FLOAT32` rather than `REAL_T` on purpose: these events are
+// *injected* input, so the judgement must not change its answer with the build's
+// `real_t` - a value the 32-bit slot cannot hold is a value no mouse can be at.
+static bool _number_fits_event(const Variant &p_value, const String &p_parameter_name, MCPToolError &r_error) {
+	return value_fits_slot(p_value, ValueSlot::FLOAT32, p_parameter_name,
+			"the 32-bit float slot this injected input event stores the number in", r_error);
+}
+
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
 // Event construction. The four classes the contract describes, built in one
 // place each so a flat tool and a sequence element cannot drift apart.
 // ---------------------------------------------------------------------------

@@ -380,7 +380,7 @@ static Variant _tool_add_node(const Dictionary &p_args, MCPToolError &r_error) {
 		parent_path = ".";
 	}
 	Dictionary properties;
-	if (!_optional_dictionary(p_args, "properties", properties, r_error)) {
+	if (!optional_dictionary(p_args, "properties", properties, r_error)) {
 		return Variant();
 	}
 	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
