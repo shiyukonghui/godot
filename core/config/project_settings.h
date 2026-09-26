@@ -136,7 +136,21 @@ protected:
 	Error _save_settings_text(const String &p_file, const RBMap<String, List<String>> &p_props, const CustomMap &p_custom = CustomMap(), const String &p_custom_features = String());
 	Error _save_settings_binary(const String &p_file, const RBMap<String, List<String>> &p_props, const CustomMap &p_custom = CustomMap(), const String &p_custom_features = String());
 
+	// TASK-067 (patch 3). The three pieces `save_custom()` and the section
+	// publish share, so the whole-file writer and the per-section writer cannot
+	// drift apart:
+	//   * `_collect_settings_for_save()` is the "which settings would a save
+	//     write, grouped by section" half of `save_custom()`;
+	//   * `_read_settings_text_file()` reads a settings file as the engine
+	//     decodes it, UTF-8 BOM included;
+	//   * `_publish_settings_text_file()` replaces it atomically (sibling,
+	//     backup, verify-bytes, rename, roll back).
+	Error _collect_settings_for_save(const CustomMap &p_custom, bool p_merge_with_current, const Vector<String> &p_custom_features, RBMap<String, List<String>> &r_props, String &r_features);
+	Error _read_settings_text_file(const String &p_path, String &r_text) const;
+	Error _publish_settings_text_file(const String &p_path, const String &p_text) const;
+
 	Error _save_custom_bnd(const String &p_file);
+	Error _save_custom_section_bnd(const String &p_path, const String &p_section, const Dictionary &p_settings);
 
 #ifdef TOOLS_ENABLED
 	const static PackedStringArray _get_supported_features();
@@ -204,6 +218,70 @@ public:
 	Error load_custom(const String &p_path);
 	Error save_custom(const String &p_path = "", const CustomMap &p_custom = CustomMap(), const Vector<String> &p_custom_features = Vector<String>(), bool p_merge_with_current = true);
 	Error save();
+
+	// A section-granular publish, for callers that must not rewrite the rest of
+	// the file. `save_custom()` -> `_save_settings_text()` writes the header
+	// comment plus every stored setting, so a caller that only wants to add one
+	// `input/<action>` entry has to accept that the whole `project.godot` is
+	// regenerated and every hand written comment in it is lost. Editing the text
+	// from the caller side instead is not a way out either: the obvious
+	// "insert the line after the `[input]` header" splice has a silent failure
+	// when that section is not the last one, because the engine's own reader
+	// attributes a key to the section that precedes it.
+	//
+	// `save_custom_section()` moves that text handling into the engine - the
+	// engine serializes the target section with the same `VariantWriter` call
+	// `_save_settings_text()` uses - and rewrites **only that section**. Every
+	// other byte of the file is copied through untouched: comments, blank lines,
+	// key order, a UTF-8 BOM and CRLF line endings included. Keys the section
+	// already has are updated in place, new keys are appended to the section
+	// (never to the wrong one), and a section that does not exist yet is created
+	// at the end of the file in the shape `_save_settings_text()` writes. Keys
+	// that are not named are never touched and never removed.
+	//
+	// Neither method changes the in-memory settings: they publish text into a
+	// file, exactly like `save_custom()` does.
+	//
+	// `p_custom` is keyed by the **full** setting name (`"input/jump"`), and every
+	// key must belong to `p_section` - the part before the first `/`. The name
+	// inside the section may itself contain `/` (`rendering/renderer/...` is
+	// stored under `[rendering]`), which is why only the first separator splits.
+	Error save_custom_section(const String &p_path, const String &p_section, const CustomMap &p_custom);
+	// TASK-067 (patch 3). The editor's own "save the project on open" call
+	// (`editor/editor_node.cpp:1071`) - it must not be a different writer from the
+	// section publish, or the editor would preserve comments while every tool
+	// that writes one section does, and lose them the moment it opens the project
+	// itself.
+	//
+	// It publishes **the settings `save()` would publish** (the same collection
+	// `save_custom()` builds, section by section) into the file that is already
+	// there, and copies every other byte through: comments, blank lines, key
+	// order, a BOM and CRLF included. Unlike `save_custom_section()` it always
+	// writes the file - the call site's stated purpose is to mark the project as
+	// last modified (`editor/project_manager/project_list.cpp:866-869` reads that
+	// timestamp as "last edited") - and it refreshes `get_last_saved_time()`, so
+	// the editor's own external-change check
+	// (`editor/editor_node.cpp:1627`) does not fire on the write it just made.
+	//
+	// It does not create a project: a missing `project.godot` is
+	// `ERR_FILE_NOT_FOUND`, and the caller keeps `save()` for that (and for
+	// binary projects).
+	Error save_preserving_text();
+	// The text half of `save_custom_section()`, without any I/O, so the exact
+	// byte behaviour can be exercised on a string. `p_text` is the file as the
+	// engine decodes it (a UTF-8 BOM, if the caller put one in, is ordinary
+	// content of the first line and is therefore preserved).
+	static Error update_settings_section_text(const String &p_text, const String &p_section, const CustomMap &p_custom, String &r_result);
+	// TASK-067 (patch 3): the text half of `save_preserving_text()` - the same
+	// per-section publish, applied to every named section in one pass over the
+	// text (one read, one write, one rollback point instead of one per section).
+	// `p_values` is keyed by full setting name; a section takes the keys whose
+	// first `/`-separated part is its name, which is exactly the grouping
+	// `_save_settings_text()` writes. `p_sections` fixes the order, so the result
+	// is reproducible for a given input. It is static and free of I/O for the same
+	// reason `update_settings_section_text()` is: the byte behaviour can be
+	// exercised on a string without touching the running project's own file.
+	static Error publish_settings_sections_text(const String &p_text, const Vector<String> &p_sections, const CustomMap &p_values, String &r_result);
 	void set_custom_property_info(const PropertyInfo &p_info);
 	const HashMap<StringName, PropertyInfo> &get_custom_property_info() const;
 	uint64_t get_last_saved_time() { return last_save_time; }

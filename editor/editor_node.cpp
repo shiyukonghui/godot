@@ -1068,7 +1068,25 @@ void EditorNode::_notification(int p_what) {
 						ProjectSettings::get_singleton()->set_setting(initial_setting.key, initial_setting.value);
 					}
 				}
-				ProjectSettings::get_singleton()->save();
+				// TASK-067 (patch 3). This used to be `save()`, which regenerates
+				// `project.godot` from the engine's own serializer - seven header
+				// comment lines plus every stored setting, and nothing a human
+				// typed. The result was that merely OPENING the project in a
+				// windowed editor deleted every hand written comment from it
+				// (`--import` and `--headless` never showed it: the
+				// `!cmdline_mode` guard above, set in the constructor from
+				// `DisplayServer::get_name() == "headless"`).
+				//
+				// `save_preserving_text()` publishes the same settings section by
+				// section and copies every other byte through, which is the rule
+				// the writing tools have followed since TASK-057 patch 2. A
+				// `project.godot` that does not exist yet (or a binary project)
+				// still needs `save()`, which is what creates it.
+				if (project_settings_path.is_empty() || !FileAccess::exists(project_settings_path)) {
+					ProjectSettings::get_singleton()->save();
+				} else {
+					ProjectSettings::get_singleton()->save_preserving_text();
+				}
 			}
 
 			_titlebar_resized();

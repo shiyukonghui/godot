@@ -2171,9 +2171,7 @@ bool CSharpScript::_update_exports(PlaceHolderScriptInstance *p_instance_to_upda
 				p_instance_to_update->update(propnames, values);
 			}
 		} else if (placeholders.size()) {
-			uint64_t script_modified_time = FileAccess::get_modified_time(get_path());
-			uint64_t last_valid_build_time = GDMono::get_singleton()->get_project_assembly_modified_time();
-			if (script_modified_time > last_valid_build_time) {
+			if (is_source_newer_than_assembly()) {
 				for (PlaceHolderScriptInstance *instance : placeholders) {
 					Object *owner = instance->get_owner();
 					if (owner->get_script_instance() == instance) {
@@ -2618,6 +2616,25 @@ Error CSharpScript::reload(bool p_keep_state) {
 	}
 
 	return OK;
+}
+
+bool CSharpScript::is_source_newer_than_assembly() const {
+	const String script_path = get_path();
+	if (script_path.is_empty()) {
+		return false;
+	}
+
+	const uint64_t script_modified_time = FileAccess::get_modified_time(script_path);
+	if (script_modified_time == 0) {
+		// The file cannot be read (it is gone): there is no newer source for
+		// the loaded assembly.
+		return false;
+	}
+
+	// Zero when no project assembly was ever built, which is what makes every
+	// readable source file "newer" than nothing.
+	const uint64_t last_valid_build_time = GDMono::get_singleton()->get_project_assembly_modified_time();
+	return script_modified_time > last_valid_build_time;
 }
 
 ScriptLanguage *CSharpScript::get_language() const {

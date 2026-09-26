@@ -273,6 +273,26 @@ public:
 		return type_info.is_abstract;
 	}
 
+	/**
+	 * Returns whether this script's source file has been modified after the
+	 * project assembly currently loaded in this process was built, i.e. whether
+	 * the assembly does not contain a build of the source as it is on disk.
+	 *
+	 * `reload()` cannot answer this: C# has no compiler on this side, `reload()`
+	 * only looks the type up in the assembly that was already built and returns
+	 * `OK` regardless (see its definition), so its return value is not a compile
+	 * verdict. A caller that has to tell "this file was changed after the last
+	 * successful build" apart from "this file does not compile" needs this
+	 * signal, which is why it is a public accessor rather than a local variable:
+	 * the editor already makes this comparison to decide whether a placeholder
+	 * has to be refreshed (see `_update_exports`), and the built-in MCP module
+	 * makes it to answer "has this file been compiled?" honestly.
+	 *
+	 * Returns `false` when the script has no path, or when its file cannot be
+	 * read: nothing can be newer than the loaded assembly then.
+	 */
+	bool is_source_newer_than_assembly() const;
+
 	bool inherits_script(const Ref<Script> &p_script) const override;
 
 	Ref<Script> get_base_script() const override;

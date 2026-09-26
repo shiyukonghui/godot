@@ -1231,9 +1231,12 @@ bool _csproj_exists(const String &p_root_dir) {
 }
 #endif // TOOLS_ENABLED
 
-Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_custom, const Vector<String> &p_custom_features, bool p_merge_with_current) {
-	ERR_FAIL_COND_V_MSG(p_path.is_empty(), ERR_INVALID_PARAMETER, "Project settings save path cannot be empty.");
-
+// TASK-067 (patch 3): the "which settings would a save write, grouped by
+// section" half of the whole-file writer, moved here unchanged so that
+// `save_preserving_text()` publishes **exactly** the set `save()` would publish.
+// Splitting it out is a pure extraction - every line below was already in
+// `save_custom()`, in the same order, with the same `_VCSort` ordering.
+Error ProjectSettings::_collect_settings_for_save(const CustomMap &p_custom, bool p_merge_with_current, const Vector<String> &p_custom_features, RBMap<String, List<String>> &r_props, String &r_features) {
 #ifdef TOOLS_ENABLED
 	PackedStringArray project_features = get_setting("application/config/features");
 	// If there is no feature list currently present, force one to generate.
@@ -1331,6 +1334,24 @@ Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_cust
 		save_features += f;
 	}
 
+	r_props = save_props;
+	r_features = save_features;
+	return OK;
+}
+
+Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_custom, const Vector<String> &p_custom_features, bool p_merge_with_current) {
+	ERR_FAIL_COND_V_MSG(p_path.is_empty(), ERR_INVALID_PARAMETER, "Project settings save path cannot be empty.");
+
+	// TASK-067 (patch 3): the collection is shared with `save_preserving_text()`
+	// so the whole-file writer and the per-section publisher cannot publish
+	// different sets.
+	RBMap<String, List<String>> save_props;
+	String save_features;
+	const Error collect_error = _collect_settings_for_save(p_custom, p_merge_with_current, p_custom_features, save_props, save_features);
+	if (collect_error != OK) {
+		return collect_error;
+	}
+
 	if (p_path.ends_with(".godot") || p_path.ends_with("override.cfg")) {
 		return _save_settings_text(p_path, save_props, p_custom, save_features);
 	} else if (p_path.ends_with(".binary")) {
@@ -1338,6 +1359,593 @@ Error ProjectSettings::save_custom(const String &p_path, const CustomMap &p_cust
 	} else {
 		ERR_FAIL_V_MSG(ERR_FILE_UNRECOGNIZED, vformat("Unknown config file format: '%s'.", p_path));
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Section-granular publish (TASK-057 patch 2).
+//
+// The whole-file writer above cannot be used when the caller must keep the rest
+// of the file: `_save_settings_text()` writes seven header comment lines plus
+// every stored setting, so anything a human typed into `project.godot` that the
+// engine did not produce - a comment, a blank line, the key order, a section the
+// engine does not know about - is gone after one call. This is not a theory:
+// TASK-042 / TASK-043 measured it for `project_set_setting` and five tool
+// descriptions in modules/mcp_server now say so.
+//
+// Doing it in the caller instead was tried and rejected: the natural splice
+// ("write the new line right after the `[input]` header") silently puts the key
+// into the WRONG section when `[input]` is not the last section of the file,
+// because the engine's reader (VariantParser -> ConfigFile::_parse) attributes
+// every assignment to the section header that preceded it. The failure is
+// silent: the file parses, the key is simply not where the writer thought.
+//
+// So the text work lives here, next to the serializer it has to agree with.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// One statement of the file: a blank line, a comment, a section header, or an
+// assignment. Only an assignment carries key and value spans.
+//
+// Why this is not line based (it was, and that was a real defect): the engine's
+// own serializer writes a non-empty `Dictionary` as SEVERAL lines
+//
+//     jump={
+//     "deadzone": 0.5,
+//     "events": []
+//     }
+//
+// (`variant_parser.cpp:2187-2201`, and the input actions of every real
+// project.godot look like this). A line-based scanner reads `jump={` as a
+// complete assignment whose value is `{`; the next call then sees a different
+// value, rewrites that one line and leaves the dictionary's remaining lines
+// behind - the file ends up with the body of the value twice. The scanner below
+// therefore finds the VALUE SPAN by walking the characters: it tracks brace,
+// bracket and parenthesis depth and whether it is inside a string, and the value
+// ends at the first newline seen at depth zero outside a string.
+struct _PSStatement {
+	int begin = 0; // First character of the statement's first line.
+	int end = 0; // One past the statement's last line terminator.
+	int key_begin = -1; // Assignment only; the key's first character.
+	int key_end = -1; // Assignment only; one past the key's last character.
+	int value_begin = -1; // Assignment only; the value's first character.
+	int value_end = -1; // Assignment only; one past the value's last character.
+	String key; // The decoded name of an assignment, empty otherwise.
+	String header; // The section an assignment belongs to the header of.
+	String terminator; // The line ending that closes the statement, or "".
+	bool is_blank = false;
+	bool is_comment = false;
+
+	bool is_assignment() const { return key_begin >= 0; }
+};
+
+String _ps_terminator_at(const String &p_text, int p_newline) {
+	return (p_newline > 0 && p_text[p_newline - 1] == '\r') ? String("\r\n") : String("\n");
+}
+
+// The name a key was written under. `_save_settings_text()` writes names through
+// `String::property_name_encode()`, which quotes anything containing `=`, `"`,
+// `;`, `[`, `]`, a space or a non-ASCII character, so a quoted key has to be
+// unescaped before it can be compared with the setting name.
+String _ps_decode_key(const String &p_key) {
+	if (p_key.length() >= 2 && p_key[0] == '"' && p_key[p_key.length() - 1] == '"') {
+		return p_key.substr(1, p_key.length() - 2).c_unescape();
+	}
+	return p_key;
+}
+
+Vector<_PSStatement> _ps_scan(const String &p_text) {
+	const int length = p_text.length();
+	Vector<_PSStatement> statements;
+
+	int i = 0;
+	while (i < length) {
+		_PSStatement statement;
+		statement.begin = i;
+
+		int first = i;
+		while (first < length && (p_text[first] == ' ' || p_text[first] == '\t')) {
+			first++;
+		}
+
+		int line_end = first;
+		while (line_end < length && p_text[line_end] != '\n') {
+			line_end++;
+		}
+		const bool has_newline = line_end < length;
+		const String line_terminator = has_newline ? _ps_terminator_at(p_text, line_end) : String();
+		const bool line_is_empty = (first >= length) || p_text[first] == '\n' || p_text[first] == '\r';
+
+		if (line_is_empty || p_text[first] == ';' || p_text[first] == '#') {
+			statement.is_blank = line_is_empty;
+			statement.is_comment = !line_is_empty;
+			statement.terminator = line_terminator;
+			statement.end = has_newline ? line_end + 1 : length;
+			statements.push_back(statement);
+			i = statement.end;
+			continue;
+		}
+
+		if (p_text[first] == '[') {
+			const int close = p_text.find_char(']', first);
+			if (close > first && close < line_end) {
+				statement.header = p_text.substr(first + 1, close - first - 1).strip_edges();
+				statement.terminator = line_terminator;
+				statement.end = has_newline ? line_end + 1 : length;
+				statements.push_back(statement);
+				i = statement.end;
+				continue;
+			}
+		}
+
+		int equals = -1;
+		for (int k = first; k < line_end; k++) {
+			if (p_text[k] == '=') {
+				equals = k;
+				break;
+			}
+		}
+		if (equals < first + 1) {
+			// Neither a header nor an assignment: the reader would not see a
+			// setting here either, so the line is carried through untouched.
+			statement.terminator = line_terminator;
+			statement.end = has_newline ? line_end + 1 : length;
+			statements.push_back(statement);
+			i = statement.end;
+			continue;
+		}
+
+		int key_end = equals;
+		while (key_end > first && (p_text[key_end - 1] == ' ' || p_text[key_end - 1] == '\t')) {
+			key_end--;
+		}
+
+		int value_begin = equals + 1;
+		while (value_begin < length && (p_text[value_begin] == ' ' || p_text[value_begin] == '\t')) {
+			value_begin++;
+		}
+
+		int cursor = value_begin;
+		int depth = 0;
+		bool in_string = false;
+		bool escaped = false;
+		while (cursor < length) {
+			const char32_t c = p_text[cursor];
+			if (in_string) {
+				if (escaped) {
+					escaped = false;
+				} else if (c == '\\') {
+					escaped = true;
+				} else if (c == '"') {
+					in_string = false;
+				}
+			} else if (c == '"') {
+				in_string = true;
+			} else if (c == '{' || c == '[' || c == '(') {
+				depth++;
+			} else if (c == '}' || c == ']' || c == ')') {
+				depth--;
+			} else if (c == '\n' && depth <= 0) {
+				break;
+			}
+			cursor++;
+		}
+
+		int value_end = cursor;
+		while (value_end > value_begin && (p_text[value_end - 1] == ' ' || p_text[value_end - 1] == '\t' || p_text[value_end - 1] == '\r')) {
+			value_end--;
+		}
+
+		statement.key_begin = first;
+		statement.key_end = key_end;
+		statement.value_begin = value_begin;
+		statement.value_end = value_end;
+		statement.key = _ps_decode_key(p_text.substr(first, key_end - first));
+		// The statement ends on the line the VALUE ends on, which for a
+		// serialized dictionary is several lines below the key.
+		const bool value_has_newline = cursor < length;
+		statement.terminator = value_has_newline ? _ps_terminator_at(p_text, cursor) : String();
+		statement.end = value_has_newline ? cursor + 1 : length;
+		statements.push_back(statement);
+		i = statement.end;
+	}
+
+	return statements;
+}
+
+} // namespace
+
+Error ProjectSettings::update_settings_section_text(const String &p_text, const String &p_section, const CustomMap &p_custom, String &r_result) {
+	r_result = p_text;
+
+	ERR_FAIL_COND_V_MSG(p_section.is_empty(), ERR_INVALID_PARAMETER,
+			"A section-granular project settings publish needs a non-empty section name.");
+	ERR_FAIL_COND_V_MSG(p_section.contains_char('[') || p_section.contains_char(']') || p_section.contains_char('\n') || p_section.contains_char('\r'), ERR_INVALID_PARAMETER,
+			vformat("'%s' cannot name a project settings section.", p_section));
+
+	// The values are serialized by the same writer `_save_settings_text()` uses,
+	// so what lands in the file is byte for byte what a full save of that one
+	// setting would have written (ConfigFile reads it back the same way).
+	// `RBMap` keeps the requested names in a deterministic order, which is what
+	// makes the appended block reproducible.
+	RBMap<String, String> serialized;
+	for (const KeyValue<String, Variant> &E : p_custom) {
+		const String prefix = p_section + "/";
+		ERR_FAIL_COND_V_MSG(!E.key.begins_with(prefix) || E.key.length() == prefix.length(), ERR_INVALID_PARAMETER,
+				vformat("Setting '%s' does not belong to section '%s': a section publish takes full setting names ('%s<name>').", E.key, p_section, prefix));
+
+		String written;
+		ERR_FAIL_COND_V_MSG(VariantWriter::write_to_string(E.value, written, true) != OK, ERR_INVALID_DATA,
+				vformat("Setting '%s' cannot be written as project settings text.", E.key));
+		serialized[E.key.substr(prefix.length())] = written;
+	}
+
+	if (serialized.is_empty()) {
+		return OK;
+	}
+
+	const Vector<_PSStatement> statements = _ps_scan(p_text);
+
+	// The target section: its header statement, and the first statement after it
+	// that is another header.
+	int header_index = -1;
+	for (int i = 0; i < statements.size(); i++) {
+		if (!statements[i].header.is_empty() && statements[i].header == p_section) {
+			header_index = i;
+			break;
+		}
+	}
+	int section_end = statements.size();
+	if (header_index >= 0) {
+		for (int i = header_index + 1; i < statements.size(); i++) {
+			if (!statements[i].header.is_empty()) {
+				section_end = i;
+				break;
+			}
+		}
+	}
+
+	// Everything the section already has gets its VALUE span replaced (every
+	// occurrence, so a hand-written duplicate cannot leave a later, different
+	// value that wins on read). The key text and the rest of the line are copied
+	// through, so a caller that writes the same value twice gets the same bytes.
+	RBMap<String, String> pending;
+	for (const KeyValue<String, String> &E : serialized) {
+		pending[E.key] = E.value;
+	}
+
+	String out;
+	int cursor = 0;
+	for (int i = 0; i < statements.size(); i++) {
+		const _PSStatement &statement = statements[i];
+		if (statement.begin > cursor) {
+			out += p_text.substr(cursor, statement.begin - cursor);
+		}
+
+		const bool in_section = header_index >= 0 && i > header_index && i < section_end;
+		if (in_section && statement.is_assignment() && serialized.has(statement.key)) {
+			const String &value = serialized[statement.key];
+			pending.erase(statement.key);
+
+			const String existing = p_text.substr(statement.value_begin, statement.value_end - statement.value_begin);
+			if (existing != value) {
+				out += p_text.substr(statement.begin, statement.key_begin - statement.begin);
+				out += statement.key.property_name_encode();
+				out += "=";
+				out += value;
+				out += p_text.substr(statement.value_end, statement.end - statement.value_end);
+				cursor = statement.end;
+				continue;
+			}
+		}
+
+		out += p_text.substr(statement.begin, statement.end - statement.begin);
+		cursor = statement.end;
+	}
+	if (cursor < p_text.length()) {
+		out += p_text.substr(cursor);
+	}
+
+	if (!pending.is_empty()) {
+		// The line ending this file uses, taken from the first statement that has
+		// one, so a CRLF project keeps CRLF endings.
+		String file_terminator = "\n";
+		for (const _PSStatement &statement : statements) {
+			if (!statement.terminator.is_empty()) {
+				file_terminator = statement.terminator;
+				break;
+			}
+		}
+
+		if (header_index >= 0) {
+			// Append after the last real line of the section, so the blank line
+			// that separates the section from the next one stays where it was.
+			// A multi-line serialized value is appended as one block.
+			int anchor = header_index;
+			for (int i = header_index + 1; i < section_end; i++) {
+				if (!statements[i].is_blank && !statements[i].is_comment) {
+					anchor = i;
+				}
+			}
+			const int insert_at = statements[anchor].end;
+			String block;
+			if (insert_at > 0 && p_text[insert_at - 1] != '\n') {
+				// The last line has no terminator yet; give it one so the new
+				// setting starts on its own line.
+				block += file_terminator;
+			}
+			for (const KeyValue<String, String> &E : pending) {
+				block += E.key.property_name_encode() + "=" + E.value + file_terminator;
+			}
+			out = out.substr(0, insert_at) + block + out.substr(insert_at);
+		} else {
+			// The section does not exist: create it at the end of the file in the
+			// shape `_save_settings_text()` writes (a blank line before the
+			// header, a blank line after it, then one assignment per line).
+			if (!out.is_empty() && !out.ends_with("\n")) {
+				out += file_terminator;
+			}
+			if (!out.is_empty()) {
+				out += file_terminator;
+			}
+			out += "[" + p_section + "]" + file_terminator;
+			out += file_terminator;
+			for (const KeyValue<String, String> &E : pending) {
+				out += E.key.property_name_encode() + "=" + E.value + file_terminator;
+			}
+		}
+	}
+
+	r_result = out;
+	return OK;
+}
+
+// ---------------------------------------------------------------------------
+// TASK-067 (patch 3): the two I/O halves of the section publish.
+//
+// They are extracted from `save_custom_section()` so a whole-file publish can do
+// ONE read and ONE write instead of one pair per section, and so the read and
+// the write rule exist in exactly one place. The byte behaviour is unchanged:
+// the reader puts back the UTF-8 BOM that `append_utf8()` skips, and the writer
+// replaces the file through a sibling plus a backup and verifies the bytes it
+// claims to have written.
+// ---------------------------------------------------------------------------
+
+Error ProjectSettings::_read_settings_text_file(const String &p_path, String &r_text) const {
+	r_text = String();
+
+	Error err = OK;
+	Ref<FileAccess> reader = FileAccess::open(p_path, FileAccess::READ, &err);
+	ERR_FAIL_COND_V_MSG(err != OK || reader.is_null(), err != OK ? err : ERR_CANT_OPEN, vformat("Couldn't read project settings from '%s'.", p_path));
+
+	const uint64_t length = reader->get_length();
+	// `append_utf8()` takes an `int`, so a file larger than that would be
+	// truncated by the cast. Refusing is the only honest answer here; the
+	// alternative - publishing a prefix of a project.godot - is silent data
+	// loss. (This is a new narrowing site, so it is named and gated rather than
+	// left implicit: TASK-057 report section 5.)
+	ERR_FAIL_COND_V_MSG(length > (uint64_t)INT32_MAX, ERR_OUT_OF_MEMORY,
+			vformat("'%s' is too large to be published section by section (size %d bytes).", p_path, (int64_t)length));
+	Vector<uint8_t> raw;
+	raw.resize(length + 1);
+	const uint64_t read = length > 0 ? reader->get_buffer(raw.ptrw(), length) : 0;
+	raw.write[length] = 0;
+	reader->close();
+	if (read != length) {
+		return ERR_FILE_CANT_READ;
+	}
+
+	// A UTF-8 BOM is not part of the engine's String: `append_utf8()` skips it
+	// and `String::utf8()` writes it back only if the character is really there.
+	// It is therefore put back into the text explicitly - measured, not assumed:
+	// an unqualified read-modify-write through `get_as_text()`/`store_string()`
+	// removes the BOM from a file that had one.
+	if (length >= 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF) {
+		r_text = String::chr(0xFEFF);
+	}
+	r_text.append_utf8((const char *)raw.ptr(), (int)length);
+	return OK;
+}
+
+Error ProjectSettings::_publish_settings_text_file(const String &p_path, const String &p_text) const {
+	// The destination is replaced the way the rest of this code base replaces a
+	// file it must not destroy: write a sibling, keep a backup, publish, roll
+	// back if the publish fails.
+	const String temp_path = p_path + ".section_tmp";
+	const String backup_path = p_path + ".section_bak";
+
+	const Error backup_error = DirAccess::copy_absolute(p_path, backup_path);
+	if (backup_error != OK) {
+		return backup_error;
+	}
+
+	Error err = OK;
+	Error result = OK;
+	Ref<FileAccess> writer = FileAccess::open(temp_path, FileAccess::WRITE, &err);
+	if (err != OK || writer.is_null()) {
+		result = err != OK ? err : ERR_CANT_CREATE;
+	} else {
+		const CharString bytes = p_text.utf8();
+		writer->store_buffer((const uint8_t *)bytes.get_data(), bytes.length());
+		writer->close();
+
+		if (!FileAccess::exists(temp_path)) {
+			result = FAILED;
+		} else if (p_text.utf8().length() != FileAccess::get_file_as_bytes(temp_path).size()) {
+			// The writer reported success; the file is the only thing that
+			// proves the bytes really landed (a store_buffer that ran out of
+			// space returns without an error).
+			result = FAILED;
+		} else {
+			DirAccess::remove_absolute(p_path);
+			result = DirAccess::rename_absolute(temp_path, p_path);
+		}
+	}
+
+	if (result != OK) {
+		if (!FileAccess::exists(p_path) && FileAccess::exists(backup_path)) {
+			DirAccess::copy_absolute(backup_path, p_path);
+		}
+	}
+
+	DirAccess::remove_absolute(backup_path);
+	DirAccess::remove_absolute(temp_path);
+	return result;
+}
+
+Error ProjectSettings::publish_settings_sections_text(const String &p_text, const Vector<String> &p_sections, const CustomMap &p_values, String &r_result) {
+	r_result = p_text;
+	for (const String &section : p_sections) {
+		if (section.is_empty()) {
+			// See `save_preserving_text()`: a sectionless key is a top-level
+			// assignment of the file itself and has no section form.
+			continue;
+		}
+		const String prefix = section + "/";
+		CustomMap section_settings;
+		for (const KeyValue<String, Variant> &E : p_values) {
+			if (E.key.begins_with(prefix) && E.key.length() > prefix.length()) {
+				section_settings[E.key] = E.value;
+			}
+		}
+		if (section_settings.is_empty()) {
+			continue;
+		}
+		String next;
+		const Error update_error = update_settings_section_text(r_result, section, section_settings, next);
+		if (update_error != OK) {
+			return update_error;
+		}
+		r_result = next;
+	}
+	return OK;
+}
+
+Error ProjectSettings::save_custom_section(const String &p_path, const String &p_section, const CustomMap &p_custom) {
+	ERR_FAIL_COND_V_MSG(p_path.is_empty(), ERR_INVALID_PARAMETER, "Project settings section save path cannot be empty.");
+
+	if (!FileAccess::exists(p_path)) {
+		// This method publishes *into* a file; it never creates a project from
+		// nothing, exactly like `load_custom()` refuses to invent one.
+		return ERR_FILE_NOT_FOUND;
+	}
+
+	String text;
+	const Error read_error = _read_settings_text_file(p_path, text);
+	if (read_error != OK) {
+		return read_error;
+	}
+
+	String updated;
+	const Error update_error = update_settings_section_text(text, p_section, p_custom, updated);
+	if (update_error != OK) {
+		return update_error;
+	}
+	if (updated == text) {
+		// Nothing to say that the file does not already say. Returning here is
+		// what keeps a repeat call from touching the file at all (the bytes and
+		// the modification time both stay put).
+		return OK;
+	}
+
+	return _publish_settings_text_file(p_path, updated);
+}
+
+// ---------------------------------------------------------------------------
+// TASK-067 (patch 3): the editor's own save on open.
+//
+// Root cause of "opening the project in a windowed editor eats the comments in
+// project.godot" (`editor/editor_node.cpp:1062-1072`, reached only when
+// `cmdline_mode` is false - `editor_node.cpp:8479` sets it from
+// `DisplayServer::get_name() == "headless"`, which is why `--import` and
+// `--headless` never showed it): that call site used `save()`, i.e. the
+// whole-file writer, which regenerates `project.godot` from the engine's own
+// serializer - seven header comment lines plus every stored setting, and nothing
+// a human typed.
+//
+// `save_preserving_text()` keeps the two things the call site actually wants -
+// the settings of the editor's own state, and a fresh modification time (the
+// project manager reads `project.godot`'s mtime as "last edited",
+// `editor/project_manager/project_list.cpp:866-869`) - and publishes them
+// section by section into the file that is there, copying every other byte
+// through. It is the same rule the writing tools follow since TASK-057 patch 2.
+// ---------------------------------------------------------------------------
+
+Error ProjectSettings::save_preserving_text() {
+	const String path = get_resource_path().path_join("project.godot");
+	ERR_FAIL_COND_V_MSG(!FileAccess::exists(path), ERR_FILE_NOT_FOUND,
+			vformat("There is no project settings file at '%s' to publish into.", path));
+
+	// The same set `save()` would write: `save()` calls
+	// `save_custom(path)` with an empty custom map and `p_merge_with_current`
+	// true, so the rendering-API and `C#` feature entries `save_custom()`
+	// recomputes are part of it and opening a project still persists them.
+	RBMap<String, List<String>> save_props;
+	String save_features;
+	const Error collect_error = _collect_settings_for_save(CustomMap(), true, Vector<String>(), save_props, save_features);
+	(void)save_features;
+	if (collect_error != OK) {
+		return collect_error;
+	}
+
+	String text;
+	const Error read_error = _read_settings_text_file(path, text);
+	if (read_error != OK) {
+		return read_error;
+	}
+
+	String updated = text;
+	{
+		// The section order is `save_props`' order (an `RBMap` over section
+		// names, so it is sorted and reproducible), and the values are the live
+		// settings - the same ones `_save_settings_text()` would have serialized.
+		Vector<String> sections;
+		CustomMap values;
+		for (const KeyValue<String, List<String>> &E : save_props) {
+			if (E.key.is_empty()) {
+				// A setting with no section is a top-level assignment of the file
+				// itself: `_load_settings_text()` calls `set(assign, value)` for one
+				// (`project_settings.cpp:1001-1002`). It can only have come from the
+				// file, and this publish copies the file through byte for byte, so
+				// there is nothing to publish for it. Section publishing has no form
+				// for a sectionless key by construction -
+				// `update_settings_section_text()` refuses an empty section name, and
+				// `_save_settings_text()` writes such a key before the first header.
+				continue;
+			}
+			sections.push_back(E.key);
+			for (const String &name : E.value) {
+				const String full = E.key + "/" + name;
+				values[full] = get(full);
+			}
+		}
+		const Error publish_error = publish_settings_sections_text(text, sections, values, updated);
+		if (publish_error != OK) {
+			return publish_error;
+		}
+	}
+
+	// Always write, even when `updated == text`. The call site's stated purpose
+	// is to mark the project as last modified, and the project manager reads that
+	// timestamp as "the date the project was last edited"; the bytes written in
+	// the unchanged case are the file's own bytes, so the comments survive either
+	// way. `last_save_time` is refreshed exactly like `save()` does it, so the
+	// editor's external-change check (`editor/editor_node.cpp:1627`) does not
+	// report the write this call just made as somebody else's.
+	const Error write_error = _publish_settings_text_file(path, updated);
+	if (write_error != OK) {
+		return write_error;
+	}
+	last_save_time = FileAccess::get_modified_time(path);
+	return OK;
+}
+
+Error ProjectSettings::_save_custom_section_bnd(const String &p_path, const String &p_section, const Dictionary &p_settings) {
+	CustomMap custom;
+	for (const KeyValue<Variant, Variant> &E : p_settings) {
+		custom[E.key] = E.value;
+	}
+	return save_custom_section(p_path, p_section, custom);
 }
 
 Variant _GLOBAL_DEF(const String &p_var, const Variant &p_default, bool p_restart_if_changed, bool p_ignore_value_in_docs, bool p_basic, bool p_internal) {
@@ -1654,6 +2262,10 @@ void ProjectSettings::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("load_resource_pack", "pack", "replace_files", "offset"), &ProjectSettings::load_resource_pack, DEFVAL(true), DEFVAL(0));
 
 	ClassDB::bind_method(D_METHOD("save_custom", "file"), &ProjectSettings::_save_custom_bnd);
+
+	// TASK-057 patch 2: the section-granular publish (see the header for why a
+	// caller that must keep the rest of the file cannot use `save_custom()`).
+	ClassDB::bind_method(D_METHOD("save_custom_section", "path", "section", "settings"), &ProjectSettings::_save_custom_section_bnd);
 
 	// Change tracking methods
 	ClassDB::bind_method(D_METHOD("get_changed_settings"), &ProjectSettings::get_changed_settings);
