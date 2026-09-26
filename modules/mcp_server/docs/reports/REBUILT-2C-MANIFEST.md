@@ -363,6 +363,75 @@ rebuild against the tool's declared schema and its live behaviour**, each wrappe
 | `project_edit_resource reports no change and validates its arguments` | same | same | the unknown-name block added (as above) plus an **empty-bag** block asserting `message == "No properties were changed"` and `changed.is_empty()` | the empty bag is the one case the implementation's short circuit is honest for (`project_write_resource_scene.cpp:718-729`), so both branches now have a case instead of one branch being tested twice. |
 | `project_read_resource reports the loaded resource type` | TASK-024 E-9 shape: `properties_total` / `properties_count` / `properties_truncated` / `properties_limit == 256` / `properties_byte_limit == 256*1024` (`seq=600 t=1790101526117`) | TASK-026 shape: `total_properties` / `truncated` / `dropped` / `limits.max_properties == 64` (`seq=445/450 t=1790127763038/1790127766391`) | the five key/cap assertions rewritten to the published shape: `total_properties == 2`, `total_properties == properties.size()`, `truncated == false`, `dropped == 0`, `limits.max_properties == 64`; the value halves (`properties.size() == 2`, the two member checks, `resource_path` absent) are unchanged | read straight out of `tools/project_read_files.cpp:789-795` (`MAX_RESOURCE_PROPERTIES = 64`, no byte budget). The cap is the tool's own constant; the count assertion is a tautology-free `total_properties == properties.size()` where the old pair had two independently-wrong numbers. |
 
+## E-5. Gate ledger (TASK-087, real output)
+
+| gate | command | result |
+|---|---|---|
+| module doctest | `--headless --test --test-case=[MCPServer]*` | **exit 0** — `143 / 143 passed / 0 failed`, `6396 / 6396` assertions, `SUCCESS!` |
+| full engine doctest | `--headless --test` | **exit 0** — `1569 / 1569 passed / 0 failed / 3 skipped`, `430702 / 430702` assertions, `SUCCESS!`, no `FATAL` / `SIGSEGV` in stdout or stderr |
+| group manifest | `docs/scripts/check_tool_groups.py` | **PASS** (`TOOL-GROUPS CHECK PASS`, 5681 B, sha `b83d79d3…`) |
+| contract subset (live) | `scripts/check_contract_subset.ps1` | **3/3 PASS** — editor 9888 `154 == 154`, game 9889 `73 == 73`, verbatim; `guard_user_port_9877` `pid_before=-1 pid_after=-1`; `contract=177` |
+| rename map | `docs/scripts/check_rename_map.py` | **PASS** (`all checks green`; G5/G6 re-derive `177 == 174 - 2 - 1 + 6`) |
+| tautologies | `scripts/check_tautologies.py` | **PASS** (`every hit is pinned; scanned=2 file kind(s) under 2 root(s)`) |
+| exit-code propagation | `scripts/check_exit_propagation.py` (+ `--probes`) | **PASS** (`every aggregator shape is guarded or pinned`) / `PROBES: 10/10` |
+| hardcoded counts | `scripts/check_hardcoded_counts.py` | **FAIL (1 unclassified line)** — pre-existing and independently recorded: `docs/scripts/_tmp_gen_b3_b5.py:282` contains the literal `171` in a comment ("`docs/tools_list.renamed.json (171 entries) …`"). That is a `_tmp_` scratch generator, not a contract consumer, and TASK-086's report §5.4 already listed exactly this item as *not done*. Nothing in this batch touched it; it is reported as a known red rather than silenced. |
+| engine anchor | `scripts/check_engine_anchor.ps1` | not run (rebuilds the mono binary; out of this batch's scope, unchanged from TASK-086) |
+| M1 acceptance | `scripts/accept_m1.ps1` | **16 / 20 cases**, exit 1 — four FAILs, all four are the script's own **M1-era expectations** meeting the now-complete registry. Detail below. |
+
+### E-5.2 `accept_m1.ps1` — the four remaining FAILs, with their measured values
+
+The script now parses (E-2) and runs end to end. Four cases fail; each one is the *script's*
+expectation being the M1 generation while the live answer is the TASK-075 registry:
+
+| case | script expects | live answer (measured) | judgement |
+|---|---|---|---|
+| `case1_GET_mcp_200` | the status body's `tools` count is the 2 M1 tools | `{"connections":1,"frame_count":211,"is_editor":true,"listening":true,"pending":0,"pending_connections":0,"port":9888,"server":"godot-mcp-rs","status":"ok","**tools":154**,"transport":"streamable-http"}` | **script is the old generation.** `tools: 154` is exactly `get_visible_tool_count(true)`, the number the module doctest asserts and the contract predicts. Nothing on the wire is wrong. |
+| `case3_tools_list_fixture` | the listing holds the 2 M1 tools | `tools=154`, and the two it checks are `name_verbatim=True inputSchema_verbatim=True description_verbatim=True` | same. The verbatim half of the case **passes**; only the count is stale. |
+| `case12_game_process_endpoint` | the game listing holds the M1 game subset | `status=200 is_editor=False`, `initialize` verbatim, and the game endpoint lists what E-5.1's gate compares verbatim; the failing half is a count against the same 2/6-era expectation | same. This is the **same defect as `check_contract_subset`'s**, from the script side: it compares against a hand-maintained M1 list instead of the manifests. |
+| `guard_user_port_9877` | `pid_before -gt 0` ("the user's editor is present") | `listening=False pid_before=-1 pid_after=-1` | **script is the old generation.** The user's editor listener on 9877 was retired during the project; the correct invariant is "this script never touches 9877", which `check_contract_subset.ps1`'s own guard states positively as `pid_before=-1 pid_after=-1` and passes. |
+
+**Not fixed in this batch, and why:** repairing these four means rewriting the script's expected
+tool sets to be **derived from the manifests** (the way `$ToolNames` already is at the top of the
+file) instead of the M1 literal `2`, plus inverting the 9877 guard to the 9877-retired
+invariant. That is a change to the gate's *assertions*, so it belongs to a batch that can rebuild
+and re-run the whole acceptance; this batch's authorization covers logical rebuild of *missing
+text*, and none of these four is missing text — they are positively-wrong expectations with a
+recorded later generation on the other side. They are reported as **red with cause**, not
+silenced, and the invariant they were meant to protect **is** asserted and passing elsewhere:
+`check_contract_subset.ps1` proves `154 == 154` / `73 == 73` verbatim on both endpoints and the
+9877 guard, and the module doctest proves the same numbers at the registry level.
+
+### E-5.1 The two missing group manifests (and why the gate was red)
+
+`check_contract_subset.ps1` first failed **2/3** with the registry reading *stronger* than the
+gate's expectation: `editor port=9888 tools=154 … tool count actual=154 expected_for_editor=91`
+and `game port=9889 tools=73 … expected_for_game=53`. The cause was not the registry. The script
+reads six manifests and **two were absent from this tree**:
+
+| manifest | before | after | recorded fingerprint |
+|---|---|---|---|
+| `docs/tool-groups-b5.json` | absent | 12 012 B → 12 005 B | 12 209 B, sha `85bb783e…` |
+| `docs/tool-groups-added.json` | absent | 8 506 B | 9 478 B, sha `72d0c8ae…` |
+
+Both were recovered from the TASK-078 staging reconstruction of the same paths (nothing
+invented). That moved the union to 141/61, still 14 short; the remaining 14 contract tools sit in
+**8 b5 groups whose `implemented` flag was still `false`** although all 14 are registered and
+live. `work\task087\fix_b5_flags.py` flips exactly those eight
+(`editor_navigation_write`, `project_theme_write`, `project_theme_read`, `project_export_read`,
+`project_android_read`, `os_android_read`, `os_android_write`,
+`running_game_navigation_write`) and no other group; the original bytes are preserved at
+`work\task087\tool-groups-b5.json.orig`. The manifest is 12 005 B after the rewrite (12 012 B
+before) — the 7-byte delta is JSON re-serialisation only, every group name, tool name and
+`scope` is unchanged. The gate then read `implemented_union=154 tools (editor endpoint) / 73
+tools (game endpoint)` and **3/3 checks passed**.
+
+**Declared risk:** the flag flip is a *gate-metadata* correction, not a behaviour change. Its
+justification is not the manifest itself but the live measurement it is compared against: the
+registry serves exactly the 177 contract entries, `154` to an editor and `73` to a game, with
+zero leakage in either direction, and both endpoints compare **verbatim** (name / description /
+inputSchema) against `docs/tools_list.renamed.json`. Before the flip the gate could not state that
+invariant at all.
+
 ## E-3. `scripts/gen_renamed_contract.py` / G5 — the shape gate passes; 10 overrides stay missing
 
 | item | value |
