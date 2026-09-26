@@ -1766,7 +1766,7 @@
         "name": "editor_list_signal_connections"
       },
       {
-        "description": "批量添加节点到场景",
+        "description": "批量添加节点到场景 默认在目标父节点下已存在同名子节点（或本批内同一父节点下重名）时整批拒绝，回 -32000，data.conflicts 列出冲突节点路径、data.suggestion 给出改法，一个节点都不写入——不会把新节点交给引擎改名后与既有节点一起留在场景里。确有需要时用 on_name_conflict=\"rename\" 显式接受引擎改名，响应在 created[i].name_conflict / renamed_count / renamed[] 里说明哪些节点被改名；editor_save_scene 之后仍会报告这些由本模块批量添加产生的同名重复。",
         "inputSchema": {
           "properties": {
             "nodes": {
@@ -1796,6 +1796,15 @@
                 "type": "object"
               },
               "type": "array"
+            },
+            "on_name_conflict": {
+              "default": "refuse",
+              "description": "同名冲突策略。默认 \"refuse\"：本批任一元素的 name 在目标父节点下已存在（或与本批更早元素在该父节点下重名）时整批拒绝、什么都不写入，回 -32000，data.conflicts 给出冲突节点路径清单，data.suggestion 给出改法——绝不把新节点交给引擎改名后与既有节点一起留在场景里（那正是 editor_save_scene 把整份副本写进 .tscn、副本绘制在真实节点上层的成因）。\"rename\" 是显式开关，保留引擎自己的重名改名行为（新节点成为 @Type@N），响应在 created[i].name_conflict=\"renamed\"、renamed_count 与 renamed[] 里说明哪些节点被改名，editor_save_scene 随后仍会报告这些由本模块批量添加产生的同名重复。",
+              "enum": [
+                "refuse",
+                "rename"
+              ],
+              "type": "string"
             },
             "resolve_within_batch": {
               "default": false,
@@ -4068,10 +4077,16 @@
         "reason": "TASK-051 O-9 顺手性（racing-backlog 审计 §5.9 confirmed；D86 复测见 REPORT-051 §2.2）：新增可选字符串参数 scope（枚举 all/user/internal，默认 \"all\"）。实测一个 5 节点、用户一条连接都没连的小场景，{} 请求返回 60/60 条、12 659 B，且 60 条全是编辑器内部方法（ScriptEditor::_queue_update_list、SceneTreeEditor::_node_script_changed、Viewport::canvas_parent_mark_dirty…）；内部连接的 source 也是普通场景节点路径，所以 node_path/signal_name 都过滤不掉它们，唯一能区分的是 method（引擎对 MethodBind 型 Callable 的拼写是 Class::method）。scope=user 只保留 method 不含 :: 的连接（场景/脚本自己连的），scope=internal 只保留引擎/编辑器内部连接；默认 all 与本工具旧答案逐字相同。signal_name 的子串过滤**刻意不改**：它是与 editor_analyze_signal_flow（精确 node_path）之间的冻结判别点（GDR-17 / R-1）。被移除的 required 成员逐字为 []（该 schema 本来就没有必填参数，“移除”的是一个空列表）；node_path 与 signal_name 两个属性（type/description）一字未动，只新增 scope 一个属性。"
       },
       {
+        "kind": "description",
+        "old_name": "batch_add_nodes",
+        "mode": "append",
+        "reason": "TASK-097（工具缺陷 D-3，根因见 MCP-TRACEABILITY.md §7）：旧描述只写「批量添加节点到场景」，既没有说同名冲突会怎样，也没有说默认会拒绝。D-3 的实测成因是：目标父节点下已有同名子节点时，旧实现既不拒绝也不报告，Godot 把新节点自动改名成 @Type@N，随后 editor_save_scene 把两份都写进 .tscn，副本排在树最后、绘制在真实节点之上（pong 5 / breakout 18 / snake 37 个副本由此而来，也是像素差列「不可得（D-1）」的真因）。本任务把默认行为改成拒绝，并加显式开关。原文逐字保留在句首（追加式 override）。"
+      },
+      {
         "kind": "inputSchema",
         "old_name": "batch_add_nodes",
         "mode": "replace",
-        "reason": "TASK-051 C-3 顺手性（racing-backlog 审计 §4.3 confirmed；D86 复测见 REPORT-051 §2.1）：新增可选布尔参数 resolve_within_batch（默认 false）。缺陷的源码位置是 tools/editor_node_batch_write.cpp:251-258 —— 父路径在**构造之前**用 find_node() 按“调用到达时的场景树”解析，于是 nodes[1].parent_path=\"P1\"（P1 由同批 nodes[0] 创建）报 -32001「nodes[1]: parent 'P1'」并把整批回滚；绕法是每深一层多一次调用（审计 A06-A09 实测）。为 true 时父路径可以指向本批更早的元素所创建的节点，同时把「同批重名」「指向更后面元素的父路径」明确拒绝，并且失败仍然整批回滚（既有语义不变）；响应在每个 created 元素上给出 parent_source（scene/batch）。被移除的 required 成员逐字为 [\"nodes\"]（原样保留，未删任何成员）；nodes 属性一字未动（它的 type/description，以及 items 的 properties/required/type 与其中四个成员的 type/description，全部逐字保留），只新增 resolve_within_batch 一个属性。"
+        "reason": "TASK-051 C-3 顺手性（racing-backlog 审计 §4.3 confirmed；D86 复测见 REPORT-051 §2.1）：新增可选布尔参数 resolve_within_batch（默认 false）。缺陷的源码位置是 tools/editor_node_batch_write.cpp:251-258 —— 父路径在**构造之前**用 find_node() 按“调用到达时的场景树”解析，于是 nodes[1].parent_path=\"P1\"（P1 由同批 nodes[0] 创建）报 -32001「nodes[1]: parent 'P1'」并把整批回滚；绕法是每深一层多一次调用（审计 A06-A09 实测）。为 true 时父路径可以指向本批更早的元素所创建的节点，同时把「同批重名」「指向更后面元素的父路径」明确拒绝，并且失败仍然整批回滚（既有语义不变）；响应在每个 created 元素上给出 parent_source（scene/batch）。被移除的 required 成员逐字为 [\"nodes\"]（原样保留，未删任何成员）；nodes 属性一字未动（它的 type/description，以及 items 的 properties/required/type 与其中四个成员的 type/description，全部逐字保留），只新增 resolve_within_batch 一个属性。TASK-097（工具缺陷 D-3）：再新增可选字符串参数 on_name_conflict（默认 \"refuse\"，枚举 [\"refuse\", \"rename\"]）。D-3 的成因是「目标父节点下已有同名子节点」时旧实现既不拒绝也不报告，Godot 按既有规则把新节点自动改名成 @Type@N，随后 editor_save_scene 把两份都写进 .tscn，副本排在树最后、绘制在真实节点之上（pong 5 / breakout 18 / snake 37 个副本即由此而来）。默认 \"refuse\" 时不写入任何节点，回 -32000，data.conflicts 列出冲突节点路径、data.suggestion 给出改法；\"rename\" 是显式开关，保留引擎改名行为并在 created[i].name_conflict / renamed_count / renamed[] 里说明。同一次修改对 required 成员仍是 [\"nodes\"]（逐字保留，未删任何成员），nodes 属性仍一字未动。"
       },
       {
         "kind": "description",

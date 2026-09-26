@@ -84,7 +84,46 @@ struct _PendingNode {
 	// request* prepared (so it is still detached and `relative_path()` cannot
 	// answer for it), false when it came out of the scene tree.
 	bool parent_from_batch = false;
+	// TASK-097 (D-3): the name the caller asked for, kept after `set_name()` so
+	// the commit phase can tell "the engine stored my name" from "the engine
+	// renamed it because the name was taken"; `name_conflict_with` is the node
+	// that already carried the name (`nullptr` when the divergence has another
+	// cause, e.g. `Node::set_name()` sanitising a path separator).
+	String requested_name;
+	Node *name_conflict_with = nullptr;
 };
+
+// ---------------------------------------------------------------------------
+// TASK-097 (tool defect D-3): the duplicate generations this session's batches
+// created, so `editor_save_scene` can report them instead of saving silently.
+//
+// The record is written at commit time, and only for a node the engine had to
+// rename **because a sibling already carried the requested name**. A caller who
+// passes `on_name_conflict: "rename"` is the only way this can happen after this
+// task, and the pair (the renamed node, the node that kept the name) is what
+// `duplicate_name_conflicts_on()` re-validates against the live tree before it
+// answers: if either node was deleted, or the two are no longer siblings, the
+// record is dropped, so the answer is always a statement about the tree in front
+// of the caller rather than about history.
+// ---------------------------------------------------------------------------
+namespace {
+struct _NameConflictRecord {
+	ObjectID scene_root;
+	ObjectID added;
+	ObjectID existing;
+	String requested_name;
+	String parent_path;
+	String added_path;
+	String existing_path;
+};
+
+Vector<_NameConflictRecord> _batch_name_conflicts;
+
+Node *_name_conflict_instance(const ObjectID &p_id) {
+	return Object::cast_to<Node>(ObjectDB::get_instance(p_id));
+}
+} // namespace
+
 
 // TASK-051 C-3: the path a prepared-but-not-yet-attached node will have once the
 // commit phase attaches it. This is the expression the prepare phase always
@@ -235,9 +274,16 @@ static MCPToolError _attach_batch_envelope(MCPToolError p_error, const Dictionar
 
 // Rolls the prepare phase back (reverse order, `memdelete`, nothing is attached
 // yet) and builds the single refusal of the call.
+//
+// TASK-097: `p_extra_data` is an optional additional `error.data` bag (the
+// name-conflict refusal attaches `conflicts` and `on_name_conflict` through it).
+// It is merged *before* `_attach_batch_envelope` writes `suggestion` and `batch`,
+// so those two keys keep the meaning they have on every other refusal of this
+// tool.
 static Variant _transaction_fail(Vector<_PendingNode> &p_pending, MCPToolError &r_error,
 		int p_index, const String &p_type, const String &p_property, const String &p_parent_path,
-		const String &p_reason, int p_code, const String &p_message, const String &p_suggestion) {
+		const String &p_reason, int p_code, const String &p_message, const String &p_suggestion,
+		const Dictionary &p_extra_data = Dictionary()) {
 	Array rolled_back;
 	for (int i = p_pending.size() - 1; i >= 0; i--) {
 		Dictionary entry;
@@ -267,6 +313,17 @@ static Variant _transaction_fail(Vector<_PendingNode> &p_pending, MCPToolError &
 			error = MCPToolError::invalid_params(p_message);
 			break;
 	}
+	if (!p_extra_data.is_empty()) {
+		Dictionary data;
+		if (error.data.get_type() == Variant::DICTIONARY) {
+			data = error.data;
+		}
+		const Array extra_keys = p_extra_data.keys();
+		for (int i = 0; i < extra_keys.size(); i++) {
+			data[extra_keys[i]] = p_extra_data[extra_keys[i]];
+		}
+		error.data = data;
+	}
 	r_error = _attach_batch_envelope(error, _rollback_envelope(errors, rolled_back), p_suggestion);
 	return Variant();
 }
@@ -274,6 +331,71 @@ static Variant _transaction_fail(Vector<_PendingNode> &p_pending, MCPToolError &
 static const char *const BATCH_ROLLBACK_SUGGESTION =
 		"editor_add_nodes_batch is all-or-nothing: no node of the request was added. Fix the element the message names "
 		"(or split the request into calls that each succeed) and call the tool again.";
+
+// TASK-097 (D-3): the child of `p_parent` whose name is exactly `p_name`, or
+// `nullptr`. A linear scan deliberately: `Node::get_node_or_null(NodePath(...))`
+// would parse the requested name as a path (`a/b` is a child of `a`), and the
+// question here is the engine's own uniqueness question, which
+// `Node::_validate_child_name()` answers against `data.children` by name.
+static Node *_child_named(Node *p_parent, const String &p_name) {
+	const int count = p_parent->get_child_count();
+	for (int i = 0; i < count; i++) {
+		Node *child = p_parent->get_child(i);
+		if (String(child->get_name()) == p_name) {
+			return child;
+		}
+	}
+	return nullptr;
+}
+
+// TASK-097 (D-3): every element whose requested `name` the target parent already
+// carries, collected **before** the prepare phase allocates anything, so the
+// refusal can name the whole list instead of only the first offender. Elements
+// this pass cannot judge are simply skipped - a malformed element, an element
+// without a name, and an element whose `parent_path` only a same-request element
+// provides are all reported by the prepare phase, which owns those refusals.
+static Array _collect_scene_name_conflicts(Node *p_root, const Array &p_nodes) {
+	Array conflicts;
+	for (int i = 0; i < p_nodes.size(); i++) {
+		const Variant element = p_nodes[i];
+		if (element.get_type() != Variant::DICTIONARY) {
+			continue;
+		}
+		const Dictionary entry = element;
+		const Variant name_value = entry.get("name", Variant());
+		if (name_value.get_type() != Variant::STRING || String(name_value).is_empty()) {
+			continue;
+		}
+		String parent_path = ".";
+		const Variant parent_value = entry.get("parent_path", Variant());
+		if (parent_value.get_type() == Variant::STRING && !String(parent_value).strip_edges().is_empty()) {
+			parent_path = parent_value;
+		}
+		Node *parent = find_node(p_root, parent_path);
+		if (parent == nullptr) {
+			continue;
+		}
+		const String requested = name_value;
+		Node *clashing = _child_named(parent, requested);
+		if (clashing == nullptr) {
+			continue;
+		}
+		const Variant type_value = entry.get("type", Variant());
+		const String parent_relative = (parent == p_root) ? String(".") : relative_path(p_root, parent);
+		Dictionary conflict;
+		conflict["index"] = i;
+		conflict["type"] = (type_value.get_type() == Variant::STRING) ? String(type_value) : String();
+		conflict["requested_name"] = requested;
+		conflict["parent_path"] = parent_path;
+		// The path the caller asked for and the path that already answers to it:
+		// both are named, because "which node do I mean" is the whole question.
+		conflict["node_path"] = _pending_path_for(parent_relative, requested);
+		conflict["existing_node_path"] = relative_path(p_root, clashing);
+		conflict["existing_type"] = clashing->get_class();
+		conflicts.push_back(conflict);
+	}
+	return conflicts;
+}
 
 // ---------------------------------------------------------------------------
 // MCPTools:: the testable entry points.
@@ -295,10 +417,55 @@ void collect_nodes_by_type(Node *p_root, const String &p_type, Vector<Node *> &r
 }
 
 Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_error,
-		bool p_resolve_within_batch) {
+		bool p_resolve_within_batch, const String &p_on_name_conflict) {
 	if (p_nodes.is_empty()) {
 		r_error = MCPToolError::invalid_params("Parameter 'nodes' must be a non-empty array");
 		return Variant();
+	}
+
+	// TASK-097 (D-3): the name-conflict policy. `"rename"` is the explicit
+	// opt-in that keeps the engine's own behaviour; everything else is the safe
+	// default and the tool's own argument guard has already narrowed the value to
+	// the two legal spellings, so an unknown value here can only come from a
+	// caller that bypassed the tool layer - treat it as the safe default.
+	//
+	// The scene-tree half of the check runs **before** the prepare phase: nothing
+	// has been allocated yet, so the refusal can carry the complete list of
+	// conflicts and the rollback envelope is empty because there is nothing to
+	// roll back.
+	const bool refuse_name_conflicts = p_on_name_conflict != String("rename");
+	if (refuse_name_conflicts) {
+		const Array conflicts = _collect_scene_name_conflicts(p_root, p_nodes);
+		if (!conflicts.is_empty()) {
+			String joined;
+			for (int i = 0; i < conflicts.size(); i++) {
+				const Dictionary conflict = conflicts[i];
+				if (i > 0) {
+					joined += ", ";
+				}
+				joined += String(conflict["node_path"]);
+			}
+			const Dictionary first = conflicts[0];
+			const String message = vformat(
+					"Refused: %d node(s) of this batch would duplicate a name that already exists under the target parent (%s)",
+					conflicts.size(), joined);
+			const String reason = vformat(
+					"nodes[%d] asks for the name '%s' under '%s', and '%s' already answers to it",
+					(int)first["index"], String(first["requested_name"]), String(first["parent_path"]),
+					String(first["existing_node_path"]));
+			const String suggestion =
+					"Nothing was written: the nodes named in 'conflicts' already exist, so the engine would have renamed the "
+					"new nodes to '@Type@N' and editor_save_scene would then have written BOTH copies into the scene (the "
+					"duplicate draws on top of the real node). Either drop the conflicting elements and change the existing "
+					"nodes with editor_set_node_property / editor_set_node_property_batch, or pass on_name_conflict: \"rename\" "
+					"to accept the engine's rename explicitly - the answer then lists every renamed node in 'renamed'.";
+			Dictionary extra;
+			extra["conflicts"] = conflicts;
+			extra["on_name_conflict"] = "refuse";
+			Vector<_PendingNode> nothing;
+			return _transaction_fail(nothing, r_error, (int)first["index"], String(first["type"]), String(),
+					String(first["parent_path"]), reason, MCP_ERR_TOOL_STATE, message, suggestion, extra);
+		}
 	}
 
 	Vector<_PendingNode> pending;
@@ -422,7 +589,15 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 		// is an `ERR_FAIL_COND` (scene/main/node.cpp:1441), and an unnamed node
 		// gets the engine's own `@Type@N` name on `add_child` - which is what the
 		// migration source's `if !node_name.is_empty()` produced.
+		//
+		// TASK-097 (D-3): the sibling that already carries the requested name is
+		// looked up *before* the name is applied, because that lookup is what
+		// tells the commit phase "the engine renamed this node because the name
+		// was taken" apart from every other reason a name can move
+		// (`Node::set_name()` also sanitises `/`, `:`, `@`, `.` and `"`).
+		Node *name_conflict_with = nullptr;
 		if (!requested_name.is_empty()) {
+			name_conflict_with = _child_named(parent, requested_name);
 			node->set_name(requested_name);
 		}
 
@@ -452,15 +627,24 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 		prepared.actual_class = node->get_class();
 		prepared.requested_parent_path = parent_path;
 		prepared.parent_from_batch = parent_from_batch;
+		prepared.requested_name = requested_name;
+		prepared.name_conflict_with = name_conflict_with;
 		const String actual_name = String(node->get_name());
 		prepared.pending_path = _pending_path_for(parent_relative, actual_name);
 
 		// TASK-051 C-3: in the new mode a duplicate path inside one request is a
 		// conflict, not an engine rename. The second element would silently
 		// become a node whose name is not the one it asked for, and a later
-		// element naming that path could not tell the two apart. The default mode
-		// keeps the engine's own rename (the existing doctest pins it).
-		if (p_resolve_within_batch && !prepared.pending_path.is_empty()) {
+		// element naming that path could not tell the two apart.
+		//
+		// TASK-097 (D-3): from this task on, the **default** policy refuses that
+		// shape too. Two elements of one request asking for the same path under
+		// the same parent is the same duplicate-generation bug as a name the
+		// scene already carries - the engine renames the second one to
+		// `@Type@N`, and `editor_save_scene` writes both. The engine's own rename
+		// is still reachable, but it has to be asked for twice: `on_name_conflict`
+		// `"rename"` *and* `resolve_within_batch` (whose rule this was).
+		if ((p_resolve_within_batch || refuse_name_conflicts) && !prepared.pending_path.is_empty()) {
 			for (int p = 0; p < pending.size(); p++) {
 				if (pending[p].pending_path != prepared.pending_path) {
 					continue;
@@ -480,6 +664,7 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 
 	// Commit phase: attach in input order, then read the real name and path back.
 	Array created;
+	Array renamed;
 	for (int i = 0; i < pending.size(); i++) {
 		const _PendingNode &prepared = pending[i];
 		prepared.parent->add_child(prepared.node);
@@ -498,6 +683,35 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 		// feeding `node_path` back into another tool needs that distinction.
 		entry["parent_source"] = prepared.parent_from_batch ? "batch" : "scene";
 		entry["node_path"] = relative_path(p_root, prepared.node);
+		// TASK-097 (D-3): a name the engine moved is reported on the element it
+		// happened to, so a `"rename"` call cannot be read as "the names I asked
+		// for are the names I got".
+		const String actual_name = String(prepared.node->get_name());
+		if (!prepared.requested_name.is_empty() && actual_name != prepared.requested_name) {
+			entry["requested_name"] = prepared.requested_name;
+			entry["name_conflict"] = "renamed";
+			Dictionary rename;
+			rename["index"] = prepared.index;
+			rename["requested_name"] = prepared.requested_name;
+			rename["name"] = actual_name;
+			rename["node_path"] = relative_path(p_root, prepared.node);
+			if (prepared.name_conflict_with != nullptr) {
+				entry["conflicting_node_path"] = relative_path(p_root, prepared.name_conflict_with);
+				rename["conflicting_node_path"] = entry["conflicting_node_path"];
+				// The record `editor_save_scene` reports from: this node exists
+				// only because the name it asked for was taken.
+				_NameConflictRecord record;
+				record.scene_root = p_root->get_instance_id();
+				record.added = prepared.node->get_instance_id();
+				record.existing = prepared.name_conflict_with->get_instance_id();
+				record.requested_name = prepared.requested_name;
+				record.parent_path = prepared.requested_parent_path;
+				record.added_path = relative_path(p_root, prepared.node);
+				record.existing_path = relative_path(p_root, prepared.name_conflict_with);
+				_batch_name_conflicts.push_back(record);
+			}
+			renamed.push_back(rename);
+		}
 		created.push_back(entry);
 	}
 
@@ -509,7 +723,62 @@ Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_e
 	// TASK-051 C-3: the mode is echoed so a caller (and a doctest) can read back
 	// which parent-resolution rule the answer was produced under.
 	result["resolve_within_batch"] = p_resolve_within_batch;
+	// TASK-097 (D-3): the name-conflict policy is echoed for the same reason, and
+	// `renamed` / `renamed_count` make the auto-renames this call was allowed to
+	// produce impossible to miss (an empty list means every requested name was
+	// stored as asked).
+	result["on_name_conflict"] = p_on_name_conflict;
+	result["renamed"] = renamed;
+	result["renamed_count"] = renamed.size();
 	return result;
+}
+
+Array duplicate_name_conflicts_on(Node *p_root) {
+	Array out;
+	if (p_root == nullptr) {
+		return out;
+	}
+	const ObjectID root_id = p_root->get_instance_id();
+	for (int i = _batch_name_conflicts.size() - 1; i >= 0; i--) {
+		const _NameConflictRecord &record = _batch_name_conflicts[i];
+		if (record.scene_root != root_id) {
+			continue;
+		}
+		Node *added = _name_conflict_instance(record.added);
+		Node *existing = _name_conflict_instance(record.existing);
+		// Stale records are dropped rather than reported: the answer describes
+		// the tree in front of the caller, so a pair that is no longer a pair of
+		// siblings under one parent (or whose nodes are gone) is not a duplicate
+		// any more.
+		if (added == nullptr || existing == nullptr || added->get_parent() == nullptr ||
+				added->get_parent() != existing->get_parent()) {
+			_batch_name_conflicts.remove_at(i);
+			continue;
+		}
+		Dictionary entry;
+		entry["requested_name"] = record.requested_name;
+		entry["parent_path"] = relative_path(p_root, added->get_parent());
+		entry["added_name"] = String(added->get_name());
+		entry["added_path"] = relative_path(p_root, added);
+		entry["existing_name"] = String(existing->get_name());
+		entry["existing_path"] = relative_path(p_root, existing);
+		entry["existing_type"] = existing->get_class();
+		out.push_back(entry);
+	}
+	return out;
+}
+
+void forget_name_conflicts_for(Node *p_root) {
+	if (p_root == nullptr) {
+		_batch_name_conflicts.clear();
+		return;
+	}
+	const ObjectID root_id = p_root->get_instance_id();
+	for (int i = _batch_name_conflicts.size() - 1; i >= 0; i--) {
+		if (_batch_name_conflicts[i].scene_root == root_id) {
+			_batch_name_conflicts.remove_at(i);
+		}
+	}
 }
 
 Variant set_node_property_batch_on(Node *p_root, const String &p_node_type, const String &p_property,
@@ -647,9 +916,18 @@ Variant set_node_property_batch_on(Node *p_root, const String &p_node_type, cons
 //
 // Wire shape of a rolled-back call (the decision recorded in REPORT-017):
 //   * `error.code`  - `-32602` for a shape/type violation, `-32001` for a
-//     missing parent or property;
-//   * `error.message` - a readable message naming the element index;
-//   * `error.data.suggestion` - the rollback explanation;
+//     missing parent or property, `-32000` for a name the target parent already
+//     carries (TASK-097 D-3: the call is well formed and legal, the *state* is
+//     what refuses it - the same reading `project_text_write.cpp` records for
+//     "the destination exists and `overwrite` is false");
+//   * `error.message` - a readable message naming the element index (and, for a
+//     name conflict, every conflicting node path);
+//   * `error.data.suggestion` - the rollback explanation (for a name conflict:
+//     the two legal fixes, including `on_name_conflict: "rename"`);
+//   * `error.data.conflicts` - only for a name conflict: one
+//     `{index,type,requested_name,parent_path,node_path,existing_node_path,
+//     existing_type}` per offending element;
+//   * `error.data.on_name_conflict` - the policy the refusal was produced under;
 //   * `error.data.batch` - `{"status":"rolled_back","created":[],"count":0,
 //     "errors":[{index,type,property,parent_path,reason}],
 //     "rolled_back":[{index,type,node_path,reason}],"on_error":"all_or_nothing"}`;
@@ -679,6 +957,21 @@ static Variant _tool_add_nodes_batch(const Dictionary &p_args, MCPToolError &r_e
 	if (!optional_bool(p_args, "resolve_within_batch", false, resolve_within_batch, r_error)) {
 		return Variant();
 	}
+	// TASK-097 (D-3): the name-conflict policy is read (and a present-but-wrong
+	// value refused) *before* the editor guard, for the reason the mode above is:
+	// a mistyped `on_name_conflict` must be a `-32602` in every process rather
+	// than a `-32000` that hides it (PLAYBOOK section 6.2). The default is
+	// `"refuse"`, so a caller that says nothing never gets the engine's silent
+	// duplicate generation.
+	String on_name_conflict = "refuse";
+	if (!optional_string(p_args, "on_name_conflict", "refuse", on_name_conflict, r_error)) {
+		return Variant();
+	}
+	if (on_name_conflict != "refuse" && on_name_conflict != "rename") {
+		r_error = MCPToolError::invalid_params(vformat(
+				"'on_name_conflict' must be \"refuse\" or \"rename\", got \"%s\"", on_name_conflict));
+		return Variant();
+	}
 	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
 				"Start the MCP server inside the Godot editor to write editor state")) {
 		return Variant();
@@ -688,7 +981,7 @@ static Variant _tool_add_nodes_batch(const Dictionary &p_args, MCPToolError &r_e
 		r_error = MCPToolError::no_scene();
 		return Variant();
 	}
-	return add_nodes_batch_on(root, nodes, r_error, resolve_within_batch);
+	return add_nodes_batch_on(root, nodes, r_error, resolve_within_batch, on_name_conflict);
 }
 
 // ---------------------------------------------------------------------------
@@ -751,9 +1044,9 @@ static Dictionary _schema_from_json(const char *p_json) {
 
 void register_editor_node_batch_write_tools(MCPToolRegistry &r_registry) {
 	{
-		ToolBuilder builder("editor_add_nodes_batch", String::utf8(R"desc(批量添加节点到场景)desc"));
+		ToolBuilder builder("editor_add_nodes_batch", String::utf8(R"desc(批量添加节点到场景 默认在目标父节点下已存在同名子节点（或本批内同一父节点下重名）时整批拒绝，回 -32000，data.conflicts 列出冲突节点路径、data.suggestion 给出改法，一个节点都不写入——不会把新节点交给引擎改名后与既有节点一起留在场景里。确有需要时用 on_name_conflict="rename" 显式接受引擎改名，响应在 created[i].name_conflict / renamed_count / renamed[] 里说明哪些节点被改名；editor_save_scene 之后仍会报告这些由本模块批量添加产生的同名重复。)desc"));
 		builder.channel("editor").verb("add").scope(MCPToolScope::EDITOR).mutating(true);
-		builder.schema(_schema_from_json(R"schema({"type":"object","properties":{"nodes":{"description":"节点数组，每个元素包含 type（必填）、parent_path、name、properties","items":{"properties":{"name":{"description":"节点名称","type":"string"},"parent_path":{"description":"父节点路径，默认 \".\"","type":"string"},"properties":{"description":"要设置的属性字典","type":"object"},"type":{"description":"节点类型","type":"string"}},"required":["type"],"type":"object"},"type":"array"},"resolve_within_batch":{"default":false,"description":"为 true 时元素的 parent_path 可以指向**本批更早的元素**所创建的节点（同一个请求里建父子树）。父元素必须排在子元素之前，父路径指向更后面的元素会被拒绝（父/子循环在按数组顺序应用时就是这个形状）；同一父节点下、同一批内重名会被拒绝（默认 false 时保留引擎自己的重命名）——两种拒绝都仍然整批回滚。默认 false：父路径只按调用到达时的场景树解析，与旧行为逐字相同。响应在每个 created 元素上给出 parent_source（scene/batch），说明父节点来自场景树还是本批","type":"boolean"}},"required":["nodes"]})schema"));
+		builder.schema(_schema_from_json(R"schema({"properties":{"nodes":{"description":"节点数组，每个元素包含 type（必填）、parent_path、name、properties","items":{"properties":{"name":{"description":"节点名称","type":"string"},"parent_path":{"description":"父节点路径，默认 \".\"","type":"string"},"properties":{"description":"要设置的属性字典","type":"object"},"type":{"description":"节点类型","type":"string"}},"required":["type"],"type":"object"},"type":"array"},"on_name_conflict":{"default":"refuse","description":"同名冲突策略。默认 \"refuse\"：本批任一元素的 name 在目标父节点下已存在（或与本批更早元素在该父节点下重名）时整批拒绝、什么都不写入，回 -32000，data.conflicts 给出冲突节点路径清单，data.suggestion 给出改法——绝不把新节点交给引擎改名后与既有节点一起留在场景里（那正是 editor_save_scene 把整份副本写进 .tscn、副本绘制在真实节点上层的成因）。\"rename\" 是显式开关，保留引擎自己的重名改名行为（新节点成为 @Type@N），响应在 created[i].name_conflict=\"renamed\"、renamed_count 与 renamed[] 里说明哪些节点被改名，editor_save_scene 随后仍会报告这些由本模块批量添加产生的同名重复。","enum":["refuse","rename"],"type":"string"},"resolve_within_batch":{"default":false,"description":"为 true 时元素的 parent_path 可以指向**本批更早的元素**所创建的节点（同一个请求里建父子树）。父元素必须排在子元素之前，父路径指向更后面的元素会被拒绝（父/子循环在按数组顺序应用时就是这个形状）；同一父节点下、同一批内重名会被拒绝（默认 false 时保留引擎自己的重命名）——两种拒绝都仍然整批回滚。默认 false：父路径只按调用到达时的场景树解析，与旧行为逐字相同。响应在每个 created 元素上给出 parent_source（scene/batch），说明父节点来自场景树还是本批","type":"boolean"}},"required":["nodes"],"type":"object"})schema"));
 		builder.handler(_tool_add_nodes_batch).register_into(r_registry);
 	}
 

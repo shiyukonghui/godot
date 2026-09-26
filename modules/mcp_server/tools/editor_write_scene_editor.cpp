@@ -29,6 +29,12 @@
 /**************************************************************************/
 #include "editor_write_scene_editor.h"
 
+// TASK-097 (D-3): `duplicate_name_conflicts_on()` - the duplicates this
+// session's `editor_add_nodes_batch` calls produced (only possible when the
+// caller opted into `on_name_conflict: "rename"`). `editor_save_scene` is what
+// turns them from an in-memory pile of nodes into a `.tscn` that draws them on
+// top of the real ones, so this is the tool that has to report them.
+#include "editor_node_batch_write.h"
 #include "tool_builder.h"
 #include "tool_helpers.h"
 
@@ -334,6 +340,34 @@ static Variant _tool_save_scene(const Dictionary &p_args, MCPToolError &r_error)
 	Dictionary result;
 	result["path"] = target;
 	result["saved"] = true;
+	// TASK-097 (D-3): the report that makes this save impossible to perform
+	// silently. The duplicates are the ones a previous `editor_add_nodes_batch`
+	// created under an automatic name because the requested name was already
+	// taken and the caller had opted into `on_name_conflict: "rename"`; they are
+	// siblings of the node that kept the name, so they draw on top of it in the
+	// saved scene. The file IS written - the tree in front of the caller is the
+	// caller's own state, and refusing here would make it impossible to save a
+	// scene that is merely being inspected - but the answer names every pair, and
+	// `editor_delete_node` on each `added_path` is the repair.
+	const Array duplicates = MCPTools::duplicate_name_conflicts_on(root);
+	if (!duplicates.is_empty()) {
+		String listed;
+		for (int i = 0; i < duplicates.size(); i++) {
+			const Dictionary duplicate = duplicates[i];
+			if (i > 0) {
+				listed += ", ";
+			}
+			listed += vformat("%s (duplicate of %s)", String(duplicate["added_path"]), String(duplicate["existing_path"]));
+		}
+		result["duplicates"] = duplicates;
+		result["duplicates_count"] = duplicates.size();
+		result["note"] = vformat(
+				"Saved, but %d node(s) of this scene are duplicates this session's editor_add_nodes_batch created under "
+				"an automatic name, because the requested name was already taken and 'on_name_conflict': \"rename\" was "
+				"passed: %s. They are siblings of the node that kept the name, so they draw on top of it - delete each "
+				"'added_path' with editor_delete_node and save again to remove the layer.",
+				duplicates.size(), listed);
+	}
 	return result;
 #endif
 	return Variant();

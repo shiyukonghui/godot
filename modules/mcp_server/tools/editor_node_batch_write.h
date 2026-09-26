@@ -128,8 +128,48 @@ void collect_nodes_by_type(Node *p_root, const String &p_type, Vector<Node *> &r
 // The transaction itself does not change: a refusal still rolls the whole
 // request back (`error.data.batch.rolled_back`, nothing attached), in either
 // mode.
+//
+// TASK-097 (tool defect D-3): `p_on_name_conflict` decides what a requested
+// `name` means when the target parent already carries it.
+//
+//   * `"refuse"` (**the default**, and the reason this task exists): the whole
+//     request is refused with `-32000`, `error.data.conflicts` names every
+//     offending element (requested name, the path it asked for, the path that
+//     already answers to it), `error.data.suggestion` names the two fixes, and
+//     nothing is written. The same policy refuses two elements of one request
+//     that ask for the same name under the same parent. Before this task the
+//     engine silently renamed such a node to `@Type@N`, and `editor_save_scene`
+//     then wrote *both* copies into the scene (pong 5 / breakout 18 / snake 37
+//     duplicates, drawn on top of the real nodes) - see
+//     `docs/reports/MCP-TRACEABILITY.md` section 7;
+//   * `"rename"`: the explicit opt-in that keeps the engine's own behaviour.
+//     The answer carries `renamed_count` and a `renamed[]` entry per renamed
+//     node (`{index,requested_name,name,node_path,conflicting_node_path}`), plus
+//     `name_conflict: "renamed"` on the `created[]` element itself, so the rename
+//     can never be mistaken for the request having been stored as written. The
+//     pair is remembered for the session, and `duplicate_name_conflicts_on()`
+//     reports it to `editor_save_scene`.
 Variant add_nodes_batch_on(Node *p_root, const Array &p_nodes, MCPToolError &r_error,
-		bool p_resolve_within_batch = false);
+		bool p_resolve_within_batch = false, const String &p_on_name_conflict = String("refuse"));
+
+// TASK-097 (D-3): the duplicates under `p_root` that *this session's*
+// `editor_add_nodes_batch` calls created under an automatic name, because the
+// requested name was already taken and the caller had opted into
+// `on_name_conflict: "rename"`. Returns one
+// `{requested_name,parent_path,added_name,added_path,existing_name,existing_path,
+// existing_type}` per pair that is **still present in the tree**; records whose
+// nodes were deleted or reparented are dropped (and forgotten) instead of being
+// reported, so the answer always describes the tree in front of the caller.
+//
+// This is the report `editor_save_scene` attaches to its result
+// (`duplicates` / `duplicates_count` / `note`), which is what makes the save of
+// a polluted scene impossible to perform *silently*.
+Array duplicate_name_conflicts_on(Node *p_root);
+
+// Forgets the records of `p_root` (all of them when `p_root` is nullptr). Used
+// by the doctests to keep one case's state out of the next one's.
+void forget_name_conflicts_for(Node *p_root);
+
 
 // Applies an `editor_set_node_property_batch` request against `p_root`. Returns
 // the success payload or fills `r_error` and returns nil; a refusal leaves every

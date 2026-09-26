@@ -775,6 +775,32 @@ DESCRIPTION_OVERRIDES = {
         ),
         "value": "在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。",
     },
+    # -----------------------------------------------------------------------
+    # TASK-097 (GENERATOR_VERSION stays "1.22.0": the six shape quantities of
+    # the contract - count 177, added_count 6, generator_version, editor 154,
+    # game 73, idempotency - are unchanged by this task, and the version string
+    # is one of them). The first description override of `batch_add_nodes`,
+    # and it is append-only like every other one in this table: the original
+    # wording ("批量添加节点到场景") stays first and verbatim, the discriminator
+    # sentence is what changed. It exists because the *default behaviour* of
+    # the tool changed: a requested `name` the target parent already carries is
+    # now a refusal (-32000 + `data.conflicts`) instead of a silent duplicate
+    # the engine renames to `@ColorRect@N` and `editor_save_scene` then writes
+    # into the `.tscn` (tool defect D-3; those copies draw on top of the real
+    # nodes). The escape hatch is explicit (`on_name_conflict: "rename"`), so
+    # the description has to name it.
+    # -----------------------------------------------------------------------
+    "batch_add_nodes": {
+        "reason": (
+            "TASK-097（工具缺陷 D-3，根因见 MCP-TRACEABILITY.md §7）：旧描述只写「批量添加节点到场景」，"
+            "既没有说同名冲突会怎样，也没有说默认会拒绝。D-3 的实测成因是：目标父节点下已有同名子节点时，"
+            "旧实现既不拒绝也不报告，Godot 把新节点自动改名成 @Type@N，随后 editor_save_scene 把两份都写进 .tscn，"
+            "副本排在树最后、绘制在真实节点之上（pong 5 / breakout 18 / snake 37 个副本由此而来，"
+            "也是像素差列「不可得（D-1）」的真因）。本任务把默认行为改成拒绝，并加显式开关。"
+            "原文逐字保留在句首（追加式 override）。"
+        ),
+        "value": "批量添加节点到场景 默认在目标父节点下已存在同名子节点（或本批内同一父节点下重名）时整批拒绝，回 -32000，data.conflicts 列出冲突节点路径、data.suggestion 给出改法，一个节点都不写入——不会把新节点交给引擎改名后与既有节点一起留在场景里。确有需要时用 on_name_conflict=\"rename\" 显式接受引擎改名，响应在 created[i].name_conflict / renamed_count / renamed[] 里说明哪些节点被改名；editor_save_scene 之后仍会报告这些由本模块批量添加产生的同名重复。",
+    },
 }
 # v1.5: a schema override replaces the whole `inputSchema` object (there is
 # nothing to append to), so it must carry `"mode": "replace"` and a `reason` that
@@ -1091,6 +1117,13 @@ SCHEMA_OVERRIDES = {
             "响应在每个 created 元素上给出 parent_source（scene/batch）。被移除的 required 成员逐字为 [\"nodes\"]"
             "（原样保留，未删任何成员）；nodes 属性一字未动（它的 type/description，以及 items 的 properties/required/type "
             "与其中四个成员的 type/description，全部逐字保留），只新增 resolve_within_batch 一个属性。"
+            "TASK-097（工具缺陷 D-3）：再新增可选字符串参数 on_name_conflict（默认 \"refuse\"，枚举 "
+            "[\"refuse\", \"rename\"]）。D-3 的成因是「目标父节点下已有同名子节点」时旧实现既不拒绝也不报告，"
+            "Godot 按既有规则把新节点自动改名成 @Type@N，随后 editor_save_scene 把两份都写进 .tscn，"
+            "副本排在树最后、绘制在真实节点之上（pong 5 / breakout 18 / snake 37 个副本即由此而来）。"
+            "默认 \"refuse\" 时不写入任何节点，回 -32000，data.conflicts 列出冲突节点路径、data.suggestion 给出改法；"
+            "\"rename\" 是显式开关，保留引擎改名行为并在 created[i].name_conflict / renamed_count / renamed[] 里说明。"
+            "同一次修改对 required 成员仍是 [\"nodes\"]（逐字保留，未删任何成员），nodes 属性仍一字未动。"
         ),
         "mode": "replace",
         "value": {
@@ -1120,6 +1153,15 @@ SCHEMA_OVERRIDES = {
                         "type": "object",
                     },
                     "type": "array",
+                },
+                "on_name_conflict": {
+                    "default": "refuse",
+                    "description": "同名冲突策略。默认 \"refuse\"：本批任一元素的 name 在目标父节点下已存在（或与本批更早元素在该父节点下重名）时整批拒绝、什么都不写入，回 -32000，data.conflicts 给出冲突节点路径清单，data.suggestion 给出改法——绝不把新节点交给引擎改名后与既有节点一起留在场景里（那正是 editor_save_scene 把整份副本写进 .tscn、副本绘制在真实节点上层的成因）。\"rename\" 是显式开关，保留引擎自己的重名改名行为（新节点成为 @Type@N），响应在 created[i].name_conflict=\"renamed\"、renamed_count 与 renamed[] 里说明哪些节点被改名，editor_save_scene 随后仍会报告这些由本模块批量添加产生的同名重复。",
+                    "enum": [
+                        "refuse",
+                        "rename",
+                    ],
+                    "type": "string",
                 },
                 "resolve_within_batch": {
                     "default": False,

@@ -76,6 +76,10 @@
 // vector-component mapping of `running_game_set_node_property` is asserted
 // through its one definition instead of a copy.
 #include "../tools/editor_node_write.h"
+// TASK-097 (D-3): `MCPTools::add_nodes_batch_on`, `duplicate_name_conflicts_on`
+// and `forget_name_conflicts_for` - the transaction, the save-side report and
+// the doctest hook of the name-conflict policy.
+#include "../tools/editor_node_batch_write.h"
 #include "../tools/input_recorder.h"
 #include "../tools/running_game_node_write.h"
 // TASK-040 D-3: the game-side observation family's named-property reader
@@ -7959,6 +7963,25 @@ TEST_CASE("[MCPServer] the editor node write tools validate every argument befor
 		args["enabled"] = 1;
 		expect_error("editor_set_auto_dismiss_dialogs", args, -32602, "'enabled' must be a boolean");
 	}
+
+	// (n) editor_add_nodes_batch (TASK-097 D-3): the name-conflict policy joins
+	// the argument grammar of the batch, and it is narrowed *before* the editor
+	// guard - so a mistyped value is a -32602 in a process that has no edited
+	// scene at all, and only a legal value reaches the guard. The default
+	// ("refuse") is read by the transaction itself (see the refusal case below).
+	{
+		Dictionary args;
+		expect_error("editor_add_nodes_batch", args, -32602, "Missing required parameter: nodes");
+		Array nodes;
+		Dictionary element;
+		element["type"] = "Node2D";
+		nodes.push_back(element);
+		args["nodes"] = nodes;
+		args["on_name_conflict"] = "overwrite";
+		expect_error("editor_add_nodes_batch", args, -32602, "on_name_conflict");
+		args["on_name_conflict"] = "rename";
+		expect_error("editor_add_nodes_batch", args, -32000, "running editor");
+	}
 }
 
 TEST_CASE("[MCPServer] the editor node write helpers follow the TASK-014 property shape") {
@@ -8053,6 +8076,187 @@ TEST_CASE("[MCPServer] the editor node write helpers follow the TASK-014 propert
 		CHECK_FALSE(cleaned.contains("/"));
 		CHECK(String(node->get_name()) == cleaned);
 		memdelete(node);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TASK-097 (tool defect D-3): a requested name the target parent already carries
+// is refused, not silently renamed into a duplicate.
+//
+// The defect this pins: `editor_add_nodes_batch` used to hand the name to
+// `Node::set_name()` and let the engine rename the new node to `@Type@N` when a
+// sibling already had it, so a replayed editor phase left a whole duplicate node
+// layer in the scene (pong 5 / breakout 18 / snake 37 copies, drawn on top of the
+// real nodes - that is why the pixel column of those three games says
+// "unavailable (D-1)"). The four claims below are the four halves of the fix:
+// the default refuses with the conflict named, a distinct name still passes, a
+// within-batch duplicate is refused by the same policy, and the explicit opt-in
+// keeps the engine's rename while reporting it and remembering the pair for
+// `editor_save_scene`.
+// ---------------------------------------------------------------------------
+TEST_CASE("[MCPServer] editor_add_nodes_batch refuses a name the target parent already carries") {
+	// (1) The default policy: -32000, the conflicting path in the message and in
+	// `data.conflicts`, the rollback envelope attached, nothing written.
+	{
+		Node *root = memnew(Node);
+		root->set_name("Main");
+		Node2D *existing = memnew(Node2D);
+		existing->set_name("Ball");
+		root->add_child(existing);
+
+		Array nodes;
+		Dictionary element;
+		element["type"] = "Node2D";
+		element["name"] = "Ball";
+		nodes.push_back(element);
+
+		MCPToolError error;
+		const Variant refused = MCPTools::add_nodes_batch_on(root, nodes, error);
+		CHECK(refused.get_type() == Variant::NIL);
+		CHECK(error.code == -32000);
+		// The message carries the path the caller tried to take.
+		CHECK(error.message.contains("Ball"));
+		REQUIRE(error.data.get_type() == Variant::DICTIONARY);
+		const Dictionary data = error.data;
+		CHECK(String(data["suggestion"]).contains("on_name_conflict"));
+		CHECK(String(data["on_name_conflict"]) == "refuse");
+		REQUIRE(data.has("conflicts"));
+		const Array conflicts = data["conflicts"];
+		REQUIRE(conflicts.size() == 1);
+		const Dictionary conflict = conflicts[0];
+		CHECK((int)conflict["index"] == 0);
+		CHECK(String(conflict["requested_name"]) == "Ball");
+		CHECK(String(conflict["node_path"]) == "Ball");
+		CHECK(String(conflict["existing_node_path"]) == "Ball");
+		CHECK(String(conflict["existing_type"]) == "Node2D");
+		REQUIRE(data.has("batch"));
+		const Dictionary batch = data["batch"];
+		CHECK(String(batch["status"]) == "rolled_back");
+		CHECK((int)batch["count"] == 0);
+		// Nothing was attached and nothing was renamed.
+		CHECK(root->get_child_count() == 1);
+		CHECK(root->get_child(0) == existing);
+		CHECK(String(existing->get_name()) == "Ball");
+		memdelete(root);
+	}
+
+	// (2) A distinct name still passes, and the answer says the requested name was
+	// the one stored (the shape the safe default has to leave intact).
+	{
+		Node *root = memnew(Node);
+		root->set_name("Main");
+		Array nodes;
+		Dictionary element;
+		element["type"] = "Node2D";
+		element["name"] = "Fresh";
+		nodes.push_back(element);
+
+		MCPToolError error;
+		const Variant ok = MCPTools::add_nodes_batch_on(root, nodes, error);
+		REQUIRE(ok.get_type() == Variant::DICTIONARY);
+		const Dictionary result = ok;
+		CHECK(error.code == 0);
+		CHECK(String(result["status"]) == "ok");
+		CHECK((int)result["count"] == 1);
+		CHECK((int)result["renamed_count"] == 0);
+		CHECK(String(result["on_name_conflict"]) == "refuse");
+		const Array created = result["created"];
+		REQUIRE(created.size() == 1);
+		const Dictionary created_entry = created[0];
+		CHECK(String(created_entry["name"]) == "Fresh");
+		CHECK_FALSE(created_entry.has("name_conflict"));
+		CHECK(MCPTools::find_node(root, "Fresh") != nullptr);
+		CHECK(root->get_child_count() == 1);
+		// No duplicate pair was produced, so the save-side report is empty.
+		CHECK(MCPTools::duplicate_name_conflicts_on(root).size() == 0);
+		memdelete(root);
+	}
+
+	// (3) Two elements of one request asking for the same name under the same
+	// parent are the same bug, and the default policy refuses them too.
+	{
+		Node *root = memnew(Node);
+		root->set_name("Main");
+		Array nodes;
+		Dictionary first;
+		first["type"] = "Node2D";
+		first["name"] = "Twin";
+		Dictionary second;
+		second["type"] = "Node2D";
+		second["name"] = "Twin";
+		nodes.push_back(first);
+		nodes.push_back(second);
+
+		MCPToolError error;
+		const Variant refused = MCPTools::add_nodes_batch_on(root, nodes, error);
+		CHECK(refused.get_type() == Variant::NIL);
+		CHECK(error.code == -32602);
+		CHECK(error.message.contains("Twin"));
+		CHECK(root->get_child_count() == 0);
+		memdelete(root);
+	}
+
+	// (4) The explicit opt-in keeps the engine's rename - and that is the only way
+	// a duplicate can still be produced. The answer reports it, and the pair is
+	// remembered for `editor_save_scene`.
+	{
+		Node *root = memnew(Node);
+		root->set_name("Main");
+		Node2D *existing = memnew(Node2D);
+		existing->set_name("Ball");
+		root->add_child(existing);
+		MCPTools::forget_name_conflicts_for(root);
+
+		Array nodes;
+		Dictionary element;
+		element["type"] = "Node2D";
+		element["name"] = "Ball";
+		nodes.push_back(element);
+
+		MCPToolError error;
+		const Variant ok = MCPTools::add_nodes_batch_on(root, nodes, error, false, "rename");
+		REQUIRE(ok.get_type() == Variant::DICTIONARY);
+		const Dictionary result = ok;
+		CHECK(error.code == 0);
+		CHECK(String(result["on_name_conflict"]) == "rename");
+		CHECK((int)result["renamed_count"] == 1);
+		const Array created = result["created"];
+		REQUIRE(created.size() == 1);
+		const Dictionary created_entry = created[0];
+		// The engine's own auto-name is kept, and the divergence is stated.
+		CHECK(String(created_entry["name"]) != "Ball");
+		CHECK(String(created_entry["name"]).begins_with("@Node2D@"));
+		CHECK(String(created_entry["requested_name"]) == "Ball");
+		CHECK(String(created_entry["name_conflict"]) == "renamed");
+		CHECK(String(created_entry["conflicting_node_path"]) == "Ball");
+		CHECK(root->get_child_count() == 2);
+		const Array renamed = result["renamed"];
+		REQUIRE(renamed.size() == 1);
+		CHECK(String(((Dictionary)renamed[0])["requested_name"]) == "Ball");
+		CHECK(String(((Dictionary)renamed[0])["conflicting_node_path"]) == "Ball");
+		CHECK(String(((Dictionary)renamed[0])["node_path"]) == String(created_entry["node_path"]));
+
+		// The save-side report names both halves of the pair, with the paths the
+		// tree really has.
+		const Array duplicates = MCPTools::duplicate_name_conflicts_on(root);
+		REQUIRE(duplicates.size() == 1);
+		const Dictionary duplicate = duplicates[0];
+		CHECK(String(duplicate["requested_name"]) == "Ball");
+		CHECK(String(duplicate["existing_path"]) == "Ball");
+		CHECK(String(duplicate["existing_name"]) == "Ball");
+		CHECK(String(duplicate["added_name"]) == String(created_entry["name"]));
+		CHECK(String(duplicate["added_path"]) == String(duplicate["added_name"]));
+		CHECK(String(duplicate["parent_path"]) == ".");
+		CHECK(String(duplicate["existing_type"]) == "Node2D");
+
+		// The record describes the tree: removing the duplicate removes the
+		// report, and the pair is forgotten rather than reported stale.
+		Node *added = MCPTools::find_node(root, String(duplicate["added_path"]));
+		REQUIRE(added != nullptr);
+		root->remove_child(added);
+		memdelete(added);
+		CHECK(MCPTools::duplicate_name_conflicts_on(root).size() == 0);
+		memdelete(root);
 	}
 }
 
