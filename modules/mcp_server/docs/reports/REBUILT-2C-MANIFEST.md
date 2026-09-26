@@ -664,4 +664,49 @@ unless it also publishes a file — that is the intended reading, and the ledger
   gate runner echoes `%ERRORLEVEL%` **inside** the cmd child and parses that line.
   This is the same class of trap as 2c-7's G-5 notes.
 
+## H-5. The round-7 test loop: the defect list (the round's main product)
+
+A real mini game project (`H:\rebuild\projects\mcpplay`) was driven over both
+endpoints with the trace and the every-call capture on: 30 calls on the editor
+(9888) and 15 on the game (9889), every tool family with at least one call that
+must take effect and one that must not or must be refused. Full artefacts in
+`work/task089/live-{before,after}\`; the ledger is
+`live-after/ledger-{editor,game}.{txt,json}`.
+
+| # | tool | evidence | root cause | disposition |
+|---|---|---|---|---|
+| D-1 | `running_game_execute_gdscript` | `-32602 "Parameter 'code' does not compile: Parse error"` for **all three** bodies (`live-before/g0{3,4,5}-*.json`); the engine's own reason was only on stderr (`logs/task089_live_game.stderr.txt:1-2`: `Parse Error: Function "get_node()" not found in base self.` at `gdscript://…:4`) | the game group carried its own `_build_source` + a bare `Script::reload()`, so the parser diagnostic was discarded; `editor_execute_gdscript` already used `reload_gdscript_capturing` + `gdscript_reload_failure_text`. One parse error, two descriptions | **fixed** (F1) |
+| D-2 | `project_create_script` | the same file written twice answered `{"created": true, "existed_before": true}` (`live-before/e08-create-script-again.json`; trace-editor seq=8 id=108) — one response contradicting itself | `out["created"] = true;` is a constant, while the two sibling text writers (`project_text_write.cpp:196`, `project_setting_write.cpp:237`) answer `created = !existed` | **fixed** (F3) |
+| D-3 | `running_game_execute_gdscript` (capability) | a body cannot reach the running scene at all: `self` is a bare `extends RefCounted`, so `get_node()` / `$Path` fail — only global singletons work. The published description ("在运行中的游戏内执行 GDScript 代码") does not say so | design question (what should `self` be?), no single root cause | **recorded, not changed** |
+| D-4 | `tool_helpers.h` | `build_execute_gdscript_source` and `execute_gdscript_method_name` are declared **twice**: inside `namespace MCPTools` (1137 / 1112) and again after the namespace closes (1531 / 1513). A file with `using namespace MCPTools;` gets MSVC **C2668 ambiguous call** (measured: `logs/task089_build_fixes.err.log`) | a duplicated block outside the namespace | **worked around** with `MCPTools::` qualification; the stray declarations were **not** removed (header change, outside this task's evidence) |
+| D-5 | the four assertion tools | every assertion call rewrites `user://mcp_test_report.json` (game ledger seq 9-12, `file_effect=changed`, absolute path and the growing `{"results":[…]}` diff in the trace) | the editor↔game report bridge | **not a defect** — but it is the reason a "read-only-looking" verdict is `ok_file_effect_observed`; the new `result_flags` column qualifies it |
+| D-6 | `editor_set_node_property` | the same value written twice has the same **shape** of answer (`old_value`/`new_value` always present); only the pixel diff tells them apart (trace seq 14 `changed` vs seq 15 `unchanged`) | the answer is honest (it carries both values); the reader must compare | **calibration note**, not a defect |
+
+**Evidence completeness, measured:** `facts_complete` is **30/30** (editor) and
+**15/15** (game) in **both** runs. No row had `args_truncated` or
+`result_json_truncated`; no capture was `unavailable` (both processes windowed).
+
+## H-6. Written (marked): the fixes the defect list justified
+
+| # | file | what was written | basis | behaviour risk |
+|---|---|---|---|---|
+| 1 | `tools/running_game_script_execution.cpp` | **F1**: the private `_split_code_lines` / `_space_indent_unit` / `_build_source` and the bare `Script::reload()` are gone; the tool now calls `MCPTools::build_execute_gdscript_source(code, false, …)` and `reload_gdscript_capturing(script, body_start_line)`, answers `gdscript_reload_failure_text(reload)` and fills `data.parse_error` + `data.parse_error_column` exactly as `editor_execute_gdscript` does | D-1. The removed builder was byte-for-byte the same three layout rules as the hoisted one, so a **successful** call compiles the same source; only the refusal changes | **none on success**; the refusal text is now longer and carries a line. Verified: `live-after/g03…` answers `data.parse_error{line:1, generated_line:4, in_caller_code:true, message:"Parse Error: Function \"get_node()\" not found in base self."}` where `live-before/g03…` answered only `"Parse error"` |
+| 2 | `tools/project_script_write.cpp` | **F3**: `out["created"] = !existed;` | D-2 | **response shape changes for an existing file** (`created` `true` → `false`). No gate reads a tool response body; the module doctest suite is green (`live`/`record` in H-7) and a new doctest pins it |
+| 3 | `mcp_trace.{h,cpp}` + `mcp_jsonrpc.cpp` | **F2**: `Record` gains `result_json` + `result_json_bytes`; `_dispatch_tools_call`'s success arm fills them from the tool's own return value; `_build_line` emits `result_json` (bounded by the same `max_args_bytes` the `args` field uses) + `result_json_bytes` + `result_json_truncated` | the round-7 session measured `ok` responses whose **own body** carried the verdict (`passed:false`) with nothing on the line but `result_bytes` — the trace could not be used to judge an assertion | **trace size grows** (measured: 45 138 → 57 590 B editor, 24 755 → 36 572 B game for the same 45 calls). No tool behaviour changes |
+| 4 | `scripts/mcp_trace_ledger.py` | **F2/F3 reader**: `result_flags` (`assertion_failed` / `created_conflict` / `result_unparseable`) and the `result_json*` fields on each row; a `flags` column in the text table | so the two shapes D-2 and the failed assertions are visible without re-reading the client's copy of the body | **none**: read-only; `check_hardcoded_counts.py` passes |
+| 5 | `tests/test_mcp_server.h` | a fifth case: `project_create_script` answers `created=false` + `existed_before=true` on the second write, and `bytes` is unchanged | D-2's regression pin | **none** |
+
+**Demonstrated by re-running the same call set** (`work/task089/compare_ledgers.py`):
+the verdict distribution is **identical** before and after on both endpoints
+(editor `failed=4 / ok_effect_observed=1 / ok_file_effect_observed=10 /
+ok_no_effect_observed=15`, game `failed=5 / ok_effect_observed=1 /
+ok_file_effect_observed=5 / ok_no_effect_observed=4`), because the fixes change
+**what the log can prove**, not what the tools do. What changed:
+
+* `live-after/e08-create-script-again.json` = `{"created": false, "existed_before": true, …}`
+  where `live-before/…` was `{"created": true, "existed_before": true, …}`;
+* `live-after/g03-execute-gdscript.json` carries the parser's line and message;
+* the after-run ledger shows `assertion_failed` on game seq 10/11/12 — the three
+  `passed:false` responses the before-run trace could not express.
+
 

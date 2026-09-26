@@ -202,6 +202,20 @@ struct Record {
 	// the same level as `id` / `method` / `tool` (see `_build_line`).
 	Array file_effects;
 	String file_effect_status;
+
+	// TASK-089 (F2): the **result body** of a successful `tools/call`, as the
+	// tool produced it (canonical JSON, truncated by the same limit `args` uses).
+	//
+	// Why it is needed, from the round-7 session: `running_game_assert_node_state`
+	// answered `{"passed": false, ...}` inside an `ok` response, and the line
+	// carried only `result_bytes`. "The call succeeded" and "the thing it was
+	// asked about really holds" are different facts, and a trace that cannot show
+	// the second one cannot be used to judge an assertion. The same applies to a
+	// response whose own fields contradict each other (`created: true` next to
+	// `existed_before: true`). `result_json_bytes` is the true size, so
+	// `result_json_truncated` never hides how much was dropped.
+	String result_json;
+	int result_json_bytes = 0;
 	// [/REBUILT-2C]
 };
 

@@ -196,7 +196,18 @@ bool create_script(const String &p_path, bool p_has_content, const String &p_con
 
 	Dictionary out;
 	out["path"] = path;
-	out["created"] = true;
+	// TASK-089 (F3): `created` was the constant `true`, so a create over an
+	// existing file answered `{"created": true, "existed_before": true}` - one
+	// response contradicting itself, measured in the round-7 session
+	// (`res://util.gd` written twice). The module's two sibling text writers
+	// (`project_text_write`, `project_setting_write`) already answer
+	// `created = !existed`, and this group's own header comment says the only
+	// thing the caller is told about an existing file is `existed_before` - so
+	// the one-word difference is the defect, not the convention.
+	// [REBUILT-2C low-confidence: verify] TASK-089 F3: written, not replayed;
+	// REBUILT-2C-MANIFEST.md section 2c-8 (H-6).
+	out["created"] = !existed;
+	// [/REBUILT-2C]
 	out["existed_before"] = existed;
 	out["bytes"] = _published_byte_size(path);
 	out["template"] = p_has_content ? String() : base_class;

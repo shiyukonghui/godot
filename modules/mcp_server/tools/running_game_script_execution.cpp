@@ -101,103 +101,26 @@ using namespace MCPTools;
 //     `running_game_frame_observation` in docs/tool-groups-b2.json).
 // ---------------------------------------------------------------------------
 
-// The method the generated script exposes.
-static const char *MCP_EXECUTE_METHOD = "_mcp_execute";
-
-// The caller's code, as lines, with `\r\n` and `\r` normalised to `\n`.
-static Vector<String> _split_code_lines(const String &p_code) {
-	const PackedStringArray raw = p_code.replace("\r\n", "\n").replace("\r", "\n").split("\n");
-	Vector<String> lines;
-	for (int i = 0; i < raw.size(); i++) {
-		lines.push_back(raw[i]);
-	}
-	return lines;
-}
-
-// The smallest positive number of leading spaces of any line, i.e. the space
-// indent unit of the body. GDScript forbids mixing tabs and spaces inside one
-// block, and an HTTP client has no reason to know the module's convention, so
-// spaces are converted to tabs first (the fuller GDScript implementation's rule,
-// mcp_game_inspector_service.gd:678-695).
-static int _space_indent_unit(const Vector<String> &p_lines) {
-	int unit = 0;
-	for (int i = 0; i < p_lines.size(); i++) {
-		const String &line = p_lines[i];
-		int spaces = 0;
-		while (spaces < line.length() && line[spaces] == ' ') {
-			spaces++;
-		}
-		if (spaces > 0 && (unit == 0 || spaces < unit)) {
-			unit = spaces;
-		}
-	}
-	return unit;
-}
-
-// Builds the GDScript source. Three rules, all of them about making the input a
-// usable *function body*:
+// ---------------------------------------------------------------------------
+// TASK-089 (F1): the source builder and the reload-diagnostic capture are the
+// module's hoisted ones (`tool_helpers.h`), not a second copy here.
 //
-//   1. the space indent unit becomes one tab;
-//   2. a `func` declaration at column 0 - plus the blank and tab-indented lines
-//      that belong to it - is lifted to class level, so the caller can define
-//      helpers (`mcp_game_inspector_service.gd:697-740`);
-//   3. everything else becomes the body of `_mcp_execute`, indented by one tab.
+// Before this, the game-side executor carried its own `_build_source` (byte for
+// byte the same layout rules as `build_execute_gdscript_source`) and called the
+// bare `Script::reload()`. A body that really does not compile therefore
+// answered "Parameter 'code' does not compile: Parse error" and the engine's own
+// diagnostic - the only thing that names the line and the reason - was printed
+// to stderr and lost. Measured on the round-7 session:
 //
-// The generated method is deliberately *untyped* (`func _mcp_execute():`, no
-// `-> Variant`): GDScript refuses to compile a typed function with a code path
-// that returns nothing ("Not all code paths return a value"), and a body without
-// `return` is a perfectly reasonable request (the answer is then `null`).
-static String _build_source(const String &p_code) {
-	Vector<String> lines = _split_code_lines(p_code);
-	const int unit = _space_indent_unit(lines);
-	if (unit > 0) {
-		const String space_unit = String(" ").repeat(unit);
-		for (int i = 0; i < lines.size(); i++) {
-			String line = lines[i];
-			String tabs;
-			while (line.begins_with(space_unit)) {
-				tabs += "\t";
-				line = line.substr(unit);
-			}
-			lines.write[i] = tabs + line;
-		}
-	}
-
-	String class_part;
-	String body_part;
-	int i = 0;
-	while (i < lines.size()) {
-		const String line = lines[i];
-		if (!line.begins_with("\t") && !line.begins_with(" ") && line.begins_with("func ")) {
-			class_part += line + "\n";
-			i++;
-			while (i < lines.size()) {
-				const String next = lines[i];
-				if (next.strip_edges().is_empty() || next.begins_with("\t")) {
-					class_part += next + "\n";
-					i++;
-				} else {
-					break;
-				}
-			}
-			continue;
-		}
-		if (line.strip_edges().is_empty()) {
-			body_part += "\n";
-		} else {
-			body_part += "\t" + line + "\n";
-		}
-		i++;
-	}
-
-	String source = "extends RefCounted\n";
-	if (!class_part.is_empty()) {
-		source += "\n" + class_part;
-	}
-	source += "\nfunc " + String(MCP_EXECUTE_METHOD) + "():\n";
-	source += body_part.is_empty() ? "\tpass\n" : body_part;
-	return source;
-}
+//   code = `var m = get_node("/root/Main"); return m.move_player(150.0)`
+//   answer: -32602 "Parameter 'code' does not compile: Parse error"
+//   stderr: "SCRIPT ERROR: Parse Error: Function \"get_node()\" not found in
+//            base self." at gdscript://...:4
+//
+// The editor endpoint (`editor_execute_gdscript`, TASK-063 d) already answered
+// the same failure with the line and the message, so the two endpoints described
+// one parse error two different ways. They share the definition now.
+// ---------------------------------------------------------------------------
 
 static Variant _tool_execute_gdscript(const Dictionary &p_args, MCPToolError &r_error) {
 	String code;
@@ -240,16 +163,59 @@ static Variant _tool_execute_gdscript(const Dictionary &p_args, MCPToolError &r_
 		return Variant();
 	}
 
-	script->set_source_code(_build_source(code));
-	const Error reload_error = script->reload();
-	if (reload_error != OK || !script->can_instantiate()) {
-		// The engine has already printed the parser's own diagnostics (with the
-		// line of the *generated* source) to stderr; the message here carries
-		// the verdict the caller can act on.
-		r_error = MCPToolError::invalid_params(vformat("Parameter 'code' does not compile: %s",
-				VariantUtilityFunctions::error_string(reload_error)));
+	// TASK-089 (F1): the shared builder (`build_execute_gdscript_source`, the
+	// module-level definition the editor executor already uses) and the shared
+	// reload capture. `p_tool_script = false`: a *game* process is never the
+	// editor, and `@tool` is what the editor executor needs, not this one.
+	// [REBUILT-2C low-confidence: verify] TASK-089 F1: written, not replayed;
+	// REBUILT-2C-MANIFEST.md section 2c-8 (H-6).
+	//
+	// Both helpers are named `MCPTools::` on purpose: `tool_helpers.h` declares
+	// `build_execute_gdscript_source` and `execute_gdscript_method_name` **twice**
+	// - once inside `namespace MCPTools` (lines 1137 / 1112) and once after the
+	// namespace closes (lines 1531 / 1513) - so an unqualified call in a file that
+	// has `using namespace MCPTools;` is ambiguous (MSVC C2668, measured). The
+	// duplicate declarations are a pre-existing hazard in the header and are
+	// recorded in the report rather than removed here.
+	String generated_source;
+	int body_start_line = 0;
+	MCPTools::build_execute_gdscript_source(code, false, generated_source, &body_start_line);
+	script->set_source_code(generated_source);
+	// TASK-063 (d) / TASK-089 (F1): `reload()` alone answers a bare `Error`; the
+	// capture reads the line and the message the engine itself reports
+	// (`_err_print_error("GDScript::reload", ..., <line>, ...)`) and
+	// `body_start_line` turns that generated line into a line of `code`.
+	const GDScriptReloadReport reload = reload_gdscript_capturing(script.ptr(), body_start_line);
+	if (reload.error != OK) {
+		r_error = MCPToolError::invalid_params(gdscript_reload_failure_text(reload));
+		if (reload.diagnostic_seen) {
+			// The same facts, machine-readable: the line of `code` (null when the
+			// engine's line is inside this tool's own wrapper), the line the engine
+			// named in the generated source, and every diagnostic it printed.
+			Dictionary diagnostics;
+			diagnostics["line"] = reload.in_caller_code ? Variant((int64_t)reload.caller_line) : Variant();
+			diagnostics["generated_line"] = (int64_t)reload.generated_line;
+			diagnostics["in_caller_code"] = reload.in_caller_code;
+			diagnostics["message"] = reload.diagnostic;
+			Array messages;
+			for (int i = 0; i < reload.messages.size(); i++) {
+				messages.push_back(reload.messages[i]);
+			}
+			diagnostics["messages"] = messages;
+			Dictionary data;
+			data["parse_error"] = diagnostics;
+			// The engine hands a handler a line, never a column.
+			data["parse_error_column"] = Variant();
+			r_error.data = data;
+		}
 		return Variant();
 	}
+	if (!script->can_instantiate()) {
+		r_error = MCPToolError::invalid_params(
+				"Parameter 'code' compiled but produced a GDScript this process cannot instantiate");
+		return Variant();
+	}
+	// [/REBUILT-2C]
 
 	// The generated source always extends `RefCounted`, so the instance is one.
 	Ref<RefCounted> instance;
@@ -261,12 +227,12 @@ static Variant _tool_execute_gdscript(const Dictionary &p_args, MCPToolError &r_
 	// those are variadic *templates* in this fork, and the explicit
 	// `(const Variant **, int, CallError &)` form is the one that reports a call
 	// failure instead of templating it away.
-	const Callable entry_point(instance.ptr(), StringName(MCP_EXECUTE_METHOD));
+	const Callable entry_point(instance.ptr(), StringName(MCPTools::execute_gdscript_method_name()));
 	Variant result;
 	entry_point.callp(nullptr, 0, result, call_error);
 	if (call_error.error != Callable::CallError::CALL_OK) {
 		r_error = MCPToolError::internal(vformat("the generated GDScript method could not be called (%s)",
-				Variant::get_call_error_text(instance.ptr(), StringName(MCP_EXECUTE_METHOD), nullptr, 0, call_error)));
+				Variant::get_call_error_text(instance.ptr(), StringName(MCPTools::execute_gdscript_method_name()), nullptr, 0, call_error)));
 		return Variant();
 	}
 

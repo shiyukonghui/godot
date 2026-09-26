@@ -9430,6 +9430,37 @@ TEST_CASE("[MCPServer] the file-effect rows are emitted on the call line, at the
 
 	TestMCPServer::remove_tree(dir);
 }
+
+// TASK-089 (F3): the round-7 session measured `project_create_script` answering
+// `{"created": true, "existed_before": true}` for the same file written twice -
+// one response contradicting itself. The module's two sibling text writers
+// already answer `created = !existed`; this pins the script writer to the same
+// rule.
+TEST_CASE("[MCPServer] project_create_script answers created=false for a file that was already there") {
+	TestMCPServer::ScratchProject project;
+	MCPToolRegistry registry;
+	TestMCPServer::build_all_tools_registry(registry);
+
+	Dictionary args;
+	args["path"] = project.path("scripts/f3_probe.gd");
+	args["content"] = "extends Node\n";
+
+	MCPToolError error;
+	const Variant first_raw = registry.call_tool("project_create_script", args, error);
+	CHECK(!error.is_error());
+	const Dictionary first = first_raw;
+	CHECK((bool)first["created"]);
+	CHECK_FALSE((bool)first["existed_before"]);
+
+	MCPToolError again_error;
+	const Variant again_raw = registry.call_tool("project_create_script", args, again_error);
+	CHECK(!again_error.is_error());
+	const Dictionary again = again_raw;
+	CHECK_FALSE((bool)again["created"]);
+	CHECK((bool)again["existed_before"]);
+	// `created` is not "the writer ran": the bytes really do not change here.
+	CHECK((int64_t)first["bytes"] == (int64_t)again["bytes"]);
+}
 // [/REBUILT-2C]
 
 

@@ -166,6 +166,37 @@ def verdict_of(ok, scene, file_effect):
     if scene == "unavailable":
         return VERDICT_OK_UNAVAILABLE
     return VERDICT_OK_UNOBSERVED
+
+
+def result_flags(record):
+    """The high-signal facts the tool's own body carries (TASK-089 F2/F3).
+
+    A verdict of `ok` says the call was answered, not that what it asserted
+    holds. Two shapes the round-7 session measured are turned into flags here so
+    they are visible in the ledger instead of buried in the body:
+
+      * `assertion_failed`   - the tool answered `passed: false`;
+      * `created_conflict`   - the answer says `created: true` next to
+                               `existed_before: true`, which cannot both be true;
+      * `result_unparseable` - the body was truncated by the trace's own bound,
+                               so no flag may be derived from it.
+    """
+    # [REBUILT-2C low-confidence: verify] TASK-089 F2/F3: written, not replayed;
+    # REBUILT-2C-MANIFEST.md section 2c-8 (H-6).
+    raw = record.get("result_json")
+    if not isinstance(raw, str) or raw == "":
+        return []
+    try:
+        body = json.loads(raw)
+    except ValueError:
+        return ["result_unparseable"]
+    flags = []
+    if isinstance(body, dict):
+        if body.get("passed") is False:
+            flags.append("assertion_failed")
+        if body.get("created") is True and body.get("existed_before") is True:
+            flags.append("created_conflict")
+    return flags
 # [/REBUILT-2C]
 
 
@@ -223,6 +254,10 @@ def row_for(record, capture_line, generation_index):
                                  else "not_recorded_in_trace"),
         "file_effects": record.get("file_effects") if isinstance(record.get("file_effects"), list) else [],
         "file_effect_detail": file_detail,
+        "result_json": record.get("result_json"),
+        "result_json_bytes": record.get("result_json_bytes"),
+        "result_json_truncated": bool(record.get("result_json_truncated")),
+        "result_flags": result_flags(record),
         "facts": facts,
         "facts_complete": all(facts.values()),
         "verdict": verdict_of(ok, scene, file_effect),
@@ -256,8 +291,8 @@ def render_text(rows, path, broken, args):
     lines.append("verdicts: " + (", ".join("%s=%d" % (k, counts[k]) for k in sorted(counts)) or "<none>"))
     lines.append("file_effects: " + (", ".join("%s=%d" % (k, file_counts[k]) for k in sorted(file_counts)) or "<none>"))
     lines.append("")
-    header = ("%-6s %-8s %-38s %-9s %-8s %-8s %-14s %-15s %s" %
-              ("seq", "req_id", "tool", "dur_ms", "ok", "err", "scene_effect", "file_effect", "verdict"))
+    header = ("%-6s %-8s %-38s %-9s %-8s %-8s %-14s %-15s %-26s %s" %
+              ("seq", "req_id", "tool", "dur_ms", "ok", "err", "scene_effect", "file_effect", "flags", "verdict"))
     lines.append(header)
     lines.append("-" * len(header))
     for row in rows:
@@ -265,10 +300,11 @@ def render_text(rows, path, broken, args):
             continue
         if args.only_ineffective and row["verdict"] in (VERDICT_OK_EFFECT, VERDICT_OK_FILE_EFFECT, VERDICT_FAILED):
             continue
-        lines.append("%-6s %-8s %-38s %-9s %-8s %-8s %-14s %-15s %s" % (
+        flags = ",".join(row.get("result_flags") or []) or "-"
+        lines.append("%-6s %-8s %-38s %-9s %-8s %-8s %-14s %-15s %-26s %s" % (
             row["call_id"], row["request_id"],
             (row["tool"] or "")[:38], row["duration_ms"], row["ok"],
-            row["error_code"], row["scene_effect"], row["file_effect"], row["verdict"]))
+            row["error_code"], row["scene_effect"], row["file_effect"], flags[:26], row["verdict"]))
     complete = sum(1 for row in rows if row["facts_complete"])
     lines.append("")
     lines.append("rows whose reconstructible facts are all present: %d/%d" % (complete, len(rows)))

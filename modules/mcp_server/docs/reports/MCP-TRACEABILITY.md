@@ -1,6 +1,6 @@
 # MCP-TRACEABILITY — 一次操作是否有效，以及凭什么判定
 
-* Task: TASK-088 item ⑤. Module: `modules/mcp_server`.
+* Task: TASK-088 item ⑤；TASK-089 item A 关闭了当时的唯一缺口（文件侧副作用）。
 * 口径：本文定义**溯源模型**（字段 / 判定规则 / 失败分类）与**如何用日志判定一次操作是否有效**，
   并给出一次真实会话的产物路径。所有字段名都以实际写出的 JSON 行为准，逐条给出源码位置。
 
@@ -8,10 +8,14 @@
 
 ## 0. 一句话结论
 
-运行期已经**把判定一次操作是否有效所需的全部事实写进日志**：每条请求一行、每次 `tools/call`
-另配一行 `{"event":"capture"}`（截图像素差）；调用行的请求身份字段此前**没有被填**
-（`method` 为空、`id` 为 null、无 `tool`/`args`），本轮补齐。
-读取侧由 `scripts/mcp_trace_ledger.py` 把这两类行合成**每次调用一行**的有效性台账。
+运行期已经**把判定一次操作是否有效所需的全部事实写进日志**：每条请求一行，每次 `tools/call`
+另配一行 `{"event":"capture"}`（截图像素差），并且（TASK-089 起）调用行本身还带着**这次调用改了
+哪些文件**（绝对路径 + 前后 sha256/大小 + 是否真的变了 + 文本文件的首尾差异摘要）与**这次调用
+答了什么**（`result_json`，有界）。读取侧由 `scripts/mcp_trace_ledger.py` 把这些行合成**每次调用
+一行**的有效性台账。
+
+**TASK-088 声明的唯一缺口（文件侧副作用 `not_recorded_in_trace`）已在 TASK-089 补上**，见 §2.4
+与 §3.2。
 
 ---
 
@@ -52,6 +56,60 @@
 | `tools` | 仅 `tools/list`：表大小 | `:344-346` |
 | `pending_ms` / `timeout_ms` | 仅延迟应答通道 | `:348-351` |
 | `capture{mode,viewport,status[,reason]}` | 捕获档位与状态（`pending` / `unavailable`） | `:356-365` |
+| `file_effect_status` / `file_effects` | **TASK-089 新增**：这次调用对磁盘做了什么，见 §2.4 | `mcp_file_effects.*`；`mcp_trace.cpp` 的 `_build_line` |
+| `result_json` / `result_json_bytes` / `result_json_truncated` | **TASK-089 新增**：成功应答的**工具自身返回体**（规范化 JSON，按 `args` 同一上限截断；真实字节数另给）。看的不是「调用成功」，而是「它自己说什么」：`passed:false`、`created:true`、`ignored`、`changed` | `mcp_jsonrpc.cpp`（`_dispatch_tools_call` 成功分支）；`mcp_trace.cpp` 的 `_build_line` |
+
+### 2.4 TASK-089 新增：文件侧副作用（`file_effect_status` + `file_effects`）
+
+**它补的是什么缺口。** 像素差覆盖的是**画面侧**副作用；在此之前，一次 `project_write_text_file`
+或 `editor_save_scene` 在日志里只有 `result_bytes`，**没有任何字段能证明盘上哪个文件变了**。台账
+只能显式写 `file_effect_evidence: "not_recorded_in_trace"`。现在调用行自己带着答案：
+
+```
+file_effect_status ∈ { no_mutation, observed_changed, observed_no_change, observed_mixed,
+                       not_tracked_deferred }        // 空串 = 这条 trace 不带文件侧证据
+file_effects: [ {                                   // 一次调用一个受影响的落点一行
+    "path":       "res://notes.txt",                // 原样（模块路径）
+    "abs_path":   "H:\\rebuild\\projects\\...\\notes.txt",   // 绝对路径（可核）
+    "kind":       "write" | "delete" | "mkdir",
+    "existed_before": true,
+    "before":     {"sha256": "...", "bytes": 197} | null,   // 不存在就是 null，不是 {}
+    "after":      {"sha256": "...", "bytes": 51}  | null,
+    "changed":    true,                              // 前后 sha/存在性真的不同
+    "failed":     false,                             // 这次落点操作报了失败
+    "diff":       { ... }                            // 见下，仅小文本文件
+} ]
+```
+
+`diff` 是**有界的首尾差异摘要**（`"type": "line_head_tail"`，如实命名，**不是**完整 LCS diff）：
+
+| 键 | 含义 |
+|---|---|
+| `lines.before` / `lines.after` | 前后行数 |
+| `same_head_lines` / `same_tail_lines` | 首部 / 尾部**逐行相同**的行数 |
+| `changed_lines.before` / `.after` | 夹在中间的那一段的行数 |
+| `head_lines` / `tail_lines` | 摘要里给出的差异行数（`- ` 删除 / `+ ` 新增 前缀） |
+| `head` / `tail` | 差异段的**头** / **尾**各最多 3 行（每行最多 200 字符） |
+| `sampled_partial` | 差异段比采样窗口大（摘要只是一部分） |
+
+开销是显式有界的：**大于 256 KiB 的文件只记 sha256 与大小，从不整份读**；含 NUL 字节的文件不
+算文本，不产生 `diff`；每行最多 200 字符；每次调用最多 256 行（超出置 `truncated`）。**trace 关
+闭时整套机制完全不动**：`begin_recording()` 不由 JSON-RPC 层调用，任何一次快照、哈希、读取都不
+会发生。
+
+**收口在一处，不是逐个工具散改。** 记录器只有一个 API（`MCPFileEffect::MutationScope`），打开它的
+地方是模块自己的磁盘原语：
+
+| 打开处 | 覆盖 |
+|---|---|
+| `publish_file_atomically()`（`tool_helpers.cpp`） | **模块唯一的发布原语**：场景 / 资源 / 脚本 / shader / theme / `project.godot` / 截图 / 测试报告的写出全部经它 |
+| `publish_project_setting_to()` 的 section 分支 | 引擎自己的 `save_custom_section()` 不走上面的原语，是唯一例外，就地补一处 |
+| `_ensure_user_data_directory()` | 唯一由模块代为建目录的地方（`kind: mkdir`） |
+| `project_delete_scene_file`（+ `.import`）、`editor_get_test_report` 的 `clear`、`write_csharp_build_record`、两处跨场景 rollback | 这四处**不走发布原语**地直接写盘，各自打开同一个 scope |
+
+**声明的覆盖边界**：记录器开在**磁盘原语**上，不在每个工具上。纯内存改动（编辑器里的节点属性、
+尚未发布进 `project.godot` 的 InputMap 动作）记为 `no_mutation`——那是正确的读法，台账的
+`file_effect` 一列写 `none`，而不是暗示「这次调用什么都没做」。
 
 ### 2.2 捕获行（`{"event":"capture"}`，与调用行同 `seq`，`mcp_capture.cpp:608-710`）
 
@@ -90,77 +148,121 @@ scene_effect  = changed    捕获行说 before/after 像素不同
                 unavailable 捕获被拒（无 framebuffer / 无该视口 / 该调用无法取景），reason 说明原因
                 not_observed 没开捕获（或 on_error 下这次成功因此不捕获）
 
-verdict       = failed                  ok=false（带 error_code/error_message）
-                ok_effect_observed      ok=true 且 scene_effect=changed      ← 有效，且效果有画面证据
-                ok_no_effect_observed   ok=true 且 scene_effect=unchanged    ← 「报成功但画面没动」
-                ok_effect_unavailable   ok=true 但本进程无法取景（诚实边界，不是失败）
-                ok_effect_not_observed  ok=true 但没开捕获（无信息，不得读作「无效」）
+file_effect   = changed    这次调用真的改写了盘上的落点（`file_effect_status` = observed_changed / mixed）
+                unchanged  走了写出原语，字节与之前完全相同（observed_no_change）
+                none       这次调用没有碰盘（no_mutation）
+                not_tracked 延迟应答通道（工具的实际工作在应答之后），本进程无法观测
+                not_recorded 这条 trace 由没有文件侧记录器的版本写出（声明的缺失，不读作「没变」）
+
+verdict       = failed                   ok=false（带 error_code/error_message）
+                ok_file_effect_observed  file_effect ∈ {changed, mixed}   ← 有效，且改动有 sha 证据
+                ok_effect_observed       scene_effect=changed             ← 有效，且效果有画面证据
+                ok_no_effect_observed    file_effect=unchanged 或 scene_effect=unchanged ←「报成功但没动」
+                ok_effect_unavailable    ok=true 但本进程无法取景（诚实边界，不是失败）
+                ok_effect_not_observed   ok=true 但没有任何有效证据（没开捕获 / 读工具）
 ```
 
+**判定优先级：文件侧强于画面侧。** 一次真的改写了文件的调用「做了事」，无论画面动没动；因此
+`ok_file_effect_observed` 先于 `ok_effect_observed` 判定。
+
 **读法（重要）**：`ok_no_effect_observed` 不等于「这次调用没用」——读工具本来就不该动画面。
-它等于「**若这次调用宣称改了画面，画面没有变**」。判一次**写**调用是否有效，看
-`ok_effect_observed`；判一次**读**调用，看 `failed` / `ok_effect_*` 中的 `ok` 与 `result_bytes`。
+它等于「**若这次调用宣称改了画面或改了文件，两者都没有变**」。判一次**写**调用是否有效，看
+`ok_file_effect_observed`；判一次**读**调用，看 `failed` / `ok_effect_*` 中的 `ok` 与 `result_bytes`。
+
+**`ok` 不等于「它断言的事成立」。** `running_game_assert_node_state` 在断言不成立时仍然是一次
+成功的调用（应答里 `passed:false`）。TASK-089 起调用行带 `result_json`，台账据此给出
+`result_flags`（`assertion_failed` / `created_conflict` / `result_unparseable`），把这一类
+「成功但结论为否」的调用从 `ok` 里挑出来。
 
 ### 3.1 可重建性（facts）
 
 每一行同时给出该调用**可从日志重建的事实**是否齐备：
-`request_id` / `tool` / `args`（未截断）/ `times` / `result` / `capture` / `scene_evidence`，
-以及 `facts_complete`。用它区分「证据支持」与「推断」：`facts_complete=false` 的行不得用来下结论。
+`request_id` / `tool` / `args`（未截断）/ `times` / `result` / `capture` / `scene_evidence` /
+`file_effect`，以及 `facts_complete`。用它区分「证据支持」与「推断」：`facts_complete=false`
+的行不得用来下结论。
 
-### 3.2 已知缺口（声明，不掩盖）
+### 3.2 缺口状态（TASK-089）
 
-* **文件侧副作用没有写进运行期日志。** 调用行只有 `result_bytes`，没有「这次调用改了盘上哪个
-  文件的 sha」。像素差覆盖的是**画面侧**副作用；文件侧目前只能由工具自身的响应（例如
-  `project_write_text_file` 回 `sha256`/`size`）或工具外核验（`project_read_text_file`、
-  `Get-FileHash`）补。台账里该字段显式写 `file_effect_evidence: "not_recorded_in_trace"`，
-  不写空成功。
-* `args` 超过 4096 B 会被截断（`args_bytes` 仍给真实值，`args_truncated=true`）；`error_message`
-  上限 512 B。这两条是刻意的，`mcp_trace.h:120-125` 有据。
-* 捕获只在 `tools/call` 上开（`initialize` / `tools/list` 无副作用可观测，
-  `mcp_capture.h:166-169`）。
+* **文件侧副作用：已补**（TASK-089 item A）。调用行带 `file_effect_status` + `file_effects`，
+  §2.4 是字段表与界。台账不再写 `file_effect_evidence: "not_recorded_in_trace"`——除非它读的是
+  一条**由更早版本写出的** trace，那种情况仍如实写 `not_recorded_in_trace`。旧 trace 与新 trace
+  因此可以并存，缺字段一律读作「这份证据不存在」，绝不读作「没有改动」。
+* **延迟应答通道（deferred）不算已补**：`file_effect_status` 写 `not_tracked_deferred`。工具的
+  实际磁盘工作发生在应答之后（运输层逐帧 tick），同步的每调用缓冲看不到它。声明的边界。
+* `args` 超过 4096 B 会被截断（`args_bytes` 仍给真实值，`args_truncated=true`）；`result_json`
+  用同一上限（`result_json_bytes` 给真实值）；`error_message` 上限 512 B。这三条是刻意的。
+* 捕获只在 `tools/call` 上开（`initialize` / `tools/list` 无副作用可观测）。
+* **失败应答的 `data`（例如 `data.suggestion`、`data.parse_error`）不在 trace 上**，只有
+  `error_code` 与 512 B 的 `error_message`。TASK-089 修掉了其中一个最要命的形状（`-32602` 只说
+  "Parse error"、不说哪一行），但**结构化失败细节仍未入日志**——这是一个仍然开着的缺口。
+
 
 ---
 
 ## 4. 实测演示（真实会话）
 
+### 4.1 TASK-088（编辑器 + 游戏，4 + 3 次调用）
+
 驱动：`C:\Users\wyl\AppData\Local\Temp\mcp-recovery\work\task088\mcp088_live_evidence.ps1`
 （窗口化，**非 headless**：headless 无 framebuffer，捕获恒 `unavailable`，不得拿来顶替）。
-产物根：`…\work\task088\live\`。
+产物根：`…\work\task088\live\`。编辑器 `calls=4`，`ok_effect_observed=1 / ok_no_effect_observed=3`，
+`facts_complete 4/4`；`editor_set_node_property` 同参数写两次 → 第一次 `changed`、第二次
+`unchanged`，即本模型要钉住的「报成功但画面没动」。
 
-| 产物 | 路径 | 实测摘要 |
+### 4.2 TASK-089 第 7 轮试测（真实小游戏工程，30 + 15 次调用）
+
+驱动：`…\work\task089\mcp089_live_evidence.ps1`。工程 `H:\rebuild\projects\mcpplay`
+（一个 `Node2D` 场景 + `main.gd` + Theme 资源 + 文本资源 + `project.godot`，能真跑起来：
+`MCP089_MINIGAME_READY`）。编辑器 9888 + 游戏 9889，两侧都开
+`--mcp-trace` + `--mcp-capture=every_call` + `--mcp-capture-viewport=2d`。
+
+| 产物 | 路径（`…\work\task089\`） | 实测摘要 |
 |---|---|---|
-| 编辑器 trace | `live\trace-editor.jsonl` | 10 行；`trace_opened` + 5 条调用 + 4 条 capture |
-| 游戏 trace | `live\trace-game.jsonl` | 7 行 |
-| 编辑器截图 | `live\shots-editor\` | 8 个 PNG（4 组 before/after），每个 78 036 B，**2978×1793 原图** |
-| 游戏截图 | `live\shots-game\` | 6 个 PNG（3 组），每个 12 266 B |
-| 编辑器 `tools/list` 原文 | `live\editor-tools-list.json` | 46 810 B，154 条工具 |
-| 台账（文本 / JSON） | `live\ledger-editor.txt` / `.json` | `calls=4`，`ok_effect_observed=1 / ok_no_effect_observed=3`，`facts_complete 4/4` |
+| 编辑器 trace（修复前 / 后） | `live-before\trace-editor.jsonl` / `live-after\…` | 62 行；后者 57 590 B（多出 `result_json`） |
+| 游戏 trace（修复前 / 后） | `live-before\trace-game.jsonl` / `live-after\…` | 31 行；后者 36 572 B |
+| 编辑器截图 | `live-after\shots-editor\` | **60 个 PNG**（30 组 before/after），每个 82 341 B 或 82 024 B |
+| 游戏截图 | `live-after\shots-game\` | **30 个 PNG**（15 组），每个 11 815 B，800×600 |
+| 台账 | `live-after\ledger-{editor,game}.{txt,json}` | 见下 |
+| 请求 / 响应逐条 | `live-after\e??-*.json`、`g??-*.json`（+ `.request.json`） | 45 组 |
 
-真实调用（编辑器侧）：`editor_open_scene`（改）→ `editor_get_scene_tree`（读）→
-`editor_set_node_property` ×2（同一颜色写两次）。台账（`live/ledger-editor.txt`）**逐行实测**：
+台账（`live-after/ledger-editor.txt` 与 `ledger-game.txt`）**逐行实测**：
 
 ```
-calls=4 malformed_lines=0
-verdicts: ok_effect_observed=1, ok_no_effect_observed=3
-
-seq    req_id   tool                        dur_ms  ok    err  scene_effect  verdict
-2      102      editor_open_scene           18      True  0    unchanged     ok_no_effect_observed
-3      103      editor_get_scene_tree       18      True  0    unchanged     ok_no_effect_observed
-4      104      editor_set_node_property    18      True  0    changed       ok_effect_observed
-5      105      editor_set_node_property    19      True  0    unchanged     ok_no_effect_observed
-
-rows whose reconstructible facts are all present: 4/4
+编辑器：calls=30 malformed_lines=0
+        verdicts: failed=4, ok_effect_observed=1, ok_file_effect_observed=10, ok_no_effect_observed=15
+        file_effects: changed=10, none=15, unchanged=5          facts_complete 30/30
+游戏：  calls=15 malformed_lines=0
+        verdicts: failed=5, ok_effect_observed=1, ok_file_effect_observed=5, ok_no_effect_observed=4
+        file_effects: changed=5, none=10                        facts_complete 15/15
 ```
 
-读法：**第 4 行是「有效」**（写入真的上了屏，像素差 `changed`），**第 5 行是同参数再写一次**
-（`ok=true` 但画面没动 → `ok_no_effect_observed`，即本模型要钉住的「报成功但没动」形态）。
-`id`（102–105）与 `tool` 一栏能在台账上读出来，就是 §2.3 那处补齐的直接结果——修复前的同一份
-trace 里这两列分别是 `null` 与空。
+三条要看的行（编辑器 `seq=2/3/16`，游戏 `seq=9/10`）：
 
-像素差实测：编辑器侧 2978×1793 = 5 339 554 像素；`changed:false` 的组
-`before.sha256 == after.sha256`（例：`0002` 组两侧同为
-`c337ce706bf7bcd85435b45b4ffb10b7005a727536b4fec9e93244024fc9bbbc`），`changed:true` 的那组
-两侧 sha 不同且 `changed_pixels>0`。判定规则在这份证据上如实工作，演示没有被粉饰。
+```
+seq  req_id  tool                       scene_effect  file_effect  flags               verdict
+2    102     project_write_text_file    unchanged     changed      -                   ok_file_effect_observed   ← 真的改了文件
+3    103     project_write_text_file    unchanged     unchanged    -                   ok_no_effect_observed     ← 同内容重复写
+16   116     editor_save_scene          unchanged     changed      -                   ok_file_effect_observed   ← 编辑器保存落了盘
+9    209     running_game_assert_node_state  unchanged changed    -                   ok_file_effect_observed   ← 断言通过（并写测试报告）
+10   210     running_game_assert_node_state  unchanged changed    assertion_failed    ok_file_effect_observed   ← 断言**不通过**，ok 仍是 true
+```
+
+`file_effects` 行实测（`seq=2`，`project_write_text_file` 真改了 `res://notes.txt`）：
+
+```
+path=res://notes.txt  abs_path=H:\rebuild\projects\mcpplay\notes.txt  kind=write  changed=True  failed=False
+before={"bytes":197,"sha256":"67EED4FD…"}   after={"bytes":51,"sha256":"FDFC1FB0…"}
+diff={"type":"line_head_tail","lines":{"before":9,"after":3},"same_head_lines":0,"same_tail_lines":0,
+      "changed_lines":{"before":9,"after":3},"head_lines":4,"tail_lines":6,"sampled_partial":false, …}
+```
+
+`seq=3`（**同内容重复写**）实测：`changed=False`，`before.sha256 == after.sha256`
+（`FDFC1FB0…`），台账于是判 `ok_no_effect_observed`；`seq=123`（`project_set_setting` 同值再写，
+走的是**另一条写入口**：引擎的 `save_custom_section()`）同样 `unchanged`。
+
+与工具外核验一致：会话前后对 `project.godot` / `main.tscn` / `notes.txt` / `util.gd` /
+`scratch/paint.tres` / `created/inner/first.txt` / `shots/editor1.png` 直接算 `Get-FileHash`
+（`live-after\live-session.txt` 末尾的独立快照），判定与 trace 的 `file_effects` 逐条相同。
 
 复现：
 
@@ -176,8 +278,10 @@ python modules\mcp_server\scripts\mcp_trace_ledger.py <trace.jsonl> --only-ineff
 | 类别 | 入口 | 判据 |
 |---|---|---|
 | 协议失败 | 调用行 `ok=false` + `error_code` | `-32700`/`-32600`/`-32601`/`-32602`/`-32000`/`-32001` |
-| 工具失败 | 同上，`error_code` 为工具自报 | 消息与 `data.suggestion` 在响应里，**不在** trace |
-| 无效成功（本模型的核心） | `ok=true` + `scene_effect=unchanged` | 画面未变 |
-| 无法判定的成功（诚实边界） | `ok=true` + `unavailable` / `not_observed` | 无 framebuffer / 没开捕获 |
-| 证据不完整 | `args_truncated=true` 或 `facts_complete=false` | 不得据此下结论 |
-| 副作用无日志 | `file_effect_evidence=not_recorded_in_trace` | 声明的缺口，见 §3.2 |
+| 工具失败 | 同上，`error_code` 为工具自报 | 消息在 `error_message`（≤512 B）；`data`（`suggestion` / `parse_error`）**不在** trace |
+| 无效成功（本模型的核心） | `ok=true` + `scene_effect=unchanged` + `file_effect∈{unchanged,none}` | 画面没动、盘上也没动 |
+| 成功但结论为否 | `ok=true` + `result_flags` 含 `assertion_failed` | 工具答 `passed:false`；TASK-089 起可见 |
+| 自相矛盾的声称 | `ok=true` + `result_flags` 含 `created_conflict` | `created:true` 与 `existed_before:true` 并存 |
+| 无法判定的成功（诚实边界） | `ok=true` + `unavailable` / `not_observed` / `not_tracked_deferred` | 无 framebuffer / 没开捕获 / 延迟应答通道 |
+| 证据不完整 | `args_truncated=true` 或 `result_json_truncated=true` 或 `facts_complete=false` | 不得据此下结论 |
+| 文件侧证据缺失 | `file_effect_evidence=not_recorded_in_trace` | 只对**旧版本写出的** trace 成立，见 §3.2 |

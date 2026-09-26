@@ -419,6 +419,13 @@ static Dispatch _dispatch_tools_call(const String &p_id_json, const Variant &p_p
 
 	// `MCPTools::content_result` is the single place that builds the success
 	// envelope, so every tool answers with the very same wire shape (GDR-6).
+	// [REBUILT-2C low-confidence: verify] TASK-089 F2: the tool's own body, on
+	// the call line; written, not replayed (REBUILT-2C-MANIFEST.md 2c-8 (H-6)).
+	if (r_trace.traceable) {
+		r_trace.result_json = JSON::stringify(tool_result);
+		r_trace.result_json_bytes = r_trace.result_json.utf8().length();
+	}
+	// [/REBUILT-2C]
 	r_trace.ok = true;
 	return _tag(_immediate(_result_response(200, _envelope_result(p_id_json, MCPTools::content_result(tool_result)))), r_trace);
 }

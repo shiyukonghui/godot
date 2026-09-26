@@ -350,6 +350,17 @@ String Recorder::_build_line(uint64_t p_connection_id, const Record &p_record, u
 			fields["file_effect_status"] = p_record.file_effect_status;
 			fields["file_effects"] = p_record.file_effects;
 		}
+
+		// TASK-089 (F2): the tool's own answer, so a response whose fields carry
+		// the verdict (`passed`, `created`, `ignored`, `changed`) is readable from
+		// the trace and not only from the client's copy of the body. Bounded by
+		// the same limit `args` uses; the true size is always reported.
+		if (!p_record.result_json.is_empty()) {
+			bool result_truncated = false;
+			fields["result_json"] = _truncate_utf8(p_record.result_json, max_args_bytes, result_truncated);
+			fields["result_json_bytes"] = p_record.result_json_bytes;
+			fields["result_json_truncated"] = result_truncated;
+		}
 		// [/REBUILT-2C]
 	}
 
