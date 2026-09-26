@@ -819,5 +819,168 @@ static Variant _tool_find_ui_elements(const Dictionary &p_args, MCPToolError &r_
 
 void register_running_game_observation_tools(MCPToolRegistry &r_registry) {
 	// BEGIN generated
+	// (scripts/gen_b2_game_schema.py: docs/tools_list.renamed.json entries copied byte for byte;
+	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
+	//  --in-place reproduces this span byte for byte.)
+	{
+		ToolBuilder builder("running_game_get_scene_tree", String::utf8("获取运行中游戏的场景树结构"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("default")] = -1;
+		v1[String::utf8("description")] = String::utf8("最大遍历深度，-1 表示无限");
+		v1[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("max_depth")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = false;
+		v2[String::utf8("description")] = String::utf8("是否只返回有名称的节点");
+		v2[String::utf8("type")] = String::utf8("boolean");
+		v0[String::utf8("named_only")] = v2;
+		Dictionary v3;
+		v3[String::utf8("description")] = String::utf8("按脚本路径过滤节点");
+		v3[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("script_filter")] = v3;
+		Dictionary v4;
+		v4[String::utf8("description")] = String::utf8("按节点类型过滤（如 Node2D, Control）");
+		v4[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("type_filter")] = v4;
+		schema[String::utf8("properties")] = v0;
+		Array v5;
+		schema[String::utf8("required")] = v5;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("get").scope(MCPToolScope::GAME).mutating(false).schema(schema).handler(_tool_get_scene_tree);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_get_node_properties", String::utf8("获取运行中游戏指定节点的属性"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("节点路径（相对于场景根节点）");
+		v1[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("node_path")] = v1;
+		Dictionary v2;
+		v2[String::utf8("description")] = String::utf8("要获取的属性列表（可选，不传则返回所有属性）");
+		Dictionary v3;
+		v3[String::utf8("type")] = String::utf8("string");
+		v2[String::utf8("items")] = v3;
+		v2[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("properties")] = v2;
+		schema[String::utf8("properties")] = v0;
+		Array v4;
+		v4.push_back(String::utf8("node_path"));
+		schema[String::utf8("required")] = v4;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("get").scope(MCPToolScope::GAME).mutating(false).schema(schema).handler(_tool_get_node_properties);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_get_node_properties_batch", String::utf8("批量获取多个节点的属性"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("节点信息数组，每个元素包含 node_path 和可选的 properties");
+		Dictionary v2;
+		Dictionary v3;
+		Dictionary v4;
+		v4[String::utf8("description")] = String::utf8("节点路径");
+		v4[String::utf8("type")] = String::utf8("string");
+		v3[String::utf8("node_path")] = v4;
+		Dictionary v5;
+		v5[String::utf8("description")] = String::utf8("需要获取的属性");
+		Dictionary v6;
+		v6[String::utf8("type")] = String::utf8("string");
+		v5[String::utf8("items")] = v6;
+		v5[String::utf8("type")] = String::utf8("array");
+		v3[String::utf8("properties")] = v5;
+		v2[String::utf8("properties")] = v3;
+		Array v7;
+		v7.push_back(String::utf8("node_path"));
+		v2[String::utf8("required")] = v7;
+		v2[String::utf8("type")] = String::utf8("object");
+		v1[String::utf8("items")] = v2;
+		v1[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("nodes")] = v1;
+		schema[String::utf8("properties")] = v0;
+		Array v8;
+		v8.push_back(String::utf8("nodes"));
+		schema[String::utf8("required")] = v8;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("get").scope(MCPToolScope::GAME).mutating(false).schema(schema).handler(_tool_get_node_properties_batch);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_get_autoload_node", String::utf8("获取自动加载节点的信息"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("自动加载节点名称");
+		v1[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("name")] = v1;
+		Dictionary v2;
+		v2[String::utf8("description")] = String::utf8("需要获取的属性列表");
+		Dictionary v3;
+		v3[String::utf8("type")] = String::utf8("string");
+		v2[String::utf8("items")] = v3;
+		v2[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("properties")] = v2;
+		schema[String::utf8("properties")] = v0;
+		Array v4;
+		v4.push_back(String::utf8("name"));
+		schema[String::utf8("required")] = v4;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("get").scope(MCPToolScope::GAME).mutating(false).schema(schema).handler(_tool_get_autoload_node);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_find_nodes_by_script", String::utf8("在运行中的游戏中按脚本路径查找节点"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("需要同时获取的属性列表");
+		Dictionary v2;
+		v2[String::utf8("type")] = String::utf8("string");
+		v1[String::utf8("items")] = v2;
+		v1[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("properties")] = v1;
+		Dictionary v3;
+		v3[String::utf8("description")] = String::utf8("脚本路径（如 res://enemy.gd）");
+		v3[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("script")] = v3;
+		schema[String::utf8("properties")] = v0;
+		Array v4;
+		v4.push_back(String::utf8("script"));
+		schema[String::utf8("required")] = v4;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("find").scope(MCPToolScope::GAME).mutating(false).schema(schema).handler(_tool_find_nodes_by_script);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_find_ui_elements", String::utf8("查找运行中游戏的所有 UI 元素"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("按控件类型过滤（如 Button, Label）");
+		v1[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("type_filter")] = v1;
+		schema[String::utf8("properties")] = v0;
+		Array v2;
+		schema[String::utf8("required")] = v2;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("find").scope(MCPToolScope::GAME).mutating(false).schema(schema).handler(_tool_find_ui_elements);
+		builder.register_into(r_registry);
+	}
 	// END generated
 }

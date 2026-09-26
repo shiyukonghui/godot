@@ -762,5 +762,79 @@ static Variant _tool_simulate_button_click_by_text(const Dictionary &p_args, MCP
 
 void register_running_game_input_tools(MCPToolRegistry &r_registry) {
 	// BEGIN generated
+	// (scripts/gen_b2_game_schema.py: docs/tools_list.renamed.json entries copied byte for byte;
+	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
+	//  --in-place reproduces this span byte for byte.)
+	{
+		ToolBuilder builder("running_game_create_input_recording", String::utf8("开始录制游戏中的输入事件（键盘、鼠标等）"));
+
+		Dictionary schema;
+		Dictionary v0;
+		schema[String::utf8("properties")] = v0;
+		Array v1;
+		schema[String::utf8("required")] = v1;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("create").scope(MCPToolScope::GAME).mutating(true).schema(schema).handler(_tool_create_input_recording);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_stop_input_recording", String::utf8("停止录制并返回已录制的输入事件数据"));
+
+		Dictionary schema;
+		Dictionary v0;
+		schema[String::utf8("properties")] = v0;
+		Array v1;
+		schema[String::utf8("required")] = v1;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("stop").scope(MCPToolScope::GAME).mutating(true).schema(schema).handler(_tool_stop_input_recording);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_play_input_recording", String::utf8("回放之前录制的输入事件序列 缺省 `events` 时，回放本游戏进程内最近一次 running_game_stop_input_recording 的录制；若本进程没有可用录制则返回 -32602。"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("要回放的事件数组");
+		v1[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("events")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = 1.0;
+		v2[String::utf8("description")] = String::utf8("回放速度倍率");
+		v2[String::utf8("type")] = String::utf8("number");
+		v0[String::utf8("speed")] = v2;
+		schema[String::utf8("properties")] = v0;
+		Array v3;
+		schema[String::utf8("required")] = v3;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("play").scope(MCPToolScope::GAME).mutating(true).schema(schema).pending_handler(_tool_play_input_recording);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_simulate_button_click_by_text", String::utf8("通过按钮文本点击运行中游戏的按钮"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("default")] = true;
+		v1[String::utf8("description")] = String::utf8("是否使用部分匹配");
+		v1[String::utf8("type")] = String::utf8("boolean");
+		v0[String::utf8("partial")] = v1;
+		Dictionary v2;
+		v2[String::utf8("description")] = String::utf8("按钮上显示的文本");
+		v2[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("text")] = v2;
+		schema[String::utf8("properties")] = v0;
+		Array v3;
+		v3.push_back(String::utf8("text"));
+		schema[String::utf8("required")] = v3;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("simulate").scope(MCPToolScope::GAME).mutating(true).schema(schema).handler(_tool_simulate_button_click_by_text);
+		builder.register_into(r_registry);
+	}
 	// END generated
 }

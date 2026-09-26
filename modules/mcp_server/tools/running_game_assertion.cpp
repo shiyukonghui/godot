@@ -708,8 +708,95 @@ void register_running_game_assertion_tools(MCPToolRegistry &r_registry) {
 	//  --in-place reproduces this span byte for byte.)
 	{
 		ToolBuilder builder("running_game_assert_node_state", String::utf8("断言运行中游戏节点的属性值符合预期"));
+
 		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("description")] = String::utf8("期望值");
+		v0[String::utf8("expected")] = v1;
+		Dictionary v2;
+		v2[String::utf8("description")] = String::utf8("节点路径");
+		v2[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("node_path")] = v2;
+		Dictionary v3;
+		v3[String::utf8("default")] = String::utf8("eq");
+		v3[String::utf8("description")] = String::utf8("比较操作符: eq/neq/gt/lt/gte/lte/contains/type_is");
+		v3[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("operator")] = v3;
+		Dictionary v4;
+		v4[String::utf8("description")] = String::utf8("属性名称");
+		v4[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("property")] = v4;
+		schema[String::utf8("properties")] = v0;
+		Array v5;
+		v5.push_back(String::utf8("node_path"));
+		v5.push_back(String::utf8("property"));
+		v5.push_back(String::utf8("expected"));
+		schema[String::utf8("required")] = v5;
+		schema[String::utf8("type")] = String::utf8("object");
+
 		builder.channel("running_game").verb("assert").scope(MCPToolScope::GAME).mutating(false).schema(schema).handler(_tool_assert_node_state);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_assert_screen_text", String::utf8("断言运行中游戏屏幕上存在指定文本"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("default")] = true;
+		v1[String::utf8("description")] = String::utf8("是否区分大小写");
+		v1[String::utf8("type")] = String::utf8("boolean");
+		v0[String::utf8("case_sensitive")] = v1;
+		Dictionary v2;
+		v2[String::utf8("default")] = true;
+		v2[String::utf8("description")] = String::utf8("是否使用部分匹配");
+		v2[String::utf8("type")] = String::utf8("boolean");
+		v0[String::utf8("partial")] = v2;
+		Dictionary v3;
+		v3[String::utf8("description")] = String::utf8("要查找的文本");
+		v3[String::utf8("type")] = String::utf8("string");
+		v0[String::utf8("text")] = v3;
+		schema[String::utf8("properties")] = v0;
+		Array v4;
+		v4.push_back(String::utf8("text"));
+		schema[String::utf8("required")] = v4;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("assert").scope(MCPToolScope::GAME).mutating(false).schema(schema).handler(_tool_assert_screen_text);
+		builder.register_into(r_registry);
+	}
+	{
+		ToolBuilder builder("running_game_capture_signal_emissions", String::utf8("监听运行中游戏节点的信号发射"));
+
+		Dictionary schema;
+		Dictionary v0;
+		Dictionary v1;
+		v1[String::utf8("default")] = 5000;
+		v1[String::utf8("description")] = String::utf8("监听持续时间（毫秒）");
+		v1[String::utf8("type")] = String::utf8("integer");
+		v0[String::utf8("duration_ms")] = v1;
+		Dictionary v2;
+		v2[String::utf8("description")] = String::utf8("要监听的节点路径列表");
+		Dictionary v3;
+		v3[String::utf8("type")] = String::utf8("string");
+		v2[String::utf8("items")] = v3;
+		v2[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("node_paths")] = v2;
+		Dictionary v4;
+		v4[String::utf8("description")] = String::utf8("要监听的信号名称过滤列表（可选）");
+		Dictionary v5;
+		v5[String::utf8("type")] = String::utf8("string");
+		v4[String::utf8("items")] = v5;
+		v4[String::utf8("type")] = String::utf8("array");
+		v0[String::utf8("signal_filter")] = v4;
+		schema[String::utf8("properties")] = v0;
+		Array v6;
+		v6.push_back(String::utf8("node_paths"));
+		schema[String::utf8("required")] = v6;
+		schema[String::utf8("type")] = String::utf8("object");
+
+		builder.channel("running_game").verb("capture").scope(MCPToolScope::GAME).mutating(false).schema(schema).pending_handler(_tool_capture_signal_emissions);
 		builder.register_into(r_registry);
 	}
 	// END generated
