@@ -1012,8 +1012,14 @@ static Variant _tool_add_state_machine_state(const Dictionary &p_args, MCPToolEr
 	if (tree == nullptr) {
 		return Variant();
 	}
+	String animation;
+	if (!optional_string(p_args, "animation", String(), animation, r_error)) {
+		return Variant();
+	}
+	const bool animation_given = p_args.has("animation");
+
 	return MCPTools::content_result(MCPTools::add_state_machine_state_on(tree, state_machine_path, state_name,
-			state_type, position_x, position_y, r_error));
+			state_type, position_x, position_y, animation, animation_given, r_error));
 }
 
 static Variant _tool_add_state_machine_transition(const Dictionary &p_args, MCPToolError &r_error) {
@@ -1045,8 +1051,25 @@ static Variant _tool_add_state_machine_transition(const Dictionary &p_args, MCPT
 	if (tree == nullptr) {
 		return Variant();
 	}
+	double xfade_time = 0.0;
+	if (!optional_float(p_args, "xfade_time", 0.0, xfade_time, r_error)) {
+		return Variant();
+	}
+	const bool xfade_time_given = p_args.has("xfade_time");
+	int64_t priority = 1;
+	if (!optional_int(p_args, "priority", 1, priority, r_error)) {
+		return Variant();
+	}
+	const bool priority_given = p_args.has("priority");
+	String advance_condition;
+	if (!optional_string(p_args, "advance_condition", String(), advance_condition, r_error)) {
+		return Variant();
+	}
+	const bool advance_condition_given = p_args.has("advance_condition");
+
 	return MCPTools::content_result(MCPTools::add_state_machine_transition_on(tree, state_machine_path, from_state,
-			to_state, switch_mode, advance_mode, r_error));
+			to_state, switch_mode, advance_mode, xfade_time, xfade_time_given, priority, priority_given,
+			advance_condition, advance_condition_given, r_error));
 }
 
 static Variant _tool_remove_state_machine_state(const Dictionary &p_args, MCPToolError &r_error) {
@@ -1128,8 +1151,14 @@ static Variant _tool_set_blend_tree_node(const Dictionary &p_args, MCPToolError 
 	if (tree == nullptr) {
 		return Variant();
 	}
+	String animation;
+	if (!optional_string(p_args, "animation", String(), animation, r_error)) {
+		return Variant();
+	}
+	const bool animation_given = p_args.has("animation");
+
 	return MCPTools::content_result(MCPTools::set_blend_tree_node_on(tree, state_machine_path, blend_tree_state,
-			bt_node_name, bt_node_type, position_x, position_y, r_error));
+			bt_node_name, bt_node_type, position_x, position_y, animation, animation_given, r_error));
 }
 
 static Variant _tool_set_animation_tree_parameter(const Dictionary &p_args, MCPToolError &r_error) {
