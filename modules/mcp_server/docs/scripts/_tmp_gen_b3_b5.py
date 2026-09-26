@@ -279,9 +279,14 @@ for batch in ("B3", "B4", "B5"):
     doc["total"] = sum(len(g["tools"]) for g in docs[batch])
     doc["source"] = {
         "batch_list": "docs/DESIGN-DETAIL.md section 10 (%s)" % batch,
-        "names": "docs/tools_list.renamed.json (171 entries) minus the 66 tools of docs/tool-groups.json and docs/tool-groups-b2.json",
+        # TASK-088: the contract's size is READ here, not written down. The
+        # literal this line used to carry ("171 entries") was the size at the
+        # revision that first ran this generator; `scripts/check_hardcoded_counts.py`
+        # flags any such literal it cannot classify, and the honest repair is a
+        # derivation, not a newer constant that goes stale the same way.
+        "names": "docs/tools_list.renamed.json (%d entries) minus the 66 tools of docs/tool-groups.json and docs/tool-groups-b2.json" % (len(contract_names),),
         "map": "docs/tool-rename-map.json (v1.1, 174 entries; channel/scope/mutating are read from it, never invented)",
-        "excluded": "none: the two unregister_until_implemented entries are absent from the 171 entry contract already",
+        "excluded": "none: the two unregister_until_implemented entries are absent from the %d entry contract already" % (len(contract_names),),
     }
     doc["counts"] = {
         "unimplemented_contract_tools": len(remaining),

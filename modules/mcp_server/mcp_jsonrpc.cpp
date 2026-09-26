@@ -333,6 +333,12 @@ static Dispatch _dispatch_tools_call(const String &p_id_json, const Variant &p_p
 		// recognisable as such in the trace.
 		r_trace.args_json = JSON::stringify(arguments);
 		r_trace.args_bytes = r_trace.args_json.utf8().length();
+		// [REBUILT-2C low-confidence: verify] TASK-088: the tool name, taken
+		// before the registry is consulted, so a call to a tool that does not
+		// exist still names itself on the line (`-32601`). Written, not
+		// replayed - same reason as the identity block in `dispatch`.
+		r_trace.tool = tool_name;
+		// [/REBUILT-2C]
 	}
 
 	if (!p_registry.is_tool_visible(tool_name, p_is_editor)) {
@@ -428,6 +434,23 @@ Dispatch dispatch(const String &p_payload, const MCPToolRegistry &p_registry, bo
 	}
 	const String method = (String)method_value;
 
+	// [REBUILT-2C low-confidence: verify] TASK-088 (item 5): the request
+	// identity. The trace line this record becomes carries the RESPONSE half
+	// (`ok`, `error_code`, `duration_ms`, `result_bytes`) and, with capture on,
+	// the pixel verdict - but the request half was never filled, so a live
+	// session produced lines with `"method":""` and `"id":null` while the
+	// capture line right next to them named the tool. A trace line that cannot
+	// say which request it describes is not traceability, so the four facts the
+	// JSON-RPC layer already holds are put on the record here (and `tool` /
+	// `tools` below). This is written text, not replayed text: the recorded
+	// `dispatch` predates the trace parameter entirely (see the TASK-085 ruling
+	// in REBUILT-2C-MANIFEST.md (C)), so no recording carries these lines.
+	if (trace.traceable) {
+		trace.id_json = id_json;
+		trace.method = method;
+	}
+	// [/REBUILT-2C]
+
 	if (method == "initialize") {
 		Dictionary tools_capability;
 		tools_capability["listChanged"] = false;
@@ -456,6 +479,15 @@ Dispatch dispatch(const String &p_payload, const MCPToolRegistry &p_registry, bo
 	if (method == "tools/list") {
 		Dictionary result;
 		result["tools"] = p_registry.build_tools_list(p_is_editor);
+		// [REBUILT-2C low-confidence: verify] TASK-088: `tools` is the one field
+		// a `tools/list` line is read for (the published table size), and
+		// `MCPTrace::_build_line` emits it only when `is_tools_list` is set.
+		// Written, not replayed - same reason as the identity block above.
+		if (trace.traceable) {
+			trace.is_tools_list = true;
+			trace.tool_count = p_registry.get_visible_tool_count(p_is_editor);
+		}
+		// [/REBUILT-2C]
 		return _tag(_immediate(_result_response(200, _envelope_result(id_json, result))), trace);
 	}
 

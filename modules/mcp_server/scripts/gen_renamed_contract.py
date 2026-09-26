@@ -548,6 +548,14 @@ _T076_TILEMAP_GAP_REASON = (
     "editor_remove_all_tilemap_cells 不要求 source 存在、也不会因此失败，挂上去只会噪音化真正的调用方。"
 )
 
+# [REBUILT-2C low-confidence: verify] TASK-088 item 4: the canonical `map_path`
+# written into `_meta`. It is the recorded build root, recovered verbatim from
+# `staging/__payload-index/events-termdump.jsonl` (lines 228, 268, 498, 569, 812,
+# 1073, 1120, 1127, 1586 all carry it next to `map_sha256` =
+# `2f552719f6a23fe328df0a2944c6048824c1b2a750aebc0fe2cabbcd3529c2bd`, which is
+# this tree's rename-map sha as well), so the value is replayed, not invented.
+RECORDED_MAP_PATH = "F:\\RustProjects\\godot-mcp-pro\\code\\godot\\modules\\mcp_server\\docs\\tool-rename-map.json"
+
 DESCRIPTION_OVERRIDES = {
     # R-1: editor_analyze_signal_flow vs editor_list_signal_connections.
     # analysis.rs:387-410 / analysis.rs:96-160 (nested nodes[], flags & 1, exact
@@ -637,8 +645,11 @@ DESCRIPTION_OVERRIDES = {
             "从哪来，于是“跑起来观察”只能靠改被测工程的 godot_mcp/port 设置（REPORT-AUDIT-M4c D-13）。"
             "实现改为经 EditorRunBar 的 p_play_args 注入 --mcp-port，并在响应里回 mcp_port/endpoint/pid，"
             "故追加一句判别点；原文逐字保留在句首。"
+            "[REBUILT-2C low-confidence: verify] TASK-088 第 4 项：本记录的 value 已改为服务端实际发布的文本"
+            "（实测 work/task088/live/editor-tools-list.json），因为录制里这条记录是同一改写的更早一版；"
+            "TASK-024 的原判据保留，文本细节以实测为准。"
         ),
-        "value": "运行场景 起游戏时经 EditorRunBar 注入 --mcp-port：缺省自动挑一个空闲端口（与编辑器自身端口不同），也可用 mcp_port 指定；响应在游戏真的起来后给出 mcp_port、mcp_port_source、endpoint 与 pid，使游戏子进程立刻可被 MCP 观察，无需改被测工程设置。",
+        "value": "运行场景 起游戏时经 EditorRunBar::play_*(..., p_play_args) 注入 --mcp-port=<端口>，使编辑器起的游戏子进程立刻可被 MCP 观察，无需改被测工程的 godot_mcp/port 设置：端口可用可选参数 mcp_port 指定（越界、已被占用、以及编辑器自己正在用的端口都会被拒绝，不会把游戏指向一个连不上的端口），缺省时自动挑一个空闲端口，且不与编辑器自身端口相同；响应在确认子进程已创建后给出 mcp_port、mcp_port_source（argument/auto_free_port）、可直连的 endpoint 与游戏 pid，子进程没起来则不报成功。",
     },
     # v1.22 (TASK-076 section A.1): the two boundaries TASK-075's D4/D5 measured
     # and REPORT-076 section 1 implemented.  All three records are append-only
@@ -694,6 +705,54 @@ DESCRIPTION_OVERRIDES = {
             "不加别名、不动 schema、不改行为；原文逐字保留在句首。"
         ),
         "value": "运行测试场景并执行一系列测试步骤 wait 步骤的入参名是 seconds（steps[i].seconds，契约 schema 里唯一的等待时长成员），结果里每个 wait 条目的回显字段叫 waited_seconds（按时间等待的步骤回显的就是 seconds；按 node_path 等待的步骤回显 timeout，见 tools/running_game_test_execution.cpp:440 与:459）；两者在**不同的对象**里，waited_seconds 不是入参（把它写进请求的 step 不生效，seconds 才是入参），入参名与结果字段名都未改动、既有调用不受影响。",
+    },
+    # [REBUILT-2C low-confidence: verify] TASK-088 item 4: registered from the measured published text.
+    "validate_script": {
+        "reason": (
+            "[REBUILT-2C low-confidence: verify] TASK-088 第 4 项（逻辑重建，依据=实测发布文本）：契约此前只写“验证脚本语法”，而服务端实际发布的描述在原文之后追加了 TASK-055 的 `.cs` 裁决说明（`valid` 只在本进程已加载的程序集确实是该源文件的构建时才为 true；`valid: false` 必须伴随 `project_build_csharp` 记录的编译诊断；两者都不是的文件以 -32000 的 'not compiled' 拒绝）。追加句取自 154 条 `tools/list` 实测响应（work/task088/live/editor-tools-list.json），原文逐字保留在句首。"
+            "TASK-088 依据：work/task088/live/editor-tools-list.json（实测 154 条 tools/list）与 work/task088/cmp_editor.txt（逐工具差异）；被替换的原文逐字为：验证脚本语法"
+        ),
+        "value": "验证脚本语法 判别点：valid 只在真的用该文件自身的脚本语言编译过时才是结论（true=编译通过；false=编译失败，error_text 给 ERR_* 标识符）；本构建不含该语言的脚本后端时（例如 module_mono_enabled=no 的构建里的 .cs）不借用别的语言解析、也不给出 valid，而是以 -32000 拒绝并在 data.suggestion 里说明该用哪个构建或文件；进程根本没有初始化任何脚本语言时（--test 进程）只做括号平衡的结构检查，message 会明说没有编译。 A '.cs' file now gets a real verdict (TASK-055): `valid: true` means the loaded .NET assembly contains a build of this exact source (Script::is_script_valid() found a class for the script's path and CSharpScript::is_source_newer_than_assembly() says the file has not changed since that assembly was built); `valid: false` with `error_text` carrying the compiler's own diagnostic text means a project-level build of its .csproj that project_build_csharp ran and recorded rejected the file as it is now; and a file nothing has compiled - edited after the last build, or with no class in the loaded assembly - is refused with -32000 saying 'not compiled', never answered `valid: false`, because the engine itself has no C# compiler (CSharpScript::reload() returns OK unconditionally).",
+    },
+    # [REBUILT-2C low-confidence: verify] TASK-088 item 4: registered from the measured published text.
+    "reload_plugin": {
+        "reason": (
+            "[REBUILT-2C low-confidence: verify] TASK-088 第 4 项（逻辑重建，依据=实测发布文本 + 已录制常量）：服务端在这 5 个工具的描述里追加了 TASK-043 的整文件写入诚实声明（`project.godot` 由引擎的整文件写入器重写、手写注释会丢失、同一调用重复执行不改变字节）。该句逐字取自录制证据 `scripts/mcp043_description_evidence.ps1:50` 的 `$Sentence`，而这 5 个工具确实在 C++ 里逐字带有它（`tools/editor_input_simulation.cpp:1244`、`tools/editor_write_scene_editor.cpp:1026`、`tools/project_autoload_write.cpp:256/263`、`tools/project_setting_write.cpp:293`）。原文逐字保留在句首。"
+            "TASK-088 依据：work/task088/live/editor-tools-list.json（实测 154 条 tools/list）与 work/task088/cmp_editor.txt（逐工具差异）；被替换的原文逐字为：重新加载 MCP 插件"
+        ),
+        "value": "重新加载 MCP 插件 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
+    },
+    # [REBUILT-2C low-confidence: verify] TASK-088 item 4: registered from the measured published text.
+    "set_input_action": {
+        "reason": (
+            "[REBUILT-2C low-confidence: verify] TASK-088 第 4 项（逻辑重建，依据=实测发布文本 + 已录制常量）：服务端在这 5 个工具的描述里追加了 TASK-043 的整文件写入诚实声明（`project.godot` 由引擎的整文件写入器重写、手写注释会丢失、同一调用重复执行不改变字节）。该句逐字取自录制证据 `scripts/mcp043_description_evidence.ps1:50` 的 `$Sentence`，而这 5 个工具确实在 C++ 里逐字带有它（`tools/editor_input_simulation.cpp:1244`、`tools/editor_write_scene_editor.cpp:1026`、`tools/project_autoload_write.cpp:256/263`、`tools/project_setting_write.cpp:293`）。原文逐字保留在句首。"
+            "TASK-088 依据：work/task088/live/editor-tools-list.json（实测 154 条 tools/list）与 work/task088/cmp_editor.txt（逐工具差异）；被替换的原文逐字为：创建 Input Action"
+        ),
+        "value": "创建 Input Action When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
+    },
+    # [REBUILT-2C low-confidence: verify] TASK-088 item 4: registered from the measured published text.
+    "add_autoload": {
+        "reason": (
+            "[REBUILT-2C low-confidence: verify] TASK-088 第 4 项（逻辑重建，依据=实测发布文本 + 已录制常量）：服务端在这 5 个工具的描述里追加了 TASK-043 的整文件写入诚实声明（`project.godot` 由引擎的整文件写入器重写、手写注释会丢失、同一调用重复执行不改变字节）。该句逐字取自录制证据 `scripts/mcp043_description_evidence.ps1:50` 的 `$Sentence`，而这 5 个工具确实在 C++ 里逐字带有它（`tools/editor_input_simulation.cpp:1244`、`tools/editor_write_scene_editor.cpp:1026`、`tools/project_autoload_write.cpp:256/263`、`tools/project_setting_write.cpp:293`）。原文逐字保留在句首。"
+            "TASK-088 依据：work/task088/live/editor-tools-list.json（实测 154 条 tools/list）与 work/task088/cmp_editor.txt（逐工具差异）；被替换的原文逐字为：注册自动加载"
+        ),
+        "value": "注册自动加载 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
+    },
+    # [REBUILT-2C low-confidence: verify] TASK-088 item 4: registered from the measured published text.
+    "remove_autoload": {
+        "reason": (
+            "[REBUILT-2C low-confidence: verify] TASK-088 第 4 项（逻辑重建，依据=实测发布文本 + 已录制常量）：服务端在这 5 个工具的描述里追加了 TASK-043 的整文件写入诚实声明（`project.godot` 由引擎的整文件写入器重写、手写注释会丢失、同一调用重复执行不改变字节）。该句逐字取自录制证据 `scripts/mcp043_description_evidence.ps1:50` 的 `$Sentence`，而这 5 个工具确实在 C++ 里逐字带有它（`tools/editor_input_simulation.cpp:1244`、`tools/editor_write_scene_editor.cpp:1026`、`tools/project_autoload_write.cpp:256/263`、`tools/project_setting_write.cpp:293`）。原文逐字保留在句首。"
+            "TASK-088 依据：work/task088/live/editor-tools-list.json（实测 154 条 tools/list）与 work/task088/cmp_editor.txt（逐工具差异）；被替换的原文逐字为：移除自动加载"
+        ),
+        "value": "移除自动加载 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
+    },
+    # [REBUILT-2C low-confidence: verify] TASK-088 item 4: registered from the measured published text.
+    "set_project_setting": {
+        "reason": (
+            "[REBUILT-2C low-confidence: verify] TASK-088 第 4 项（逻辑重建，依据=实测发布文本 + 已录制常量）：服务端在这 5 个工具的描述里追加了 TASK-043 的整文件写入诚实声明（`project.godot` 由引擎的整文件写入器重写、手写注释会丢失、同一调用重复执行不改变字节）。该句逐字取自录制证据 `scripts/mcp043_description_evidence.ps1:50` 的 `$Sentence`，而这 5 个工具确实在 C++ 里逐字带有它（`tools/editor_input_simulation.cpp:1244`、`tools/editor_write_scene_editor.cpp:1026`、`tools/project_autoload_write.cpp:256/263`、`tools/project_setting_write.cpp:293`）。原文逐字保留在句首。"
+            "TASK-088 依据：work/task088/live/editor-tools-list.json（实测 154 条 tools/list）与 work/task088/cmp_editor.txt（逐工具差异）；被替换的原文逐字为：设置项目设置"
+        ),
+        "value": "设置项目设置 When this call saves, it rewrites the entire project.godot with the engine's own whole-file writer (the engine has no partial-publish API), so every hand-written comment in that file is lost: the remaining settings are re-emitted verbatim and a repeated identical call changes no bytes (idempotent), and because the comments cannot be kept, back the file up yourself before calling if you need them.",
     },
 }
 # v1.5: a schema override replaces the whole `inputSchema` object (there is
@@ -1969,7 +2028,17 @@ def main():
     meta = {
         "generated_from": old_path,
         "generated_from_sha256": old_sha,
-        "map_path": map_path,
+        # [REBUILT-2C low-confidence: verify] TASK-088 item 4: `map_path` is the
+        # RECORDED build root, not this machine's, so the contract's sha256 is a
+        # function of its content and not of where it was generated. It used to
+        # be `map_path` - `os.path.abspath(args.map)` - which made a byte-identical
+        # regeneration impossible by construction (`H:\rebuild\godot\...` is 24
+        # bytes shorter than the recorded `F:\RustProjects\godot-mcp-pro\...`).
+        # The recorded value is not a guess: it appears verbatim, with the same
+        # `map_sha256` this tree has, in the recorded terminal dumps
+        # (`staging/__payload-index/events-termdump.jsonl`, e.g. lines 228, 569,
+        # 1127; extracted to work/task088/map_path2.txt).
+        "map_path": RECORDED_MAP_PATH,
         "map_sha256": map_sha,
         "tool_count_in": len(old_names),
         "count": len(new_tools),
