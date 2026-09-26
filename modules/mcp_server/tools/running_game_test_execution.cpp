@@ -843,7 +843,7 @@ void register_running_game_test_execution_tools(MCPToolRegistry &r_registry) {
 	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
 	//  --in-place reproduces this span byte for byte.)
 	{
-		ToolBuilder builder("running_game_run_test_scenario", String::utf8("运行测试场景并执行一系列测试步骤"));
+		ToolBuilder builder("running_game_run_test_scenario", String::utf8("运行测试场景并执行一系列测试步骤 wait 步骤的入参名是 seconds（steps[i].seconds，契约 schema 里唯一的等待时长成员），结果里每个 wait 条目的回显字段叫 waited_seconds（按时间等待的步骤回显的就是 seconds；按 node_path 等待的步骤回显 timeout，见 tools/running_game_test_execution.cpp:440 与:459）；两者在**不同的对象**里，waited_seconds 不是入参（把它写进请求的 step 不生效，seconds 才是入参），入参名与结果字段名都未改动、既有调用不受影响。"));
 
 		Dictionary schema;
 		Dictionary v0;

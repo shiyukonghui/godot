@@ -1348,7 +1348,7 @@
         "name": "editor_get_performance_monitors"
       },
       {
-        "description": "列出所有脚本文件",
+        "description": "列出所有脚本文件 会包含 .godot 下的生成脚本：本工具的 walk 从 res:// 起递归，只跳过 . 与 ..，因此引擎自己生成的文件也在答案里（真实 mono 工程会出现 res://.godot/mono/temp/obj/** 下的 .cs，例如 res://.godot/mono/temp/obj/Debug/*.AssemblyInfo.cs），调用方若要只看手写脚本请自行过滤这些路径。",
         "inputSchema": {
           "properties": {},
           "required": [],
@@ -3529,7 +3529,7 @@
         "name": "project_get_statistics"
       },
       {
-        "description": "运行测试场景并执行一系列测试步骤",
+        "description": "运行测试场景并执行一系列测试步骤 wait 步骤的入参名是 seconds（steps[i].seconds，契约 schema 里唯一的等待时长成员），结果里每个 wait 条目的回显字段叫 waited_seconds（按时间等待的步骤回显的就是 seconds；按 node_path 等待的步骤回显 timeout，见 tools/running_game_test_execution.cpp:440 与:459）；两者在**不同的对象**里，waited_seconds 不是入参（把它写进请求的 step 不生效，seconds 才是入参），入参名与结果字段名都未改动、既有调用不受影响。",
         "inputSchema": {
           "properties": {
             "scene_path": {
@@ -4014,6 +4014,12 @@
         "reason": "D-3 契约与行为一致（TASK-014 §1.3 / D59 裁决 1）：把 events 从 required 移除，使契约与实现（缺省 events 时回退到本游戏进程最近一次录制）一致。被移除的 required 成员逐字为 [\"events\"]；properties 的两个成员一字未动。"
       },
       {
+        "kind": "description",
+        "old_name": "list_scripts",
+        "mode": "append",
+        "reason": "TASK-068 §2.3(i) / REPORT-068 §2.3：TASK-067 §1.4 承认的 walk 边界（从 res:// 起递归、只跳过 . 与 ..）此前只写在报告里，客户端真正读到的描述没说。追加一句把它变成可读事实，行为一字未改（walk 仍然只跳过 . 与 ..）。"
+      },
+      {
         "kind": "inputSchema",
         "old_name": "simulate_sequence",
         "mode": "replace",
@@ -4084,6 +4090,12 @@
         "old_name": "analyze_signal_flow",
         "mode": "replace",
         "reason": "R-1 消歧 + 事实纠正（TASK-007 §1）：原文按迁移源 analysis.rs:387 写成“只统计持久连接（flags & 1）”，但 Godot 4 里 CONNECT_DEFERRED = 1、CONNECT_PERSIST = 2（core/object/object.h:356-360），照字面实现会让普通 .tscn 场景恒返回 nodes: []。实现（TASK-006 已交付）按意图用了 CONNECT_PERSIST，契约描述是唯一还在说 flags & 1 的地方，故用 mode=replace 纠正。被替换的原文（逐字保留以便审计）：分析当前场景的信号连接流 判别点：按节点嵌套返回 nodes[]（每节点含 signals_emitted/signals_connected_to），只统计持久连接（flags & 1）、node_path 精确匹配、无 signal_name 过滤；要扁平 connections[] 或子串匹配请用 editor_list_signal_connections。"
+      },
+      {
+        "kind": "description",
+        "old_name": "run_test_scenario",
+        "mode": "append",
+        "reason": "TASK-068 §2.3(ii) / REPORT-068 §2.3：R4 §8.2 登记的 waited_seconds 陷阱是文档含混，不是同名异义——入参是 steps[].seconds（契约 schema 里唯一的等待时长成员），结果的 wait 条目回显字段是 waited_seconds，回显的是**请求侧**的值、并随 wait 形式而变（tools/running_game_test_execution.cpp:440 镜像 seconds，:459 镜像 timeout）。只追加一句描述，不加别名、不动 schema、不改行为；原文逐字保留在句首。"
       },
       {
         "kind": "inputSchema",

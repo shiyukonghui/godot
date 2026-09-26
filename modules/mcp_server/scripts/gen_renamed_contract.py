@@ -670,6 +670,31 @@ DESCRIPTION_OVERRIDES = {
         "reason": _T076_TILEMAP_GAP_REASON,
         "value": "填充瓦片地图矩形区域 " + TILEMAP_ATLAS_GAP_SENTENCE,
     },
+    # v1.20 (TASK-068, description-only). Both records are append-only, so the
+    # original wording stays first and verbatim and the
+    # `startswith(<original> + " ")` guard above enforces it. The two `value`
+    # strings below are the ones `docs/reports/evidence/task076/
+    # contract_fingerprint.txt` reads back out of the generated contract (the
+    # same file that pins sha256 a5c59853... / 36 overrides / generator 1.22.0)
+    # and the ones REPORT-068 section 2.3 quotes.
+    "list_scripts": {
+        "reason": (
+            "TASK-068 §2.3(i) / REPORT-068 §2.3：TASK-067 §1.4 承认的 walk 边界（从 res:// 起递归、"
+            "只跳过 . 与 ..）此前只写在报告里，客户端真正读到的描述没说。追加一句把它变成可读事实，"
+            "行为一字未改（walk 仍然只跳过 . 与 ..）。"
+        ),
+        "value": "列出所有脚本文件 会包含 .godot 下的生成脚本：本工具的 walk 从 res:// 起递归，只跳过 . 与 ..，因此引擎自己生成的文件也在答案里（真实 mono 工程会出现 res://.godot/mono/temp/obj/** 下的 .cs，例如 res://.godot/mono/temp/obj/Debug/*.AssemblyInfo.cs），调用方若要只看手写脚本请自行过滤这些路径。",
+    },
+    "run_test_scenario": {
+        "reason": (
+            "TASK-068 §2.3(ii) / REPORT-068 §2.3：R4 §8.2 登记的 waited_seconds 陷阱是文档含混，"
+            "不是同名异义——入参是 steps[].seconds（契约 schema 里唯一的等待时长成员），结果的 wait 条目"
+            "回显字段是 waited_seconds，回显的是**请求侧**的值、并随 wait 形式而变"
+            "（tools/running_game_test_execution.cpp:440 镜像 seconds，:459 镜像 timeout）。只追加一句描述，"
+            "不加别名、不动 schema、不改行为；原文逐字保留在句首。"
+        ),
+        "value": "运行测试场景并执行一系列测试步骤 wait 步骤的入参名是 seconds（steps[i].seconds，契约 schema 里唯一的等待时长成员），结果里每个 wait 条目的回显字段叫 waited_seconds（按时间等待的步骤回显的就是 seconds；按 node_path 等待的步骤回显 timeout，见 tools/running_game_test_execution.cpp:440 与:459）；两者在**不同的对象**里，waited_seconds 不是入参（把它写进请求的 step 不生效，seconds 才是入参），入参名与结果字段名都未改动、既有调用不受影响。",
+    },
 }
 # v1.5: a schema override replaces the whole `inputSchema` object (there is
 # nothing to append to), so it must carry `"mode": "replace"` and a `reason` that
