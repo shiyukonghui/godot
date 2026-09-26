@@ -78,9 +78,14 @@ using namespace MCPTools;
 //   * the answer is
 //     `{"result": <serialize_variant of the returned value>, "result_type":
 //     "<Variant type name>"}`; a body without `return` answers
-//     `{"result": null, "result_type": "nil"}`;
+//     `{"result": null, "result_type": "Nil"}` and - TASK-103 (X-1) - carries a
+//     `note` saying that a null result is not evidence of an effect;
 //   * `code` that does not compile is `-32602` ("does not compile: <verdict>") -
 //     a malformed argument, not an internal failure;
+//   * `code` that compiles and then fails **while it runs** is `-32000` with
+//     `data.script_error` (message, line of `code`, generated line, script path,
+//     the GDScript function the engine blamed) and `data.suggestion` - TASK-103
+//     (X-1); see the long note in `tool_helpers.h`;
 //   * an engine build without the GDScript class is `-32000` with a suggestion
 //     (GDR-14's "the capability is absent"), never a crash;
 //   * a `Callable` call error (the generated method is missing) is `-32603`,
@@ -107,16 +112,21 @@ using namespace MCPTools;
 // legacy `Expression` failure on the very same expression.
 //
 // Deliberate limitations, stated rather than hidden:
-//   * a *runtime* error inside the body (calling a missing method, a null
-//     dereference) is reported by the engine on stderr and leaves the answer at
-//     `{"result": null, "result_type": "nil"}`; GDScript has no exceptions and
-//     the script language reports such errors through the engine log, so the
-//     tool can not echo a structured failure without installing an error
-//     handler that would swallow the engine's own diagnostics;
 //   * `print()` output is not captured (it goes to the engine log);
 //   * the code runs synchronously inside the frame that serves the request, so
 //     it must not block and it cannot wait for frames (see
-//     `running_game_frame_observation` in docs/tool-groups-b2.json).
+//     `running_game_frame_observation` in docs/tool-groups-b2.json);
+//   * a *runtime* error in the body used to be the first entry of this list: it
+//     was reported by the engine on stderr and the answer stayed
+//     `{"result": null, "result_type": "Nil"}` inside an `ok`. TASK-103 (X-1)
+//     removed it from the list - the engine's error handler sees the aborted
+//     frame (`gdscript_vm.cpp:3988`) and the capture in `tool_helpers.h` turns it
+//     into `-32000` + `data.script_error`; see the contract bullets above;
+//   * the one boundary that remains, and that no handler can see: the VM's error
+//     report is inside `#ifdef DEBUG_ENABLED`, so a release template
+//     (`target=template_release`) would abort the frame silently and this tool
+//     would answer `ok` again. Every build this module's gates run is
+//     `target=editor` (SConstruct:550/566-569).
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
@@ -231,9 +241,31 @@ Variant execute_gdscript_code(const String &p_code, bool p_tool_script, Node *p_
 	}
 	// [/REBUILT-2C]
 
+	// TASK-103 (X-1): the identity of the script the runtime capture below has to
+	// attribute its diagnostics to.
+	//
+	// It cannot be `Script::get_path()`: that is `Resource::get_path()`, which
+	// answers the **path cache** (`core/io/resource.cpp:118-120`) and is empty for
+	// a script that was never loaded from a resource - measured, the runtime
+	// error's `p_file` was `gdscript://-9223371484028730203.gd` while
+	// `script->get_path()` answered `""`. The path the engine really uses is
+	// `GDScript::path`, which a pathless GDScript makes out of its own instance id
+	// (`modules/gdscript/gdscript.cpp:1337`:
+	// `path = vformat("gdscript://%d.gd", get_instance_id())`), and
+	// `GDScriptFunction::source` is set from it (`gdscript_compiler.cpp:3291`).
+	// Reconstructing it exactly that way, from the same object, is what makes the
+	// comparison in the capture an exact one without reaching into the gdscript
+	// module (which this group deliberately does not depend on).
+	const String generated_script_path = vformat("gdscript://%d.gd", script->get_instance_id());
+
 	const StringName method(MCPTools::execute_gdscript_method_name());
 	Variant result;
 	Callable::CallError call_error;
+	// TASK-103 (X-1): filled by whichever branch below runs. A *runtime* error in
+	// the body never reaches `Callable::callp`'s `call_error` - GDScript aborts the
+	// frame and answers `CALL_OK` with the return type's default value - so this is
+	// the only place those facts can come from.
+	GDScriptRuntimeReport runtime;
 
 	// TASK-090 (item B): the scene-tree path. The instance is a real `Node`
 	// mounted under the mount point the caller supplied, so the body sees the
@@ -251,7 +283,7 @@ Variant execute_gdscript_code(const String &p_code, bool p_tool_script, Node *p_
 		// `(const Variant **, int, CallError &)` form is the one that reports a call
 		// failure instead of templating it away.
 		const Callable entry_point(instance, method);
-		entry_point.callp(nullptr, 0, result, call_error);
+		runtime = MCPTools::call_gdscript_capturing(entry_point, generated_script_path, body_start_line, result, call_error);
 
 		// Away from the game's tree before anything else can happen, and before the
 		// instance may be freed. A body that freed itself (`queue_free()`) is left
@@ -282,7 +314,7 @@ Variant execute_gdscript_code(const String &p_code, bool p_tool_script, Node *p_
 		instance->set_script(script);
 
 		const Callable entry_point(instance.ptr(), method);
-		entry_point.callp(nullptr, 0, result, call_error);
+		runtime = MCPTools::call_gdscript_capturing(entry_point, generated_script_path, body_start_line, result, call_error);
 		if (call_error.error != Callable::CallError::CALL_OK) {
 			r_error = MCPToolError::internal(vformat("the generated GDScript method could not be called (%s)",
 					Variant::get_call_error_text(instance.ptr(), method, nullptr, 0, call_error)));
@@ -291,9 +323,85 @@ Variant execute_gdscript_code(const String &p_code, bool p_tool_script, Node *p_
 	}
 	// [/REBUILT-2C]
 
+	// -----------------------------------------------------------------------
+	// TASK-103 (X-1): a body that compiled and then failed while it ran.
+	//
+	// The code is `-32000` (`MCP_ERR_TOOL_STATE`), the module's existing
+	// convention for "the call is well formed but the state blocks it"
+	// (GDR-14; `MCPToolError::tool_state`), and the reasoning is worth writing
+	// down because two neighbours are wrong here:
+	//
+	//   * `-32602` (`invalid_params`, what the parse failure uses) means the
+	//     *argument* was malformed. It was not: the body compiled - the engine
+	//     accepted every line of it. Reusing `-32602` would tell a caller to fix
+	//     its syntax when its syntax is fine;
+	//   * `-32603` (`internal`, what a `Callable` failure uses) means *this
+	//     module* is broken. It is not: the caller's code is the thing that
+	//     failed, and the module correctly observed that it did.
+	//
+	// `-32000` is the one that says what happened: the tool ran, and the state the
+	// caller asked for could not be produced. It also matches how the same family
+	// is already spoken about (`not_implemented` and `no_scene` are `-32000`), and
+	// it carries `data.suggestion`, which is what GDR-14 requires of it.
+	// -----------------------------------------------------------------------
+	if (runtime.error_seen) {
+		const String where = runtime.in_caller_code
+				? vformat("at line %d of 'code'", runtime.caller_line)
+				: (runtime.generated_line > 0
+								? vformat("at generated line %d (in the tool's own wrapper rather than in 'code')", runtime.generated_line)
+								: String("while the body ran"));
+		r_error = MCPToolError::tool_state(
+				vformat("Parameter 'code' raised a GDScript runtime error %s: %s", where, runtime.diagnostic),
+				"A GDScript runtime error aborts the frame: the statements after the failing one did not run and no side effect "
+				"of the body can be assumed. Read data.script_error for the engine's own message, the line of 'code', the script "
+				"path and the GDScript function it blames, then fix the body and call again. If the error names another script, "
+				"the body reached game code that failed - check that script's own diagnostics.");
+
+		Dictionary script_error;
+		script_error["message"] = runtime.diagnostic;
+		// The engine hands a handler a line, never a column (the same boundary the
+		// parse capture documents), so the column is reported as absent rather than
+		// invented.
+		script_error["line"] = runtime.in_caller_code ? Variant((int64_t)runtime.caller_line) : Variant();
+		script_error["column"] = Variant();
+		script_error["generated_line"] = (int64_t)runtime.generated_line;
+		script_error["in_caller_code"] = runtime.in_caller_code;
+		script_error["script_path"] = runtime.script_path;
+		script_error["function"] = runtime.function;
+		script_error["in_generated_body"] = runtime.in_generated_body;
+		// The identity this module reconstructed for the script it generated
+		// (`gdscript://<instance id>.gd`). Reported next to `script_path` so the
+		// comparison `in_generated_body` makes is auditable from the answer itself.
+		script_error["body_script_path"] = generated_script_path;
+		script_error["error_count"] = (int64_t)runtime.error_count;
+		Array messages;
+		for (int i = 0; i < runtime.messages.size(); i++) {
+			messages.push_back(runtime.messages[i]);
+		}
+		script_error["messages"] = messages;
+
+		// `tool_state()` already attached `data.suggestion`; the `script_error`
+		// object is added next to it rather than replacing it.
+		Dictionary data = r_error.data.get_type() == Variant::DICTIONARY ? (Dictionary)r_error.data : Dictionary();
+		data["script_error"] = script_error;
+		r_error.data = data;
+		return Variant();
+	}
+
 	Dictionary answer;
 	answer["result"] = serialize_variant(result);
 	answer["result_type"] = Variant::get_type_name(result.get_type());
+	// TASK-103 (X-1) requirement 2: "ok" on its own cannot tell "the body ran and
+	// changed something" apart from "the body returned nothing and changed
+	// nothing" - both answer `result: null` / `result_type: "Nil"`. The success
+	// path has no JSON-RPC `error.data` to put a note in, so the note lives in the
+	// tool's own result object, which is where the rest of the answer is.
+	if (result.get_type() == Variant::NIL) {
+		answer["note"] = "The body returned no value (result is null / result_type \"Nil\"). This is not evidence that the "
+						 "body had an effect: it is also what a body with no `return`, and what a body whose statements were "
+						 "all no-ops, answer. Confirm the effect separately (a property sample, a scene-tree snapshot, a "
+						 "screenshot diff or a file sha) before treating this call as a change.";
+	}
 	return answer;
 }
 
@@ -347,7 +455,7 @@ void register_running_game_script_execution_tools(MCPToolRegistry &r_registry) {
 	//  channel/verb/scope/mutating read from docs/tool-rename-map.json. Re-running the generator
 	//  --in-place reproduces this span byte for byte.)
 	{
-		ToolBuilder builder("running_game_execute_gdscript", String::utf8("在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。"));
+		ToolBuilder builder("running_game_execute_gdscript", String::utf8("在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。 运行期错误（能编译、但执行中失败，例如调用不存在的方法或方法名大小写错）回 -32000（tool_state：调用格式没问题，是这次执行失败），data.script_error 给出引擎原文 message、'code' 的行号 line（引擎只给行不给列，column 恒为 null）、生成源行号 generated_line、脚本路径 script_path（无路径脚本为 gdscript://<id>.gd）、被点名的 GDScript 函数 function 与错误条数 error_count，data.suggestion 给出改法；同一批事实也进 trace 的调用行（error_data_json），所以溯源里能直接看到这次为什么失败。运行期错误会中止该帧：出错行之后的语句没有执行，脚本的任何副作用都不能假定。脚本运行成功但 result 为 null/Nil 时响应带 note，说明 null 结果不是「有副作用」的证据，须另配效果证据（属性采样 / 场景树快照 / 像素差 / 文件 sha）。"));
 
 		Dictionary schema;
 		Dictionary v0;

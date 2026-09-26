@@ -2834,6 +2834,101 @@ String gdscript_reload_failure_text(const GDScriptReloadReport &p_report) {
 }
 
 // ---------------------------------------------------------------------------
+// TASK-103 (X-1): the runtime diagnostic capture. See the declaration in
+// `tool_helpers.h` for the engine basis (`gdscript_vm.cpp:3988`), the window and
+// the two boundaries it deliberately stops at (no column; a release template
+// reports nothing).
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// Bounded, like every list this module puts on the wire: a body that fails in a
+// loop must not be able to make the refusal unbounded.
+const int GDSCRIPT_RUNTIME_MAX_MESSAGES = 12;
+
+struct _RuntimeCapture {
+	GDScriptRuntimeReport report;
+	// `Script::get_path()` of the generated script: `gdscript://<instance id>.gd`
+	// (`modules/gdscript/gdscript.cpp:1337`). Comparing the engine's `p_file`
+	// against it is how "the body itself failed" is told apart from "a script the
+	// body called failed", with no heuristic in between.
+	String generated_script_path;
+};
+
+void _capture_runtime_diagnostic(void *p_userdata, const char *p_function, const char *p_file, int p_line,
+		const char *p_error, const char *p_message, bool p_editor_notify, ErrorHandlerType p_type) {
+	_RuntimeCapture *capture = static_cast<_RuntimeCapture *>(p_userdata);
+	if (capture == nullptr) {
+		return;
+	}
+	// `ERR_HANDLER_SCRIPT` is the type `GDScriptFunction::call()` passes for an
+	// aborted frame (`gdscript_vm.cpp:3988`) and the type `GDScript::reload()`
+	// passes for a parse error - the two are separated by the window, not by the
+	// type. A body's own deliberate `push_error()` is `ERR_HANDLER_ERROR` and is
+	// therefore not evidence of a failed body.
+	if (p_type != ERR_HANDLER_SCRIPT) {
+		return;
+	}
+	const String function(p_function != nullptr ? p_function : "");
+	const String file(p_file != nullptr ? p_file : "");
+	const bool in_body = !capture->generated_script_path.is_empty() && file == capture->generated_script_path;
+
+	capture->report.error_count++;
+	// The primary prefers the generated body: if a game script the body called
+	// also failed, the caller still wants the failure of *its own* code first.
+	if (!capture->report.error_seen || (!capture->report.in_generated_body && in_body)) {
+		capture->report.error_seen = true;
+		capture->report.in_generated_body = in_body;
+		capture->report.diagnostic = String(p_error != nullptr ? p_error : "");
+		capture->report.function = function;
+		capture->report.script_path = file;
+		capture->report.generated_line = p_line;
+	}
+	if (capture->report.messages.size() < GDSCRIPT_RUNTIME_MAX_MESSAGES) {
+		if (p_message != nullptr && *p_message != '\0') {
+			capture->report.messages.push_back(String(p_message));
+		} else if (p_error != nullptr) {
+			capture->report.messages.push_back(String(p_error));
+		}
+	}
+}
+
+} // namespace
+
+GDScriptRuntimeReport call_gdscript_capturing(const Callable &p_entry_point, const String &p_generated_script_path,
+		int p_body_start_line, Variant &r_result, Callable::CallError &r_call_error) {
+	_RuntimeCapture capture;
+	capture.generated_script_path = p_generated_script_path;
+
+	ErrorHandlerList handler;
+	handler.errfunc = _capture_runtime_diagnostic;
+	handler.userdata = &capture;
+	handler.next = nullptr;
+
+	// The engine's own printing happens before the handler list is walked
+	// (`core/error/error_macros.cpp:125-141`), so installing this costs the log
+	// nothing - the `SCRIPT ERROR` line is still on stderr exactly as before;
+	// removing it immediately keeps the process-wide list exactly as it was found.
+	add_error_handler(&handler);
+	p_entry_point.callp(nullptr, 0, r_result, r_call_error);
+	remove_error_handler(&handler);
+
+	GDScriptRuntimeReport report = capture.report;
+	// The same mapping the parse capture uses: the engine names a line of the
+	// generated source, and `p_body_start_line` is the generated line of the
+	// caller's first line. A diagnostic above that belongs to the tool's own
+	// wrapper (the prelude, a lifted `func`, the `func _mcp_execute():` header).
+	if (report.error_seen && report.generated_line > 0 && p_body_start_line > 0) {
+		const int caller_line = report.generated_line - p_body_start_line + 1;
+		if (caller_line >= 1) {
+			report.in_caller_code = true;
+			report.caller_line = caller_line;
+		}
+	}
+	return report;
+}
+
+// ---------------------------------------------------------------------------
 // Running-game scene helpers (hoisted by TASK-011 section 2 from
 // `tools/running_game_observation.cpp`). Verbatim move: the bodies are the ones
 // that file already had, with `static`/`_` removed and the two helpers they call

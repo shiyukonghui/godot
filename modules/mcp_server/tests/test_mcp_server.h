@@ -5270,7 +5270,7 @@ TEST_CASE("[MCPServer] the running_game_script_execution group is game-only and 
 		// `execute_game_script`), so the old wording stays first, verbatim; the
 		// literal is kept in step with `docs/tools_list.renamed.json` and with the
 		// generated registration block.
-		CHECK(String(listed["description"]) == String::utf8("在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。"));
+		CHECK(String(listed["description"]) == String::utf8("在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。 运行期错误（能编译、但执行中失败，例如调用不存在的方法或方法名大小写错）回 -32000（tool_state：调用格式没问题，是这次执行失败），data.script_error 给出引擎原文 message、'code' 的行号 line（引擎只给行不给列，column 恒为 null）、生成源行号 generated_line、脚本路径 script_path（无路径脚本为 gdscript://<id>.gd）、被点名的 GDScript 函数 function 与错误条数 error_count，data.suggestion 给出改法；同一批事实也进 trace 的调用行（error_data_json），所以溯源里能直接看到这次为什么失败。运行期错误会中止该帧：出错行之后的语句没有执行，脚本的任何副作用都不能假定。脚本运行成功但 result 为 null/Nil 时响应带 note，说明 null 结果不是「有副作用」的证据，须另配效果证据（属性采样 / 场景树快照 / 像素差 / 文件 sha）。"));
 		const Dictionary schema = listed["inputSchema"];
 		CHECK(String(schema["type"]) == "object");
 		const Array required = schema["required"];
@@ -9861,11 +9861,15 @@ TEST_CASE("[MCPServer] running_game_execute_gdscript reaches a live scene tree a
 	CHECK(scene_root->get_child_count() == 1);
 	{
 		MCPToolError error;
-		// A missing child is a *runtime* error: GDScript reports it through the
-		// engine log and the call still returns (the documented boundary of this
-		// tool). The mount has to be gone either way - that is the failure path
-		// that really runs after `add_child`.
+		// A missing child is a *runtime* error: GDScript aborts the frame and the
+		// engine reports it. TASK-103 (X-1) made that a structured refusal
+		// (`-32000` + `data.script_error`) instead of the old `ok` with `null`.
+		// The mount has to be gone either way - that is the failure path that
+		// really runs after `add_child`.
 		(void)execute_gdscript_code("return get_parent().get_node(\"NoSuchChild\").name", false, scene_root, error);
+		CHECK(error.code == -32000);
+		CHECK(error.data.get_type() == Variant::DICTIONARY);
+		CHECK(((Dictionary)error.data).has("script_error"));
 		CHECK(scene_root->get_child_count() == 1);
 		CHECK(scene_root->get_child(0) == player);
 	}
@@ -9880,6 +9884,157 @@ TEST_CASE("[MCPServer] running_game_execute_gdscript reaches a live scene tree a
 	}
 
 	memdelete(scene_root);
+}
+
+// ---------------------------------------------------------------------------
+// TASK-103 (X-1): a body that compiles and then fails **while it runs**.
+//
+// The defect (TASK-102, `runs/match3/m3-task102-r1/g115-runtime-overlay.json`):
+// the body called `main.addChild(c)` - the C# spelling of the method - on a C#
+// `Node2D`. GDScript compiled it (the call is dynamically dispatched) and then
+// aborted the frame at that line; `Callable::callp` answered `CALL_OK` with the
+// return type's default, so the tool answered `ok` with
+// `{"result": null, "result_type": "Nil"}`, **no** error code, **no** message and
+// **no** suggestion, while the engine's stderr carried the whole
+// `SCRIPT ERROR: Invalid call. Nonexistent function 'addChild' ...` line. The
+// cost was measured: the pixel diff of the next frame was 0 and the scene tree
+// had no `ProbeOverlay`, so the `ok` answer was the only thing pointing the wrong
+// way - and it pointed the wrong way.
+//
+// The three situations the tool now has to keep apart are pinned here:
+//
+//   (1) `code` that does not parse      -> `-32602`, the pre-existing contract;
+//   (2) `code` that parses and then fails at run time -> `-32000` with
+//       `data.script_error` (message / line of `code` / generated line / script
+//       path / the blamed GDScript function) and `data.suggestion`;
+//   (3) `code` that succeeds             -> no error at all, and a `note` exactly
+//       when the answer is `null`, because a null result is not evidence of an
+//       effect.
+//
+// The base object is taken out of a `Dictionary` on purpose: that makes the call
+// dynamically dispatched (`Variant`), which is the shape that reaches the VM's
+// runtime-error path at all. A statically typed base would be rejected by the
+// analyzer with a compile error instead, and the test would be pinning the wrong
+// two paths.
+// ---------------------------------------------------------------------------
+TEST_CASE("[MCPServer] running_game_execute_gdscript reports a GDScript runtime error structurally") {
+	if (!ScriptServer::are_languages_initialized()) {
+		ScriptServer::init_languages();
+	}
+	CHECK(ScriptServer::are_languages_initialized());
+
+	MCPToolRegistry registry;
+	TestMCPServer::build_all_tools_registry(registry);
+
+	const auto call = [&registry](const String &p_code, Variant &r_payload, MCPToolError &r_error) {
+		Dictionary args;
+		args["code"] = p_code;
+		r_payload = registry.call_tool("running_game_execute_gdscript", args, r_error);
+	};
+
+	// (1) The parse failure, unchanged: a malformed argument, not a failed run.
+	{
+		Variant payload;
+		MCPToolError error;
+		call("return (", payload, error);
+		CHECK(error.code == -32602);
+		CHECK(error.message.contains("does not compile"));
+		CHECK(payload.get_type() == Variant::NIL);
+	}
+
+	// (2) The runtime error. It is `-32000`, never `-32602` (the syntax was fine)
+	// and never `-32603` (this module is not the thing that failed).
+	{
+		Variant payload;
+		MCPToolError error;
+		// Line 3 of `code` is the failing one; the generated source puts it on
+		// line 6 (header at 1-3, the two setup statements at 4-5).
+		call("var box = {}\nbox[\"m\"] = Node.new()\nreturn box[\"m\"].NoSuchMethodAtAll()", payload, error);
+		CHECK(error.code == -32000);
+		CHECK(payload.get_type() == Variant::NIL);
+		CHECK(error.message.contains("GDScript runtime error"));
+		CHECK(error.message.contains("line 3 of 'code'"));
+		CHECK(error.message.contains("NoSuchMethodAtAll"));
+
+		CHECK(error.data.get_type() == Variant::DICTIONARY);
+		const Dictionary data = error.data;
+		CHECK(data.has("suggestion"));
+		CHECK(String(data["suggestion"]).contains("data.script_error"));
+		CHECK(data.has("script_error"));
+
+		const Dictionary script_error = data["script_error"];
+		CHECK(String(script_error["message"]).contains("NoSuchMethodAtAll"));
+		CHECK((int64_t)script_error["line"] == 3);
+		CHECK((bool)script_error["in_caller_code"] == true);
+		CHECK((int64_t)script_error["generated_line"] == 6);
+		CHECK((bool)script_error["in_generated_body"] == true);
+		CHECK(String(script_error["function"]) == "_mcp_execute");
+		CHECK(String(script_error["script_path"]).begins_with("gdscript://"));
+		// The auditable form of the attribution: the answer carries both strings, so
+		// this comparison is the one `in_generated_body` made.
+		CHECK(String(script_error["script_path"]) == String(script_error["body_script_path"]));
+		CHECK((int64_t)script_error["error_count"] >= 1);
+		// The engine hands a handler a line and never a column: reported absent.
+		CHECK(script_error["column"].get_type() == Variant::NIL);
+		CHECK(script_error["messages"].get_type() == Variant::ARRAY);
+	}
+
+	// (2b) The shape X-1 was found in - the *wrong case* spelling of a real
+	// method on a dynamically dispatched base. Whether the engine resolves
+	// `addChild` as a name and rejects the `null` argument, or does not resolve it
+	// at all, both are runtime errors of the same body and both have to be
+	// reported: the assertion is on the refusal, not on the engine's wording.
+	{
+		Variant payload;
+		MCPToolError error;
+		call("var box = {}\nbox[\"m\"] = Node.new()\nreturn box[\"m\"].addChild(null)", payload, error);
+		CHECK(error.code == -32000);
+		CHECK(error.data.get_type() == Variant::DICTIONARY);
+		const Dictionary data = error.data;
+		CHECK(data.has("script_error"));
+		if (data.has("script_error")) {
+			const Dictionary script_error = data["script_error"];
+			CHECK((int64_t)script_error["line"] == 3);
+		}
+	}
+
+	// (3) Success with a value: no error, and no note - there is nothing to warn
+	// about.
+	{
+		Variant payload;
+		MCPToolError error;
+		call("return 40 + 2", payload, error);
+		CHECK_FALSE(error.is_error());
+		const Dictionary answer = payload;
+		CHECK((int64_t)answer["result"] == 42);
+		CHECK_FALSE(answer.has("note"));
+	}
+
+	// (4) Success with no value: the answer says so, so "ok" cannot be read as
+	// "something happened".
+	{
+		Variant payload;
+		MCPToolError error;
+		call("var m = Node.new()\nm.set_name(\"mcp-note-probe\")", payload, error);
+		CHECK_FALSE(error.is_error());
+		const Dictionary answer = payload;
+		CHECK(answer["result"].get_type() == Variant::NIL);
+		CHECK(String(answer["result_type"]) == "Nil");
+		CHECK(answer.has("note"));
+		CHECK(String(answer["note"]).contains("not evidence that the body had an effect"));
+	}
+
+	// (5) A deliberate `push_error()` is not a runtime error: it is
+	// `ERR_HANDLER_ERROR`, it does not abort the frame, and the body's own value
+	// still comes back. The capture keys on `ERR_HANDLER_SCRIPT` precisely so that
+	// a body's own diagnostics cannot turn a successful call into a refusal.
+	{
+		Variant payload;
+		MCPToolError error;
+		call("push_error(\"deliberate diagnostic from the body\")\nreturn 7", payload, error);
+		CHECK_FALSE(error.is_error());
+		CHECK((int64_t)((Dictionary)payload)["result"] == 7);
+	}
 }
 
 // ---------------------------------------------------------------------------

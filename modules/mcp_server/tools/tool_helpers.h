@@ -34,6 +34,7 @@
 #include "core/math/math_funcs.h"
 #include "core/object/object.h"
 #include "core/string/string_name.h"
+#include "core/variant/callable.h"
 #include "core/variant/dictionary.h"
 #include "core/variant/variant.h"
 #include "core/variant/variant_utility.h"
@@ -1220,6 +1221,99 @@ GDScriptReloadReport reload_gdscript_capturing(Script *p_script, int p_body_star
 // (every existing doctest and the migration source's own phrasing key on it) and
 // adds the line when the engine named one.
 String gdscript_reload_failure_text(const GDScriptReloadReport &p_report);
+
+// ---------------------------------------------------------------------------
+// TASK-103 (X-1): the *runtime* diagnostic of one generated GDScript body.
+//
+// **The defect this closes.** The generated body could compile and then fail
+// while it ran - a missing method (`main.addChild(c)`, the C# spelling, on a C#
+// `Node2D`), a null dereference, a bad index. GDScript has no exceptions and
+// `GDScriptFunction::call()` answers `Callable::CallError::CALL_OK` for such a
+// body: the VM prints the error through the engine's error machinery, aborts the
+// function and returns the return type's default value. So the old tool answered
+// `ok` with `{"result": null, "result_type": "Nil"}` and **no** error code, no
+// message and no suggestion - measured in TASK-102 (`m3-task102-r1`,
+// `g115-runtime-overlay`: the `ok` answer, the byte-identical frame and the
+// missing scene node, while the engine's stderr carried the full
+// `SCRIPT ERROR: Invalid call. Nonexistent function 'addChild'...` line). X-1's
+// whole cost was that `ok` could not be told apart from "the body really ran
+// and its side effect is simply not visible here".
+//
+// **The engine route, and its boundary.** The same `add_error_handler` hook the
+// parse capture uses sees runtime errors too: `GDScriptFunction::call()`
+// reports the aborted frame as
+//
+//     _err_print_error(err_func, err_file, err_line, err_text, false, ERR_HANDLER_SCRIPT)
+//     (modules/gdscript/gdscript_vm.cpp:3988)
+//
+// with `err_func` the GDScript function's name (`_mcp_execute`), `err_file` the
+// script the frame belongs to (a pathless `GDScript` is named after its own
+// instance id in its constructor, `modules/gdscript/gdscript.cpp:1337`, and
+// `GDScriptFunction::source` is set from that path,
+// `gdscript_compiler.cpp:3291`; it is the string the engine's own log line
+// carries) and `err_line` a line of the **generated** source. Both the VM
+// sites are inside `#ifdef DEBUG_ENABLED`, and every build this task's gates run
+// is `target=editor` (SConstruct:550/566-569), so the hook is compiled in - but
+// that is a real boundary and is stated rather than assumed: a release template
+// would report nothing and this capture would answer "no error seen".
+//
+// The window is exactly one `Callable::callp()` - the tool is synchronous and on
+// the main thread - so every `ERR_HANDLER_SCRIPT` emitted between the install
+// and the removal happened *because of this call*. `ERR_HANDLER_SCRIPT` (not
+// `ERR_HANDLER_ERROR`) is what keeps a body's own deliberate `push_error()` out
+// of the verdict; `p_message` is the engine's explanation when it has one.
+//
+// Columns are dropped before any handler sees them (the engine hands a handler
+// `p_line` alone, `core/error/error_macros.h:63-77`) - the same boundary the
+// parse capture documents, so `data.script_error` carries a line and never
+// invents a column.
+// ---------------------------------------------------------------------------
+struct GDScriptRuntimeReport {
+	// True when at least one `ERR_HANDLER_SCRIPT` error was emitted in the window.
+	bool error_seen = false;
+	// The primary diagnostic: the first error reported inside the generated body
+	// when there is one, otherwise the first error of any script.
+	bool in_generated_body = false;
+	// The engine's own text, e.g.
+	// "Invalid call. Nonexistent function 'addChild' in base 'Node2D (Match3Game.cs)'."
+	String diagnostic;
+	// The GDScript function the engine blamed (`_mcp_execute`, or a lifted helper).
+	String function;
+	// The script identifier the engine named (`gdscript://<id>.gd`, or the path of
+	// a *game* script when the body's call reached it and it failed there).
+	String script_path;
+	// The line the engine named, in the **generated** source. 0 when it named none.
+	int generated_line = 0;
+	// 1-based line of the caller's own `code`, or 0 when the diagnostic is not in
+	// the caller's code or could not be mapped.
+	int caller_line = 0;
+	// True exactly when the diagnostic landed inside the caller's own lines.
+	bool in_caller_code = false;
+	// Every `ERR_HANDLER_SCRIPT` error captured in the window (the primary is one
+	// of them), so a caller is not told about one failure while three happened.
+	int error_count = 0;
+	// Every diagnostic captured, bounded, in the order the engine emitted them.
+	Vector<String> messages;
+};
+
+// Runs one generated-body entry point with a temporary error handler installed,
+// so a *runtime* error becomes a structured fact instead of a line on stderr.
+//
+// `p_generated_script_path` is the identity the engine reports for the script the
+// callable belongs to (`gdscript://<instance id>.gd` for the pathless GDScript the
+// executor compiles, reconstructed by the caller as `GDScript::path` is made - NOT
+// `Script::get_path()`, which answers the usually-empty path cache); it is what
+// lets the capture separate "the body itself failed" from "a script the body
+// called failed" without guessing.
+//
+// `r_result` and `r_call_error` are the ones `Callable::callp` filled - the
+// caller keeps its existing handling of a `CALL_*` failure and adds this report
+// on top. The handler is installed and removed around that one call and is never
+// left behind; the list is process-global and locked, which is why this is
+// documented as a main-thread-only operation (both executors already run on the
+// main thread).
+GDScriptRuntimeReport call_gdscript_capturing(const Callable &p_entry_point, const String &p_generated_script_path,
+		int p_body_start_line, Variant &r_result, Callable::CallError &r_call_error);
 
 // ---------------------------------------------------------------------------
 // Screen-text observation (TASK-019, `running_game_assert_screen_text`).

@@ -772,8 +772,16 @@ DESCRIPTION_OVERRIDES = {
             "本任务把执行体改为挂到当前场景根节点下的临时 Node（成功与失败都在返回前移除；无场景树时回退为 RefCounted），"
             "因此描述必须补上：能触达运行中的场景树、路径以临时节点为基准（绝对路径与 get_tree().current_scene 可达任意节点）、"
             "调用同步且节点存活不足一帧（_process/_physics_process 不会被触发）、游戏自身节点树不被改动。原文逐字保留在句首。"
+            "TASK-103（X-1，工具缺陷，依据=实测发布文本 + TASK-102 的现场应答）：补上运行期错误的应答契约。"
+            "X-1 的现场是 TASK-102 的 m3-task102-r1/g115-runtime-overlay："
+            "脚本能编译、执行时调了 C# 拼写的 addChild，VM 中止该帧并只把 SCRIPT ERROR 打到引擎 stderr，"
+            "而工具回 ok + {\"result\":null,\"result_type\":\"Nil\"}——没有错误码、没有消息、没有建议，"
+            "于是「脚本炸了」与「脚本跑了但没有可见副作用」在答复里无法区分（那一轮真正抓到它的是像素差 0 与场景树里没有该节点）。"
+            "修好之后：运行期错误回 -32000 并带 data.script_error（引擎原文、'code' 的行、生成源行、脚本路径、被点名的 GDScript 函数）"
+            "与 data.suggestion；成功但 result 为 null/Nil 的应答带 note。这两条都必须写进契约，否则消费者仍会把 ok 当成「脚本执行成功」。"
+            "追加式 override：TASK-090 的句子逐字保留在其前，本任务只在其后追加。"
         ),
-        "value": "在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。",
+        "value": "在运行中的游戏内执行 GDScript 代码 有场景树时，代码体作为一个临时 Node 挂在当前场景根节点下执行：get_node()/$Path、节点属性、信号、get_tree() 均可用（路径以该临时节点为基准，绝对路径与 get_tree().current_scene 可达任意节点）；调用返回前该节点必定被移除（成功与失败同样处理），游戏自身的节点树不被改动；调用是同步的，临时节点存活不足一帧，_process/_physics_process 不会被触发。进程内没有场景树时回退为 extends RefCounted，仅全局单例可用。 运行期错误（能编译、但执行中失败，例如调用不存在的方法或方法名大小写错）回 -32000（tool_state：调用格式没问题，是这次执行失败），data.script_error 给出引擎原文 message、'code' 的行号 line（引擎只给行不给列，column 恒为 null）、生成源行号 generated_line、脚本路径 script_path（无路径脚本为 gdscript://<id>.gd）、被点名的 GDScript 函数 function 与错误条数 error_count，data.suggestion 给出改法；同一批事实也进 trace 的调用行（error_data_json），所以溯源里能直接看到这次为什么失败。运行期错误会中止该帧：出错行之后的语句没有执行，脚本的任何副作用都不能假定。脚本运行成功但 result 为 null/Nil 时响应带 note，说明 null 结果不是「有副作用」的证据，须另配效果证据（属性采样 / 场景树快照 / 像素差 / 文件 sha）。",
     },
     # -----------------------------------------------------------------------
     # TASK-097 (GENERATOR_VERSION stays "1.22.0": the six shape quantities of
