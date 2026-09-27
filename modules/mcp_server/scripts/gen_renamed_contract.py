@@ -488,6 +488,23 @@ in TASK-075 but only ever written down in a report the caller never reads:
 The sentences are two module-level literals (`SCENE_TREE_ADDRESSABILITY_SENTENCE`
 and `TILEMAP_ATLAS_GAP_SENTENCE`) so the two tilemap entries cannot drift apart,
 exactly like `NODE_PATH_RULE_SENTENCE` (v1.19) and `_T059_SECTION_WRITE` (v1.18).
+
+v1.23 (TASK-112 D-T111-3): the count and every `description` stay exactly where
+v1.22 left them (**177 entries**, `overrides` 26 -> 27), and **one `inputSchema`
+moves** - the first schema override since the animation-tree family:
+
+  * **`editor_add_raycast`** (old `add_raycast`): `dimension` is declared as the
+    closed set it always was (`enum: ["2d", "3d"]`, `default`/`type` unchanged).
+    The old schema said only `{"default":"2d","type":"string"}` and the
+    implementation was `dimension == "2d" ? RayCast2D : RayCast3D`, so every
+    other spelling - a typo, `"2D"`, `"4d"` - silently built a `RayCast3D` and
+    answered `added: true` (measured, `c4-033`:
+    `{"dimension":"4d"}` -> `{"added":true,"name":"Ray4d","type":"RayCast3D"}`).
+    TASK-111 registered that as D-T111-3; TASK-112 fixes the runtime with a
+    closed-set refusal *before* the editor guard and makes the set visible before
+    the call. The same commit's doctest pins the refusal; the enum is the
+    contract half of the same fact. No `required` member moves (it is `[]` before
+    and after).
 """
 
 import argparse
@@ -497,7 +514,7 @@ import os
 import re
 import sys
 
-GENERATOR_VERSION = "1.22.0"
+GENERATOR_VERSION = "1.23.0"
 GENERATED_BY = "modules/mcp_server/scripts/gen_renamed_contract.py"
 
 # Explicit override hooks. SCHEMA_OVERRIDES was empty for B0/B1: the rename is
@@ -1406,6 +1423,56 @@ SCHEMA_OVERRIDES = {
                 },
             },
             "required": ["steps"],
+            "type": "object",
+        },
+    },
+    # TASK-112 D-T111-3 (v1.23): `editor_add_raycast.dimension` becomes a
+    # declared closed set.
+    #
+    # Rationale for changing the contract at all: the tool is a closed-set tool
+    # by nature (it builds exactly one of two node classes), the sibling closed
+    # sets in this contract already declare their `enum`
+    # (`editor_set_node_selection.mode`, `running_game_run_test_scenario.steps[].type`),
+    # and a caller who reads `tools/list` had no way to learn that `"4d"` was
+    # anything other than a third option: the old schema said only
+    # `{"default":"2d","type":"string"}`, so a typo was accepted and silently
+    # produced a `RayCast3D` (measured, `c4-033`). Declaring the enum makes the
+    # accepted set visible *before* the call, which is the point of publishing a
+    # schema; the runtime refusal added in the same commit is the enforcement.
+    #
+    # This is a whole-object replacement (the generator has no other mode), so
+    # the three members and their `default`s are copied verbatim from the old
+    # schema and the only change is the added `enum` on `dimension`. No member is
+    # dropped and no `required` member changes: the old schema's `required` member
+    # is `[]` and it stays `[]` (逐字：`[]`).
+    "add_raycast": {
+        "reason": (
+            "TASK-112 D-T111-3：把 dimension 声明为闭集 enum [\"2d\",\"3d\"]。"
+            "依据：实测 c4-033 的 {\"dimension\":\"4d\"} 返回 ok 且建出 RayCast3D"
+            "（旧的 dimension == \"2d\" ? RayCast2D : RayCast3D 对任何非 \"2d\" 值都落 3D），"
+            "而契约只写 {\"default\":\"2d\",\"type\":\"string\"}，调用方无法从 tools/list 得知 \"4d\" 非法；"
+            "同契约的其它闭集（editor_set_node_selection.mode、run_test_scenario.steps[].type）都已声明 enum。"
+            "本次 schema override 是整体替换（mode=replace），dimension 的 default/type、name 与 parent_path 的 "
+            "default/type 逐字保留，只新增 enum；被移除的 required 成员逐字为 []（本来为空，且仍为 []，未移除任何成员）。"
+        ),
+        "mode": "replace",
+        "value": {
+            "properties": {
+                "dimension": {
+                    "default": "2d",
+                    "enum": ["2d", "3d"],
+                    "type": "string",
+                },
+                "name": {
+                    "default": "RayCast",
+                    "type": "string",
+                },
+                "parent_path": {
+                    "default": ".",
+                    "type": "string",
+                },
+            },
+            "required": [],
             "type": "object",
         },
     },

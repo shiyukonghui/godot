@@ -2450,6 +2450,10 @@
           "properties": {
             "dimension": {
               "default": "2d",
+              "enum": [
+                "2d",
+                "3d"
+              ],
               "type": "string"
             },
             "name": {
@@ -3959,7 +3963,7 @@
         "merged_into": "get_performance_monitors"
       }
     ],
-    "generator_version": "1.22.0",
+    "generator_version": "1.23.0",
     "generated_by": "modules/mcp_server/scripts/gen_renamed_contract.py",
     "overrides": [
       {
@@ -4117,6 +4121,12 @@
         "old_name": "remove_autoload",
         "mode": "append",
         "reason": "[REBUILT-2C low-confidence: verify] TASK-088 第 4 项（逻辑重建，依据=实测发布文本 + 已录制常量）：服务端在这 5 个工具的描述里追加了 TASK-043 的整文件写入诚实声明（`project.godot` 由引擎的整文件写入器重写、手写注释会丢失、同一调用重复执行不改变字节）。该句逐字取自录制证据 `scripts/mcp043_description_evidence.ps1:50` 的 `$Sentence`，而这 5 个工具确实在 C++ 里逐字带有它（`tools/editor_input_simulation.cpp:1244`、`tools/editor_write_scene_editor.cpp:1026`、`tools/project_autoload_write.cpp:256/263`、`tools/project_setting_write.cpp:293`）。原文逐字保留在句首。TASK-088 依据：work/task088/live/editor-tools-list.json（实测 154 条 tools/list）与 work/task088/cmp_editor.txt（逐工具差异）；被替换的原文逐字为：移除自动加载"
+      },
+      {
+        "kind": "inputSchema",
+        "old_name": "add_raycast",
+        "mode": "replace",
+        "reason": "TASK-112 D-T111-3：把 dimension 声明为闭集 enum [\"2d\",\"3d\"]。依据：实测 c4-033 的 {\"dimension\":\"4d\"} 返回 ok 且建出 RayCast3D（旧的 dimension == \"2d\" ? RayCast2D : RayCast3D 对任何非 \"2d\" 值都落 3D），而契约只写 {\"default\":\"2d\",\"type\":\"string\"}，调用方无法从 tools/list 得知 \"4d\" 非法；同契约的其它闭集（editor_set_node_selection.mode、run_test_scenario.steps[].type）都已声明 enum。本次 schema override 是整体替换（mode=replace），dimension 的 default/type、name 与 parent_path 的 default/type 逐字保留，只新增 enum；被移除的 required 成员逐字为 []（本来为空，且仍为 []，未移除任何成员）。"
       },
       {
         "kind": "inputSchema",

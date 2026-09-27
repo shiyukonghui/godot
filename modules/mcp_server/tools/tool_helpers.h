@@ -172,6 +172,74 @@ typedef Error (*AtomicWriteFunc)(const String &p_temp_path, void *p_userdata);
 // when it is missing and the destination does not exist yet.
 Error publish_file_atomically(const String &p_path, AtomicWriteFunc p_write, void *p_userdata);
 
+// ---------------------------------------------------------------------------
+// TASK-112 D-T111-1: the UID half of the scratch-name publish.
+//
+// `temporary_sibling_path`'s own note already records that the engine's
+// `ResourceSaver::save()` runs its `save_callback` for `res://` paths *before*
+// the caller renames the scratch file, so the editor's resource filesystem
+// records the scratch path. What that note did not cover is that the *same*
+// callback is what registers the file's **UID**:
+//
+//   ResourceSaver::save(res, "res://a/b.mcp-tmp.tres")
+//     -> ResourceFormatSaverText::save asks
+//        `ResourceSaver::get_resource_id_for_path(local_path = the scratch path, true)`,
+//        mints a fresh id and writes `uid="uid://…"` into the scratch header;
+//     -> on success `ResourceSaver::save` calls `save_callback(res, path = the scratch path)`
+//        (`core/io/resource_saver.cpp:146-148`);
+//     -> `EditorNode::_resource_saved` -> `EditorFileSystem::update_file(the scratch path)`
+//        reads that header uid and does `ResourceUID::add_id(uid, the scratch path)`
+//        + `update_cache()`.
+//
+// The rename that follows changes the file name and **nothing else**, so the
+// project's `.godot/uid_cache.bin` keeps `uid -> <name>.mcp-tmp.<ext>`. A scene
+// that references the resource by that uid then resolves it to a file that does
+// not exist: `resource_format_text.cpp:481-483` prefers the uid over the
+// `path=` attribute that is still correct, `ResourceLoader::_load_start` returns
+// a null token for the missing scratch file, and the load fails with
+// "`[ext_resource] referenced non-existent resource`" - while the write tool
+// exited 0. That is a silent wrong result, measured in `projects/_exercises/ex_3d`
+// (TASK-111 section C2, D-T111-1).
+//
+// The fix runs after a successful publish, i.e. *after* the engine has been told
+// about the scratch path: it reads the UID the file really carries and makes the
+// destination its authoritative path, so the scratch entry is overwritten in the
+// same map and disappears from `uid_cache.bin`. A path whose file carries no UID
+// (every text file, every PNG, `project.godot`) is a no-op, so the publish
+// primitive can call it unconditionally without guessing what it published.
+void retarget_published_uid(const String &p_path);
+
+// ---------------------------------------------------------------------------
+// TASK-112 D-T111-2: one definition of "write this JSON bag onto this freshly
+// created Resource".
+//
+// `editor_add_resource_to_node_property` used to run the caller's
+// `resource_properties` through `property_value_from_json` and hand the result
+// straight to `coerce_to_property_type`, **without** the
+// `shape_vector_from_json` step every other property bag of the module runs
+// (`project_write_resource_scene.cpp`, `project_setting_write.cpp`,
+// `editor_shader_write.cpp`, `running_game_node_write.cpp` all call it first).
+// `property_value_from_json`'s DICTIONARY branch deliberately leaves an object
+// alone - folding `{"x":48,"y":48}` into a `Vector2` is
+// `shape_vector_from_json`'s job - so the tool refused exactly the spelling its
+// own refusal message told the caller to send ("a JSON object naming its
+// components for a vector/colour"), while its sibling
+// `editor_setup_collision_shape` accepted the identical input.
+//
+// The loop now lives here so the doctest can assert the function the tool
+// really calls (the doctest process has no `SceneTree` and no editor UI, so the
+// tool itself is unreachable there - the same reason TASK-040 D-1 hoisted
+// `assign_resource_to_property`).
+//
+// Contract: every name in `p_properties` must be a property of `p_resource`
+// (`-32001` naming it otherwise, matching `_write_resource_properties`); a
+// value that cannot fill its property's type is `-32602` naming the member and
+// the property. Returns false with `r_error` filled and **no** guarantee about
+// which of the earlier members were already written (they are written in the
+// dictionary's order, exactly as before).
+bool write_resource_properties_from_json(const Ref<Resource> &p_resource, const Dictionary &p_properties,
+		MCPToolError &r_error);
+
 // The `AtomicWriteFunc` for a whole text file, plus the one-line wrapper every
 // text-file writer of a *new* group uses (TASK-035: `project_create_shader` /
 // `project_edit_shader`). The existing text writer of `project_script_write` keeps

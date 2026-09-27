@@ -242,6 +242,38 @@ static Variant _tool_add_scene_instance(const Dictionary &p_args, MCPToolError &
 // no orphan behind - the migration source's `root.get_node_as::<Node>(path)`
 // produced a null `Gd` for a missing parent and then added the node to nothing.
 // ---------------------------------------------------------------------------
+// TASK-112 D-T111-3: `dimension` is a **closed set**.
+//
+// The first implementation wrote `dimension == "2d" ? RayCast2D : RayCast3D`, so
+// every value other than the exact literal `"2d"` - `"4d"`, `"2D"`, a typo, an
+// empty string - silently produced a `RayCast3D` and the answer echoed the
+// caller's own spelling back next to `added: true`. Measured (`c4-033`):
+// `{"dimension":"4d","name":"Ray4d"}` answered
+// `{"added":true,"name":"Ray4d","node_path":"Ray4d","type":"RayCast3D"}` - a
+// wrong node under a successful exit code, which is the worst of the three
+// outcomes.
+//
+// The sibling closed sets do exactly this (`editor_set_physics_layers`'
+// `layer_type`, `editor_physics_write.cpp:68-81`;
+// `editor_setup_navigation_region`'s `mode`, `editor_node_setup.cpp:462`): a
+// value outside the set is a `-32602` that names the set. The registry attaches
+// the `data.suggestion` every `-32602` of this module carries (TASK-050 N-7),
+// which lists the parameters the tool really declares.
+static bool _resolve_raycast_dimension(const String &p_dimension, bool &r_is_2d, MCPToolError &r_error) {
+	const String value = p_dimension.strip_edges();
+	if (value == "2d") {
+		r_is_2d = true;
+		return true;
+	}
+	if (value == "3d") {
+		r_is_2d = false;
+		return true;
+	}
+	r_error = MCPToolError::invalid_params(vformat(
+			"'dimension' must be one of '2d' or '3d'; got '%s'", p_dimension));
+	return false;
+}
+
 static Variant _tool_add_raycast(const Dictionary &p_args, MCPToolError &r_error) {
 	String parent_path;
 	if (!_optional_parent_path(p_args, parent_path, r_error)) {
@@ -253,6 +285,13 @@ static Variant _tool_add_raycast(const Dictionary &p_args, MCPToolError &r_error
 	}
 	String dimension;
 	if (!optional_string(p_args, "dimension", "2d", dimension, r_error)) {
+		return Variant();
+	}
+	// TASK-112 D-T111-3: decided **before** the editor guard, so the refusal is
+	// the caller's argument and not the process's state - and so a doctest can
+	// pin it without an editor.
+	bool is_2d = true;
+	if (!_resolve_raycast_dimension(dimension, is_2d, r_error)) {
 		return Variant();
 	}
 	if (!require_editor_ui(r_error, "editor node writes outside a running editor",
@@ -271,7 +310,7 @@ static Variant _tool_add_raycast(const Dictionary &p_args, MCPToolError &r_error
 		return Variant();
 	}
 
-	Node *node = dimension == "2d" ? (Node *)memnew(RayCast2D) : (Node *)memnew(RayCast3D);
+	Node *node = is_2d ? (Node *)memnew(RayCast2D) : (Node *)memnew(RayCast3D);
 	add_typed_child(root, parent, name, node);
 
 	Dictionary result;
@@ -428,7 +467,7 @@ void register_editor_node_instantiate_tools(MCPToolRegistry &r_registry) {
 	{
 		ToolBuilder builder("editor_add_raycast", String::utf8(R"desc(添加射线检测节点)desc"));
 		builder.channel("editor").verb("add").scope(MCPToolScope::EDITOR).mutating(true);
-		builder.schema(_schema_from_json(R"schema({"properties":{"dimension":{"default":"2d","type":"string"},"name":{"default":"RayCast","type":"string"},"parent_path":{"default":".","type":"string"}},"required":[],"type":"object"})schema"));
+		builder.schema(_schema_from_json(R"schema({"properties":{"dimension":{"default":"2d","enum":["2d","3d"],"type":"string"},"name":{"default":"RayCast","type":"string"},"parent_path":{"default":".","type":"string"}},"required":[],"type":"object"})schema"));
 		builder.handler(_tool_add_raycast).register_into(r_registry);
 	}
 

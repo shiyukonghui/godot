@@ -43,6 +43,10 @@
 #include "running_game_node_write.h"
 
 #include "core/config/project_settings.h"
+// TASK-112 D-T111-1: `retarget_published_uid` persists the corrected mapping
+// only in an editor process (`Engine::is_editor_hint()`), the one process whose
+// save callback can have created the stale entry.
+#include "core/config/engine.h"
 // TASK-063 (d): the error-handler list is how the engine's own `GDScript::reload`
 // diagnostics (which carry the *line*) are made readable without a
 // module-to-module dependency on `modules/gdscript/**`; `script_language.h`
@@ -65,6 +69,10 @@
 // resource its `res://` path names (section 23.5 of DESIGN-DETAIL.md).
 #include "core/io/resource.h"
 #include "core/io/resource_loader.h"
+// TASK-112 D-T111-1: `retarget_published_uid` reads the UID a published file
+// really carries and re-points it at the destination (`ResourceUID::set_id` /
+// `add_id` / `update_cache`).
+#include "core/io/resource_uid.h"
 #include "core/math/color.h"
 #include "core/object/class_db.h"
 #include "core/os/keyboard.h"
@@ -536,6 +544,18 @@ Error publish_file_atomically(const String &p_path, AtomicWriteFunc p_write, voi
 			result = DirAccess::rename_absolute(temp_path, p_path);
 		}
 	}
+	if (result == OK) {
+		// TASK-112 D-T111-1: the engine's own `ResourceSaver::save()` callback
+		// already ran for `temp_path` while it existed and the editor's resource
+		// filesystem cached the file's UID under that name
+		// (`EditorNode::_resource_saved` -> `EditorFileSystem::update_file` ->
+		// `ResourceUID::add_id`). The rename above changed the file name and
+		// nothing else, so the mapping has to be moved onto the destination or a
+		// scene that references the resource by UID resolves it to a scratch
+		// file that no longer exists. See the header note on
+		// `retarget_published_uid` for the whole chain and the measurement.
+		retarget_published_uid(p_path);
+	}
 
 	if (result != OK && destination_exists) {
 		// Put the original bytes back if the publish step got far enough to
@@ -551,6 +571,74 @@ Error publish_file_atomically(const String &p_path, AtomicWriteFunc p_write, voi
 	DirAccess::remove_absolute(backup_path);
 	DirAccess::remove_absolute(temp_path);
 	return result;
+}
+
+void retarget_published_uid(const String &p_path) {
+#ifdef MCP_EDITOR_TOOLS_ENABLED
+	ResourceUID *uids = ResourceUID::get_singleton();
+	if (uids == nullptr) {
+		return;
+	}
+	// Which UID has to move is a question with two answers, and the engine gives
+	// a different one in an editor process than in every other process
+	// (`ResourceLoader::get_resource_uid` reads the file's header only under
+	// `is_editor_hint()`; `ResourceUID::get_path_id` only works when the reverse
+	// cache is on, and `main.cpp:2255-2257` turns it on for **non**-editor runs).
+	// Both sources are therefore read, in the order that prefers the authority:
+	//
+	//   1. the path being published, as the engine resolves it - in the editor
+	//      that is the `uid="uid://…"` the saver just wrote into the file, which
+	//      is the UID every later load reads;
+	//   2. failing that, the mapping the save callback registered for the
+	//      scratch name (`<name>.mcp-tmp.<ext>`), which is exactly the entry the
+	//      rename made stale.
+	ResourceUID::ID uid = ResourceLoader::get_resource_uid(p_path);
+	if (uid == ResourceUID::INVALID_ID) {
+		uid = uids->get_path_id(temporary_sibling_path(p_path));
+	}
+	if (uid == ResourceUID::INVALID_ID) {
+		// Nothing to retarget: a plain text file, a PNG, `project.godot`, or a
+		// save that ran outside the editor (no `save_callback`, so no `uid=` in
+		// the header and nothing in the cache).
+		return;
+	}
+	if (uids->has_id(uid)) {
+		if (uids->get_id_path(uid) == p_path) {
+			// Already right (a second publish of the same file): do not rewrite
+			// the cache for nothing.
+			return;
+		}
+		uids->set_id(uid, p_path);
+	} else {
+		uids->add_id(uid, p_path);
+	}
+	// Persisting is the editor's job, and the editor has already persisted the
+	// *wrong* value: its own save callback (`EditorNode::_resource_saved`,
+	// `editor_node.cpp:7963-7974` -> `EditorFileSystem::update_file`) ran
+	// `ResourceUID::update_cache()` while the file was still called
+	// `<name>.mcp-tmp.<ext>`, and the in-memory correction above is not enough
+	// for the process that reads the scene later (TASK-111's reproduction was a
+	// fresh `godot --headless` run). So the same engine primitive, now on the
+	// path that exists, is what fixes the file on disk.
+	//
+	// Two guards, both measured rather than assumed:
+	//   * `is_editor_hint()` - the corruption can only have been created by the
+	//     editor's save callback, and a game process must not open the project's
+	//     `uid_cache.bin`;
+	//   * the project data directory must already exist - the editor always has
+	//     `res://.godot/`, the doctest binary does not, and a helper on the
+	//     *write* path may not create a directory as a side effect of reading a
+	//     header. (The alternative, `EditorFileSystem::update_file(p_path)`, was
+	//     measured to CRASH the full `--test` run: that singleton exists in the
+	//     test process but is not usable there. `update_cache()` is the primitive
+	//     `update_file` itself ends up calling, and it is safe in every process.)
+	Engine *engine = Engine::get_singleton();
+	ProjectSettings *settings = ProjectSettings::get_singleton();
+	if (engine != nullptr && engine->is_editor_hint() && settings != nullptr
+			&& DirAccess::dir_exists_absolute(settings->get_project_data_path())) {
+		uids->update_cache();
+	}
+#endif
 }
 
 // ---------------------------------------------------------------------------

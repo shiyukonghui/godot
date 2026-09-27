@@ -99,6 +99,11 @@
 #include "../tools/running_game_script_execution.h"
 #include "../tools/tool_builder.h"
 #include "../tools/tool_helpers.h"
+// TASK-112 D-T111-2: the bag writer `editor_add_resource_to_node_property` now
+// runs is the exported one of the two `project_*resource` writers
+// (`MCPTools::write_resource_properties`), so the doctest that pins the
+// vector/colour component rule calls the very function the tool calls.
+#include "../tools/project_write_resource_scene.h"
 // TASK-033: the animation family. The three group headers declare the entry
 // points the doctests drive directly (they need engine *resources*, which a
 // doctest can build without an editor), and `animation_shared.h` carries the
@@ -216,6 +221,9 @@
 #include "core/io/file_access.h"
 #include "core/io/image.h"
 #include "core/io/json.h"
+// TASK-112 D-T111-1: the UID regression publishes a real `.tres`/`.tscn` and
+// loads the scene back, so the case names `PackedScene` itself.
+#include "scene/resources/packed_scene.h"
 #include "core/io/resource_uid.h"
 // TASK-027 D-8: the doctest loads the fixture's real `.png`/`.tres` files and
 // asserts the shape an Object-valued property is read back in and takes back.
@@ -4444,6 +4452,40 @@ TEST_CASE("[MCPServer] the editor write tools validate their arguments before to
 		expect_invalid("editor_add_resource_to_node_property", args, "must be an object");
 	}
 
+	// editor_add_raycast: `dimension` is a closed set (TASK-112 D-T111-3). The
+	// value outside it is refused here - before the editor guard, which is why
+	// this case can see it at all - with a message that names both members. The
+	// measured defect was the opposite: `{"dimension":"4d"}` answered `ok` and
+	// built a `RayCast3D`, so the caller got a different node than the one it
+	// asked for, under a success.
+	{
+		Dictionary args;
+		args["dimension"] = "4d";
+		expect_invalid("editor_add_raycast", args, "'dimension' must be one of '2d' or '3d'");
+	}
+	{
+		Dictionary args;
+		args["dimension"] = "2D";
+		expect_invalid("editor_add_raycast", args, "'dimension' must be one of '2d' or '3d'");
+	}
+	{
+		// The positive control: the two members of the set are *not* refused by
+		// the dimension rule. This process has no editor, so the call stops at
+		// the editor guard with its own `-32000`; what matters is that the code
+		// and the message are no longer about `dimension`.
+		const char *const accepted[2] = { "2d", "3d" };
+		for (int i = 0; i < 2; i++) {
+			Dictionary args;
+			args["dimension"] = accepted[i];
+			MCPToolError error;
+			const Variant result = registry.call_tool("editor_add_raycast", args, error);
+			CHECK(result.get_type() == Variant::NIL);
+			CHECK(error.is_error());
+			CHECK(error.code == -32000);
+			CHECK_FALSE(error.message.contains("'dimension' must be one of"));
+		}
+	}
+
 	// editor_set_viewport_3d_camera: the {x, y, z} objects and the one number.
 	{
 		Dictionary args;
@@ -4630,6 +4672,184 @@ TEST_CASE("[MCPServer] publish_file_atomically never damages the destination and
 	for (int i = 0; i < files.size(); i++) {
 		CHECK_FALSE(((String)files[i]).contains(".mcp-tmp"));
 	}
+}
+
+// ---------------------------------------------------------------------------
+// TASK-112 D-T111-1 (blocking, silent): the UID the engine's save callback
+// registered for the scratch name must end up on the published path.
+//
+// The chain (measured in TASK-111 section C2 on `projects/_exercises/ex_3d`):
+// `ResourceSaver::save(res, "res://…/b.mcp-tmp.tres")` mints a UID for the
+// scratch path and writes it into the scratch file's header; `ResourceSaver::save`
+// then calls the editor's `save_callback` with that same scratch path
+// (`core/io/resource_saver.cpp:146-148`), so `EditorNode::_resource_saved` ->
+// `EditorFileSystem::update_file(scratch)` -> `ResourceUID::add_id(uid, scratch)`
+// + `update_cache()` runs while the file is still called `<name>.mcp-tmp.<ext>`.
+// The rename that publishes it changes the file *name* only, so the project's
+// `.godot/uid_cache.bin` kept `uid -> …b.mcp-tmp.tres`. A scene referencing the
+// resource by that UID then resolved it to a file that does not exist
+// (`resource_format_text.cpp:481-483` prefers the UID over the still-correct
+// `path=`), `ResourceLoader::_load_start` returned a null token and the load died
+// with "`[ext_resource] referenced non-existent resource`" - with the write tool
+// reporting success and exit code 0.
+//
+// The doctest cannot run an editor, so it does what the editor does, in order:
+// registers the UID under the scratch name first, then publishes the file the way
+// every writer of this module publishes, then asserts that the UID resolves to a
+// path that exists. The "then reloads the scene" half is the last block.
+TEST_CASE("[MCPServer] a published resource's UID ends up on the published path, never on the scratch sibling") {
+	TestMCPServer::ScratchProject fixture;
+	const String target = fixture.path("assets/uid_retarget.tres");
+	const String scratch = MCPTools::temporary_sibling_path(target);
+	CHECK(scratch == fixture.path("assets/uid_retarget.mcp-tmp.tres"));
+
+	ResourceUID *uids = ResourceUID::get_singleton();
+	REQUIRE(uids != nullptr);
+
+	// The header the engine's text saver really writes, with a real UID in the
+	// engine's own text spelling (the doctest mints it the way the saver does).
+	ResourceUID::ID uid = uids->create_id();
+	CHECK(uid != ResourceUID::INVALID_ID);
+	const String resource_text = vformat(
+			"[gd_resource type=\"Resource\" format=3 uid=\"%s\"]\n\n[resource]\nresource_name = \"uid_retarget\"\n",
+			uids->id_to_text(uid));
+
+	// Step 1: what `EditorFileSystem::update_file(scratch)` did while the atomic
+	// publish's temporary sibling existed.
+	uids->add_id(uid, scratch);
+	CHECK(uids->has_id(uid));
+	CHECK(uids->get_id_path(uid) == scratch);
+	CHECK_FALSE(FileAccess::exists(scratch));
+
+	// Step 2: the publish itself (the scratch name is what the outer helper
+	// writes; `retarget_published_uid` runs at the end of it). The editor hint is
+	// what makes the engine read the published file's own header, which is the
+	// authority in the process where the defect happens - `Engine::is_editor_hint()`
+	// is false in this binary (`Main::test_entrypoint` runs before the editor is
+	// set up), and `ResourceLoader::get_resource_uid` answers a *cache* lookup
+	// without it. The hint is restored immediately; the editor filesystem, which
+	// would persist the correction, does not exist in this process, so nothing
+	// outside the fixture is written.
+	Engine *engine = Engine::get_singleton();
+	REQUIRE(engine != nullptr);
+	const bool was_editor = engine->is_editor_hint();
+	engine->set_editor_hint(true);
+	const Error published = MCPTools::publish_text_atomically(target, resource_text);
+	engine->set_editor_hint(was_editor);
+	CHECK(published == OK);
+	CHECK(FileAccess::exists(target));
+	CHECK_FALSE(FileAccess::exists(scratch));
+
+	// Step 3: the UID must now name the file that exists. Before the fix this
+	// line read `scratch` - a path that is not on disk.
+	CHECK(uids->get_id_path(uid) == target);
+	CHECK(FileAccess::exists(uids->get_id_path(uid)));
+
+	// The scene that references the resource the way the engine does (by UID,
+	// with the path only as a fallback) must load, and its text must not carry
+	// the scratch name anywhere.
+	const String scene_path = fixture.path("scenes/uid_retarget.tscn");
+	const String scene_text = vformat(
+			"[gd_scene load_steps=2 format=3]\n\n[ext_resource type=\"Resource\" uid=\"%s\" path=\"%s\" id=\"1_m\"]\n\n"
+			"[node name=\"Root\" type=\"Node2D\"]\n",
+			uids->id_to_text(uid), target);
+	CHECK(MCPTools::publish_text_atomically(scene_path, scene_text) == OK);
+	CHECK_FALSE(FileAccess::get_file_as_string(scene_path).contains(".mcp-tmp"));
+	const Ref<PackedScene> reloaded = ResourceLoader::load(scene_path);
+	CHECK(reloaded.is_valid());
+
+	// Hygiene: the fixture's UID must not leak into any later case's cache.
+	uids->remove_id(uid);
+	CHECK_FALSE(uids->has_id(uid));
+}
+
+// ---------------------------------------------------------------------------
+// TASK-112 D-T111-2: the `resource_properties` bag of
+// `editor_add_resource_to_node_property` runs the same vector/colour component
+// rule every other property bag of the module runs.
+//
+// Measured (`c4-040`, `runs/_exercises/ex_write5/c4-v5-task111`): the tool
+// refused `resource_properties: {"size":{"x":48,"y":48}}` on a
+// `RectangleShape2D` with `-32602` and a message that told the caller to
+// "Send the property type's own shape: a JSON object naming its components for a
+// vector/colour" - i.e. it refused exactly the shape it asked for - while the
+// sibling `editor_setup_collision_shape` accepted the identical input. The cause
+// was that this tool's bag went `property_value_from_json` ->
+// `coerce_to_property_type` with the `shape_vector_from_json` step missing.
+//
+// The doctest pins the shared writer the tool now calls (the tool itself needs
+// the editor UI, which this process has none of - the same reason TASK-040 D-1
+// exported `assign_resource_to_property`).
+TEST_CASE("[MCPServer] the resource-properties bag folds a component object into its vector") {
+	// `StyleBoxFlat`, not the `RectangleShape2D` the defect was *measured* on:
+	// `Main::test_setup()` (`main/main.cpp:688-834`) initialises the physics
+	// server *manager* but never `PhysicsServer2DManager::initialize_server()`,
+	// and `Shape2D`'s constructor is `PhysicsServer2D::get_singleton()->shape_create(...)`
+	// - so `memnew(RectangleShape2D)` is a null dereference in this process
+	// (measured: SIGSEGV, 0 assertions). `StyleBoxFlat` is a plain `Resource`
+	// with both member kinds this rule is about - `shadow_offset` is a
+	// **Vector2** and `bg_color` is a **Color** - so the exact input shape the
+	// defect refused (`{"x":…,"y":…}` for a vector property) is pinned here, and
+	// the `RectangleShape2D.size` spelling is exercised on the wire by the
+	// TASK-112 exercise run and by `c4-040`, the measured refusal.
+	Ref<StyleBoxFlat> box;
+	box.instantiate();
+	CHECK(box.is_valid());
+
+	// (1) the two primitives the missing line sat between, on a real property
+	// type (`StyleBoxFlat.shadow_offset` is a `Vector2`).
+	const Variant::Type target_type = MCPTools::property_type_of(box.ptr(), StringName("shadow_offset"));
+	CHECK(target_type == Variant::VECTOR2);
+	Dictionary offset;
+	offset["x"] = 7.0;
+	offset["y"] = -3.0;
+	Variant shaped;
+	MCPToolError error;
+	CHECK(MCPTools::shape_vector_from_json(offset, target_type, "shadow_offset", "resource_properties", shaped, error));
+	CHECK_FALSE(error.is_error());
+	CHECK(shaped.get_type() == Variant::VECTOR2);
+	CHECK(Variant(shaped) == Variant(Vector2(7, -3)));
+	Variant converted;
+	CHECK(MCPTools::coerce_to_property_type(shaped, target_type, converted, error, "resource_properties"));
+	CHECK(Variant(converted) == Variant(Vector2(7, -3)));
+
+	// (2) the whole bag, through the shared writer the tool now calls. Before the
+	// fix `editor_add_resource_to_node_property` was the only property-bag writer
+	// of the module that skipped step (1); the two `project_*resource` writers
+	// never did, and this is the rule they share.
+	Dictionary properties;
+	properties["shadow_offset"] = offset;
+	Dictionary colour;
+	colour["r"] = 1.0;
+	colour["g"] = 0.5;
+	colour["b"] = 0.25;
+	properties["bg_color"] = colour;
+	Dictionary changed;
+	Dictionary ignored;
+	Array properties_set;
+	MCPToolError bag_error;
+	CHECK(MCPTools::write_resource_properties(box, properties, changed, ignored, properties_set, bag_error));
+	CHECK_FALSE(bag_error.is_error());
+	CHECK(box->get_shadow_offset() == Vector2(7, -3));
+	CHECK(box->get_bg_color() == Color(1.0, 0.5, 0.25));
+	CHECK(properties_set.size() == 2);
+	CHECK(ignored.is_empty());
+
+	// (3) the refusal the old shape produced must stay a refusal when a component
+	// really cannot fill its slot (a width gate, not a silence).
+	Ref<StyleBoxFlat> other;
+	other.instantiate();
+	Dictionary bad_properties;
+	Dictionary bad_offset;
+	bad_offset["x"] = "wide";
+	bad_offset["y"] = 1.0;
+	bad_properties["shadow_offset"] = bad_offset;
+	MCPToolError bad_error;
+	CHECK_FALSE(MCPTools::write_resource_properties(other, bad_properties, changed, ignored, properties_set, bad_error));
+	CHECK(bad_error.code == -32602);
+	// The component gate names the slot it refused (`<bag>.<component>`), which
+	// is the same spelling the two `project_*resource` writers answer with.
+	CHECK(bad_error.message.contains("properties.x"));
 }
 
 // ---------------------------------------------------------------------------

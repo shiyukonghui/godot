@@ -35,6 +35,11 @@
 // turns them from an in-memory pile of nodes into a `.tscn` that draws them on
 // top of the real ones, so this is the tool that has to report them.
 #include "editor_node_batch_write.h"
+// TASK-112 D-T111-2: `MCPTools::write_resource_properties` - the one
+// `resource_properties` bag writer of the module (TASK-049 exported it for
+// exactly this reuse, so the node-property tool runs the same vector/colour
+// component rule `project_create_resource` runs).
+#include "project_write_resource_scene.h"
 #include "tool_builder.h"
 #include "tool_helpers.h"
 
@@ -717,15 +722,25 @@ static Variant _tool_add_resource_to_node_property(const Dictionary &p_args, MCP
 	}
 	Ref<Resource> resource_ref = resource;
 
-	const Array keys = resource_properties.keys();
-	for (int i = 0; i < keys.size(); i++) {
-		const StringName key = keys[i];
-		const Variant::Type target_type = property_type_of(resource_ref.ptr(), key);
-		Variant converted;
-		if (!coerce_to_property_type(property_value_from_json(resource_properties[keys[i]], target_type), target_type, converted, r_error, "resource_properties")) {
-			return Variant();
-		}
-		resource_ref->set(key, converted);
+	// TASK-112 D-T111-2: this loop used to run the caller's bag through
+	// `property_value_from_json` -> `coerce_to_property_type` and **skip**
+	// `shape_vector_from_json`, which is the one step that folds a JSON object
+	// naming a vector's/colour's components into that vector. So
+	// `{"size":{"x":48,"y":48}}` on a `RectangleShape2D` was refused - with a
+	// message that told the caller to send exactly that shape ("Send the
+	// property type's own shape: a JSON object naming its components for a
+	// vector/colour") - while the sibling `editor_setup_collision_shape` and the
+	// two `project_*resource` writers accepted it. The bag writer is now the
+	// shared, exported `MCPTools::write_resource_properties`, i.e. the identical
+	// rule the sibling tools run, and the answer carries the same three
+	// read-back fields they answer (`properties_set` / `ignored` /
+	// `ignored_count`) instead of an unconditional success.
+	Dictionary resource_changed;
+	Dictionary resource_ignored;
+	Array resource_properties_set;
+	if (!MCPTools::write_resource_properties(resource_ref, resource_properties, resource_changed,
+				resource_ignored, resource_properties_set, r_error)) {
+		return Variant();
 	}
 
 	// TASK-040 D-1: the store step is `MCPTools::assign_resource_to_property`
@@ -745,6 +760,13 @@ static Variant _tool_add_resource_to_node_property(const Dictionary &p_args, MCP
 	result["node_path"] = node == root ? String(".") : String(root->get_path_to(node));
 	result["property"] = property;
 	result["resource_type"] = resource_type;
+	// TASK-112 D-T111-2: the same read-back fields the sibling resource writers
+	// answer, so "the engine stored what was asked for" is visible rather than
+	// assumed.
+	result["properties_set"] = resource_properties_set;
+	result["ignored"] = resource_ignored;
+	result["ignored_count"] = resource_ignored.size();
+	result["changed"] = resource_changed;
 	return result;
 #endif
 	return Variant();
