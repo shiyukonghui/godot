@@ -771,7 +771,14 @@ void register_editor_node_read_tools(MCPToolRegistry &r_registry) {
 	{
 		ToolBuilder builder("editor_list_signal_connections", String::utf8(R"desc(递归查找场景中所有信号连接 判别点：扁平返回 connections[]（每项 {source,signal,target,method}）与 count，收全部连接（不过滤非持久连接）、node_path 与 signal_name 均按子串匹配；要按节点嵌套的流向分析请用 editor_analyze_signal_flow。)desc"));
 		builder.channel("editor").verb("list").scope(MCPToolScope::EDITOR).mutating(false);
-		builder.schema(_schema_from_json(R"schema({"properties":{"node_path":{"description":"节点路径过滤（可选，包含匹配）","type":"string"},"signal_name":{"description":"信号名过滤（可选，包含匹配）","type":"string"}},"required":[],"type":"object"})schema"));
+		// TASK-110: the registered schema was missing `scope`, so the parameter
+		// validator answered -32602 'Unknown parameter' before this handler - which
+		// has supported the narrowing since TASK-051 (see the parser and the
+		// `counts` breakdown below) - ever saw the argument. The contract
+		// (docs/tools_list.renamed.json) declares `scope` with this exact enum,
+		// default and description, so the member below is the contract's, copied
+		// verbatim; the schema is the only thing that was out of step.
+		builder.schema(_schema_from_json(R"schema({"properties":{"node_path":{"description":"节点路径过滤（可选，包含匹配）","type":"string"},"scope":{"default":"all","description":"连接范围：all=全部连接（默认，与本工具旧答案逐字相同）；user=只保留 method 不含 \"::\" 的连接，即场景/脚本自己连的；internal=只保留 method 形如 Class::method 的引擎/编辑器内部连接（编辑器的自连线）。注意内部连接的 source 是普通场景节点路径，按 node_path/signal_name 过滤不掉它们，只有 method 能区分；响应的 counts 给出三种口径各自的条数","enum":["all","user","internal"],"type":"string"},"signal_name":{"description":"信号名过滤（可选，包含匹配）","type":"string"}},"required":[],"type":"object"})schema"));
 		builder.handler(_tool_list_signal_connections).register_into(r_registry);
 	}
 }
