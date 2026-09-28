@@ -52,6 +52,11 @@ class SceneTree;
 // TASK-063 (d): `reload_gdscript_capturing` takes a raw `Script *` (the callers
 // pass `Ref<Script>::ptr()`), so the class name is all this header needs.
 class Script;
+// TASK-151: `GDScriptErrorBreakGuard` takes the process' `ScriptDebugger *`
+// (`EngineDebugger::get_script_debugger()` at the two production call sites), so
+// the class name is all this header needs - `core/debugger/` stays out of every
+// translation unit that only wants an MCP helper.
+class ScriptDebugger;
 
 // `MCPToolError` (`../tool_registry.h`) and `is_editor_process()` plus the
 // `MCP_EDITOR_TOOLS_ENABLED` definition (`tool_builder.h`). The include is what
@@ -1289,6 +1294,84 @@ GDScriptReloadReport reload_gdscript_capturing(Script *p_script, int p_body_star
 // (every existing doctest and the migration source's own phrasing key on it) and
 // adds the line when the engine named one.
 String gdscript_reload_failure_text(const GDScriptReloadReport &p_report);
+
+// ---------------------------------------------------------------------------
+// TASK-151: the *debugger* half of "an engine diagnostic belongs in the answer,
+// not in the process' control flow".
+//
+// **The defect this closes.** The game child of `editor_play_scene` carries
+// `--remote-debug tcp://...` (`editor/run/editor_run.cpp:64-68`), so
+// `EngineDebugger::is_active()` is true inside it. With a debugger active,
+// `GDScript::reload()` reports a parse / analyzer / compiler failure through
+// `GDScriptLanguage::debug_break_parse()`
+// (`modules/gdscript/gdscript.cpp:825/845/867`) and an aborted GDScript frame
+// reports through `GDScriptLanguage::debug_break()`
+// (`modules/gdscript/gdscript_vm.cpp:525/3989`). Both funnel into
+// `EngineDebugger::debug()`, whose remote implementation spins in
+//
+//     while (is_peer_connected()) { ... }   (core/debugger/remote_debugger.cpp:444)
+//
+// until the editor resumes the process or the peer goes away. Both executors run
+// on the **main thread** inside the frame pump, so the whole process stops
+// answering *and* stops rendering. Measured on a scene played from an editor: the
+// compile-failing request got no status line at all in 20 s and `GET /mcp` went
+// unanswered for the full 60 s of observation, while the listener stayed open and
+// the process stayed alive ("connection established, no status line" is the
+// transport shape the smoke run reported as `10060`).
+//
+// **Why the module owns this and the engine does not.** "Stop in the debugger on
+// a script error" is the editor's contract for *the user's* code. The code this
+// module compiles is not the user's code: it is a synthetic snippet sent by an MCP
+// caller, and the module's whole answer to it is the structured refusal built from
+// the captured diagnostic (`-32602` + `data.parse_error`, TASK-063/089; `-32000` +
+// `data.script_error`, TASK-103). A debugger pause is the one way those
+// diagnostics can still turn into "no answer at all", so the guard below raises
+// the engine's own "do not break on an error" switch for exactly the window in
+// which this module runs engine code on the caller's behalf, and puts back the
+// value it found.
+//
+// The switch is the engine's, not a private one: it is the same
+// `ScriptDebugger::ignore_error_breaks` the debugger protocol exposes as
+// `set_ignore_error_breaks` (`core/debugger/remote_debugger.cpp:740-742`), and
+// both debugger kinds test it *before* they can block
+// (`RemoteDebugger::debug()` at `core/debugger/remote_debugger.cpp:407-409`,
+// `LocalDebugger::debug()` at `core/debugger/local_debugger.cpp:120-122`).
+//
+// Boundaries, stated rather than assumed:
+//   * with no debugger (an editor process, a plain game, the `--test` harness)
+//     `changed()` is false and nothing is written at all - the undebugged path is
+//     byte for byte what it was;
+//   * the window covers the *body's own execution* as well, because
+//     `GDScriptFunction::call()` reports an aborted frame the same way. An engine
+//     error the caller's body triggers is therefore reported structurally
+//     (`-32000` + `data.script_error`) instead of pausing the editor mid-call -
+//     which is the same decision the compile half makes, one stage later;
+//   * it cannot help a process whose debugger wait is already entered: the switch
+//     is read at the top of that wait.
+// ---------------------------------------------------------------------------
+class GDScriptErrorBreakGuard {
+public:
+	// `p_debugger` is what the two production call sites pass
+	// (`EngineDebugger::get_script_debugger()`). It is an argument rather than a
+	// lookup inside the guard so that the save/restore pair stays decidable in a
+	// process whose debugger wait cannot run - see the doctest, and
+	// `core/debugger/remote_debugger.cpp:626-632` for why it cannot.
+	explicit GDScriptErrorBreakGuard(ScriptDebugger *p_debugger);
+	~GDScriptErrorBreakGuard();
+
+	// A guard owns one save/restore pair; copying it would restore twice.
+	GDScriptErrorBreakGuard(const GDScriptErrorBreakGuard &) = delete;
+	GDScriptErrorBreakGuard &operator=(const GDScriptErrorBreakGuard &) = delete;
+
+	// True when a debugger was present and the switch was actually raised.
+	bool changed() const { return debugger != nullptr; }
+	// The value found, and the one the destructor puts back.
+	bool previous_value() const { return previous; }
+
+private:
+	ScriptDebugger *debugger = nullptr;
+	bool previous = false;
+};
 
 // ---------------------------------------------------------------------------
 // TASK-103 (X-1): the *runtime* diagnostic of one generated GDScript body.

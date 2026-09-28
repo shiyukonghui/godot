@@ -82,6 +82,19 @@ using namespace MCPTools;
 //     `note` saying that a null result is not evidence of an effect;
 //   * `code` that does not compile is `-32602` ("does not compile: <verdict>") -
 //     a malformed argument, not an internal failure;
+//   * TASK-151: **a caller's failing body never stops this process in a
+//     debugger.** A game child of `editor_play_scene` runs with
+//     `--remote-debug` (`editor/run/editor_run.cpp:64-68`), so
+//     `EngineDebugger::is_active()` is true in it and the engine's own
+//     `debug_break_parse` / `debug_break` would park the main thread - the thread
+//     this endpoint is served from - until the editor resumes it (measured: no
+//     status line in 20 s, `GET /mcp` silent for 60 s, listener still open). The
+//     compile and execution windows therefore run with the engine's error-break
+//     switch raised, so a body that does not compile answers `-32602` and a body
+//     that fails while it runs answers `-32000`, both immediately, in a debugged
+//     process exactly as in an undebugged one. The switch is put back afterwards;
+//     see `GDScriptErrorBreakGuard` in `tool_helpers.h` for the engine basis and
+//     the boundaries;
 //   * `code` that compiles and then fails **while it runs** is `-32000` with
 //     `data.script_error` (message, line of `code`, generated line, script path,
 //     the GDScript function the engine blamed) and `data.suggestion` - TASK-103

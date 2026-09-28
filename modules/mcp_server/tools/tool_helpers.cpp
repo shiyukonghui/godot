@@ -57,6 +57,11 @@
 
 #include "core/error/error_macros.h"
 #include "core/object/script_language.h"
+// TASK-151: the guard below reads and writes the process' `ScriptDebugger`
+// through `EngineDebugger` (`core/` headers, not `modules/gdscript/**`), which is
+// the same "no module-to-module dependency" rule the two captures follow.
+#include "core/debugger/engine_debugger.h"
+#include "core/debugger/script_debugger.h"
 // TASK-041 section 2: the `project.godot` `[input]` bridge reads the published
 // bytes back with the engine's own config reader (`ConfigFile`, objects allowed -
 // `core/io/config_file.cpp:289`) and builds its value out of the live `InputMap`.
@@ -2800,6 +2805,31 @@ bool build_execute_gdscript_source(const String &p_code, bool p_tool_script, Str
 }
 
 // ---------------------------------------------------------------------------
+// TASK-151: the debugger half. See the declaration in `tool_helpers.h` for the
+// engine basis, the decision and the boundaries.
+// ---------------------------------------------------------------------------
+
+GDScriptErrorBreakGuard::GDScriptErrorBreakGuard(ScriptDebugger *p_debugger) {
+	if (p_debugger == nullptr) {
+		// No debugger in this process: nothing to raise, and - the point of the
+		// class - nothing written either.
+		return;
+	}
+	debugger = p_debugger;
+	previous = p_debugger->is_ignoring_error_breaks();
+	p_debugger->set_ignore_error_breaks(true);
+}
+
+GDScriptErrorBreakGuard::~GDScriptErrorBreakGuard() {
+	if (debugger == nullptr) {
+		return;
+	}
+	// The value found, not a fixed `false`: an editor that had already switched
+	// error breaks off must still have them off after a tool call.
+	debugger->set_ignore_error_breaks(previous);
+}
+
+// ---------------------------------------------------------------------------
 // TASK-063 (d): the parser diagnostic capture. See the declaration in
 // `tool_helpers.h` for the engine basis and for the boundary this deliberately
 // stops at (a line, never a column).
@@ -2871,9 +2901,17 @@ GDScriptReloadReport reload_gdscript_capturing(Script *p_script, int p_body_star
 	// (`core/error/error_macros.cpp:125-141`), so installing this costs the log
 	// nothing; removing it immediately is what keeps the process-wide list
 	// exactly as it was found.
-	add_error_handler(&handler);
-	report.error = p_script->reload();
-	remove_error_handler(&handler);
+	//
+	// TASK-151: the reload is also the call that can stop the process in a
+	// debugger (`debug_break_parse`), so it runs with error breaks suppressed -
+	// otherwise the diagnostic this function exists to capture never reaches the
+	// caller at all. See `GDScriptErrorBreakGuard`.
+	{
+		GDScriptErrorBreakGuard break_guard(EngineDebugger::get_script_debugger());
+		add_error_handler(&handler);
+		report.error = p_script->reload();
+		remove_error_handler(&handler);
+	}
 
 	report.diagnostic_seen = capture.report.diagnostic_seen;
 	report.diagnostic = capture.report.diagnostic;
@@ -2997,9 +3035,19 @@ GDScriptRuntimeReport call_gdscript_capturing(const Callable &p_entry_point, con
 	// (`core/error/error_macros.cpp:125-141`), so installing this costs the log
 	// nothing - the `SCRIPT ERROR` line is still on stderr exactly as before;
 	// removing it immediately keeps the process-wide list exactly as it was found.
-	add_error_handler(&handler);
-	p_entry_point.callp(nullptr, 0, r_result, r_call_error);
-	remove_error_handler(&handler);
+	//
+	// TASK-151: `callp` is the second call that can stop the process in a debugger
+	// (`GDScriptFunction::call()` reports an aborted frame through `debug_break`),
+	// so it runs with error breaks suppressed too - otherwise a body that fails
+	// once freezes the endpoint instead of answering `-32000`. The TASK-103 answer
+	// is built from the capture below either way, so nothing about the refusal is
+	// weakened. See `GDScriptErrorBreakGuard`.
+	{
+		GDScriptErrorBreakGuard break_guard(EngineDebugger::get_script_debugger());
+		add_error_handler(&handler);
+		p_entry_point.callp(nullptr, 0, r_result, r_call_error);
+		remove_error_handler(&handler);
+	}
 
 	GDScriptRuntimeReport report = capture.report;
 	// The same mapping the parse capture uses: the engine names a line of the
