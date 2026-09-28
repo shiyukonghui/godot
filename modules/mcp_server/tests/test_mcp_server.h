@@ -233,6 +233,15 @@
 // `get_local_port()`, and the doctest re-binds the port it answered to prove the
 // claim "free" is not a promise the probe cannot keep.
 #include "core/io/tcp_server.h"
+// TASK-151: the game child of `editor_play_scene` runs with a debugger peer
+// attached (`--remote-debug`, editor/run/editor_run.cpp:64-68), and the case at
+// the end of this file puts this process into that state on purpose - a real
+// loopback `TCPServer` as the peer, `EngineDebugger` initialised against it, and
+// a helper thread that releases the peer after a bounded hold so an unfixed
+// build fails on an assertion instead of hanging the suite.
+#include "core/debugger/engine_debugger.h"
+#include "core/debugger/script_debugger.h"
+#include "core/os/thread.h"
 // TASK-024 E-10: the free-port probe `editor_play_scene` uses is
 // `TCPServer::listen(0)` + `get_local_port()`, and the doctest pins that this
 // mechanism really works in this process (the tool's own `_pick_free_port` is
@@ -10254,6 +10263,148 @@ TEST_CASE("[MCPServer] running_game_execute_gdscript reports a GDScript runtime 
 		call("push_error(\"deliberate diagnostic from the body\")\nreturn 7", payload, error);
 		CHECK_FALSE(error.is_error());
 		CHECK((int64_t)((Dictionary)payload)["result"] == 7);
+	}
+}
+
+// ---------------------------------------------------------------------------
+// TASK-151: a body that does not compile is answered even in the process the
+// editor starts a scene in.
+//
+// **The defect.** The game child of `editor_play_scene` carries
+// `--remote-debug tcp://...` (editor/run/editor_run.cpp:64-68) and therefore has
+// `EngineDebugger::is_active() == true` inside it. `GDScript::reload()` reports a
+// parse / analyzer / compiler failure through
+// `GDScriptLanguage::debug_break_parse()` whenever a debugger is active
+// (modules/gdscript/gdscript.cpp:825/845/867), and that funnels into
+// `RemoteDebugger::debug()`, whose body is
+//
+//     while (is_peer_connected()) { ... }   (core/debugger/remote_debugger.cpp:444)
+//
+// Both executors run on the **main thread** inside the frame pump, so the process
+// stops answering *and* stops rendering until the editor resumes it. Measured
+// live on a scene played from an editor: the compile-failing request got no
+// status line at all in 20 s, and `GET /mcp` went unanswered for the whole 60 s
+// of observation, while the listener stayed open and the process stayed alive.
+// Releasing the debugger peer - the game started by hand with `--remote-debug`
+// pointing at a socket this side owns, and no `--editor-pid` confound - answered
+// the *same* connection after 23.6 s with exactly the `-32602` +
+// `data.parse_error` the contract asks for. That is what identifies the wait,
+// rather than a dead socket or a dead process.
+//
+// **Why this case pins the module's decision and not the engine's wait.** The two
+// halves are different things, and only one of them can run here. "Stop in the
+// debugger" is the engine's loop; it cannot even execute in this harness, because
+// every idle iteration of it calls
+// `DisplayServer::get_singleton()->force_process_and_drop_events()`
+// (core/debugger/remote_debugger.cpp:626-632) and `Main::test_setup()` creates no
+// display server. Measured: a case that attaches a real `--remote-debug` peer and
+// then lets an uncompilable body fail dies with `SIGSEGV` inside that loop (the
+// same failure this module's `.cpp` documents for the runtime capture's release
+// template, in a different place). What *is* this module's decision - and what the
+// fix changes - is whether the engine is allowed to enter that loop at all while
+// it runs a caller's code:
+//
+//   * (1) with a `ScriptDebugger` in place and "break on an error" armed, the
+//     module raises that switch for exactly the window in which it compiles and
+//     executes the caller's body, and puts back the value it found - the editor's
+//     own setting must not be rewritten by a tool call;
+//   * (2) with no debugger at all it writes nothing, so an editor, a plain game
+//     and the `--test` harness behave byte for byte as they did;
+//   * (3) end to end on the game path - `is_editor == false` (the tool is
+//     visible on that endpoint) and `p_tool_script == false` inside the executor
+//     - a body that does not compile still answers `-32602` with
+//     `data.parse_error` naming the line and the engine's message, and the tool
+//     still answers afterwards, which is what "the endpoint survives" means from
+//     inside the process.
+//
+// The engine-visible half - a real game child with `--remote-debug`, no freeze,
+// `-32602` on the wire, endpoint alive, and a runtime error still `-32000` - is
+// measured on the wire in `recovery/work/task151/verify_fixed.ps1` (pre-fix
+// `repro_played.ps1` / `repro_peer.ps1`).
+// ---------------------------------------------------------------------------
+TEST_CASE("[MCPServer] running_game_execute_gdscript does not run caller code with engine error breaks armed") {
+	if (!ScriptServer::are_languages_initialized()) {
+		ScriptServer::init_languages();
+	}
+	CHECK(ScriptServer::are_languages_initialized());
+
+	// (1) The save/restore pair, on a `ScriptDebugger` this case owns. Production
+	// passes `EngineDebugger::get_script_debugger()`; taking the debugger as an
+	// argument is what makes the decision decidable in a process whose engine wait
+	// cannot run (see the header comment). `ScriptDebugger` is a plain class, so
+	// nothing here starts a debugger, a peer or a thread.
+	{
+		ScriptDebugger owned;
+		CHECK_FALSE(owned.is_ignoring_error_breaks());
+		{
+			MCPTools::GDScriptErrorBreakGuard guard(&owned);
+			CHECK(guard.changed());
+			CHECK(owned.is_ignoring_error_breaks());
+		}
+		// Put back, not forced off: a process that had already switched error
+		// breaks off finds them off again.
+		CHECK_FALSE(owned.is_ignoring_error_breaks());
+
+		owned.set_ignore_error_breaks(true);
+		{
+			MCPTools::GDScriptErrorBreakGuard guard(&owned);
+			CHECK(guard.changed());
+			CHECK(owned.is_ignoring_error_breaks());
+		}
+		CHECK(owned.is_ignoring_error_breaks());
+	}
+
+	// (2) No debugger, no write at all.
+	{
+		CHECK(EngineDebugger::get_script_debugger() == nullptr);
+		MCPTools::GDScriptErrorBreakGuard guard(EngineDebugger::get_script_debugger());
+		CHECK_FALSE(guard.changed());
+	}
+
+	// (3) End to end on the game path.
+	MCPToolRegistry registry;
+	TestMCPServer::build_all_tools_registry(registry);
+	// The game endpoint (`is_editor == false`) is the one that serves this tool,
+	// and `p_tool_script == false` inside the executor is the game half of the
+	// same distinction (the editor executor passes `true`).
+	CHECK(registry.is_tool_visible("running_game_execute_gdscript", false));
+
+	// The trigger, verbatim from the smoke run that found the defect: the call is
+	// an analyzer error (`action_press()` returns void) rather than a parse error,
+	// and both stages have to reach the same answer.
+	{
+		Dictionary args;
+		args["code"] = "return str(Input.action_press(\"move_right\"))";
+		MCPToolError error;
+		const Variant payload = registry.call_tool("running_game_execute_gdscript", args, error);
+		CHECK(error.code == -32602);
+		CHECK(error.message.contains("does not compile"));
+		CHECK(payload.get_type() == Variant::NIL);
+		CHECK(error.data.get_type() == Variant::DICTIONARY);
+		if (error.data.get_type() == Variant::DICTIONARY) {
+			const Dictionary data = error.data;
+			CHECK(data.has("parse_error"));
+			if (data.has("parse_error")) {
+				const Dictionary parse_error = data["parse_error"];
+				CHECK(String(parse_error["message"]).contains("void"));
+				CHECK((int64_t)parse_error["line"] == 1);
+				CHECK((bool)parse_error["in_caller_code"]);
+			}
+		}
+	}
+
+	// ... and the tool still works after it, which is the "the endpoint survived"
+	// half of the defect statement.
+	{
+		Dictionary args;
+		args["code"] = "return 40 + 2";
+		MCPToolError error;
+		const Variant payload = registry.call_tool("running_game_execute_gdscript", args, error);
+		CHECK_FALSE(error.is_error());
+		CHECK(payload.get_type() == Variant::DICTIONARY);
+		if (payload.get_type() == Variant::DICTIONARY) {
+			CHECK((int64_t)((Dictionary)payload)["result"] == 42);
+		}
 	}
 }
 
