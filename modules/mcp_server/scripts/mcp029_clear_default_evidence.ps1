@@ -116,7 +116,7 @@ if (Test-Path $OldFixture) {
 #  this script and mcp032 used to carry that number. Nothing in either script may
 #  occupy it, probe it, or even name it as a reachable value.
 #
-#  The form chosen here is the *explicit refusal guard*: a requests port outside
+#  The form chosen here is the *explicit refusal guard*: a requested port outside
 #  {9888, 9889} is a hard stop, and so is any occurrence of the user editor's port
 #  literal in `$PSScriptRoot` (where every launcher this script can use is
 #  assembled), so there is no path on which that port is used *silently*.
