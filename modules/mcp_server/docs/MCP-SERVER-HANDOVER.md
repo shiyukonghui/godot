@@ -379,6 +379,37 @@
   `if (sizeof(real_t) == 4)` 两条分支的**固有**差异；**用例数两边都是 345**
   `[报告:REPORT-071 §B.3]`、`[报告:REPORT-073 §4.2]`。
 
+### (k) `running_game_execute_gdscript` 的失败**不再停在调试器**，但「引擎的等待」本身不在模块可修范围内
+
+- **保证（TASK-151）**：本模块执行调用方的 `code` 期间（编译窗口 `reload_gdscript_capturing`、执行窗口
+  `call_gdscript_capturing`）把引擎的 `ScriptDebugger::ignore_error_breaks` 抬起，退出时**还原它读到的值**。
+  因此在**带调试器对端**的游戏进程里（`editor_play_scene` 起的子进程带 `--remote-debug tcp://…`，
+  `editor/run/editor_run.cpp:64-68`），编译不过仍**立刻**回 `-32602`（带 `data.parse_error`）、运行期失败仍**立刻**回
+  `-32000`（带 `data.script_error`），而不是把主线程停在 `RemoteDebugger::debug()` 的
+  `while (is_peer_connected())`（`core/debugger/remote_debugger.cpp:444`）里——那正是 MCP 端点被服务的线程
+  `[文件:tools/tool_helpers.h` 的 `GDScriptErrorBreakGuard]`、`[文件:tools/tool_helpers.cpp` 两处 capture 的调用点]`、
+  `[文件:tools/running_game_script_execution.cpp` 的契约注释]`。
+- **不保证**：①它**只**覆盖本模块自己的窗口——同一进程里**游戏自身脚本**的编译/运行期错误仍按编辑器的规则停住调试器；
+  ②它**救不回**已经进入等待的进程（开关是在等待开始时读的）；③无调试器时它是**零写入**——编辑器、普通游戏、`--test`
+  进程逐字节不变（`changed() == false`）。
+- **实测（修复前）**：播放的游戏端点发一条编译不过的 body → **20 s 内没有任何状态行**、`GET /mcp` **60 s 无应答**，
+  监听仍在、进程仍活；把**调试器对端**（自己起的监听套接字，且**不带** `--editor-pid`，去掉「编辑器死了孩子就退出」这个混淆）
+  释放后，**同一条连接**在 **23.6 s** 后回 `-32602` + `data.parse_error`——这一条把「在等调试器」与「套接字坏了 / 进程死了」
+  区分开。修复后同一条 body 回 **13 ms**（自建对端）/ **3 ms**（编辑器播放）；运行期失败回 `-32000` 用 **4 ms**。
+  脚本与原始输出：`recovery/work/task151/`（`repro_played.ps1`、`repro_peer.ps1`、`verify_fixed.ps1`）。
+- **为什么 doctest 只钉模块自己的决定**：引擎的等待在 `--test` 框架里**跑不起来**——
+  `RemoteDebugger::debug()` 的空闲分支要 `DisplayServer::get_singleton()->force_process_and_drop_events()`
+  （`core/debugger/remote_debugger.cpp:626-632`），而 `Main::test_setup()` 不建显示服务器；实测「挂上真调试器对端再让 body 失败」
+  的用例在该循环里 **SIGSEGV**。故 doctest 钉三件事：有调试器时开关被抬起并还原、无调试器时零写入、游戏态仍回 `-32602`
+  且其后仍可用；「真游戏进程里不冻结」由 `verify_fixed.ps1`（34 条检查，两个场景 + 编辑器对照）在线上量。
+- **回归**：`accept_m1` 22/22、`check_contract_subset` 3/3、契约逐字未变、模块 doctest 160/160（6801 断言）、
+  全引擎 doctest 1586/1586。**门⑤ 的三条红（B0/B1/B2）与本任务无关，且已查明出处**：它们比的是 hof-rs 的冻结
+  fixture（`...\tests\fixtures\mcp\tools_list.json`），而该文件已被 hof-rs 侧 `db2eed7`（177 工具四通道）重采
+  （现 `50c5fb42…`/177，脚本冻结的是 `8f8051c4…`/174）；本任务未触碰 g05 的任何一个输入
+  （`git diff --name-only 15bbf1f50e..HEAD -- modules/mcp_server/docs/tool-rename-map.json
+  modules/mcp_server/docs/tools_list.renamed.json` 为空）。**不得**为了变绿去改那个冻结常量或恢复 hof-rs 的 fixture
+  ——前者会重定基线，后者在禁改区内。
+
 ### 3.11 其它已声明边界（一并列出，避免漏项）
 
 | 边界 | 内容 | 锚点 |
