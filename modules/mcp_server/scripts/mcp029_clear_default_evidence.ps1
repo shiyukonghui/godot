@@ -46,7 +46,9 @@ $Root = $OutRoot
 $Ev = Join-Path $Root 'evidence'
 $LogRoot = Join-Path $Root 'logs'
 $Proj = Join-Path $Root 'proj'
-$UserPort = 9877
+# TASK-154: there is no `$UserPort` here any more. The constant it held (the
+# decision maker's editor port) is refused by the launch guard below and is never
+# read, enumerated or asserted on by this script.
 
 # --- encoding facts this script depends on -----------------------------------
 #
@@ -55,11 +57,39 @@ $UserPort = 9877
 # the ANSI code page (measured here: `gb2312`), so a Chinese literal written into
 # this script would be silently mangled and the two description checks below would
 # compare garbage. The two strings that have to be Chinese are therefore built
-# from code points, and the *old* wording is read out of the frozen fixture with an
+# from code points, and the *old* wording is read out of the frozen baseline with an
 # explicit UTF-8 decoder instead of `Get-Content`.
 $utf8 = [Text.Encoding]::UTF8
 $sharedWord = -join ([char]0x5171, [char]0x4EAB) # the word "shared"
-$OldFixture = 'F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json'
+
+# TASK-154: the pre-override wording is read from the ENGINE-REPOSITORY baseline,
+# not from the hof-rs working file.
+#
+# Until TASK-154 this was the absolute path
+# `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` - a file outside the
+# repository this script belongs to, and one that hof-rs commit `db2eed7` has since
+# re-captured to the 177-tool four-channel shape. The bytes this script actually
+# needs are the ones frozen inside this repository as
+# `docs/rename-baseline-tools-list.json` (48749 B, 174 entries, sha256
+# `8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54`, no newline):
+# that is the same artifact `docs/scripts/check_rename_map.py` (TASK-152) and
+# `scripts/gen_renamed_contract.py` (TASK-153) already read, so the two entries
+# this script compares against now come from ONE baseline inside one git history.
+#
+# Equivalence evidence (TASK-154, static - the hof-rs file on this machine is the
+# post-`db2eed7` 177-tool capture and no longer carries these pre-override names at
+# all): both entries of the old baseline were compared, decoded with this same
+# explicit UTF-8 decoder, against the same entries read out of the hof-rs file at
+# the state this script always intended (`git -C F:\moonbit-hof-rs show
+# db2eed7^:tests/fixtures/mcp/tools_list.json`, a read-only object-store read):
+#   get_test_report.description              and its
+#   get_test_report.inputSchema.properties.clear.description
+# are byte-identical (same length, same UTF-8 bytes) in both sources; likewise for
+# get_game_node_properties in mcp032. The path constant is the only thing that
+# changes, so what each script *evidences* is unchanged.
+$ModuleRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$Docs = Join-Path $ModuleRoot 'docs'
+$OldFixture = Join-Path $Docs 'rename-baseline-tools-list.json'
 $oldDescription = ''
 $oldClearDescription = ''
 if (Test-Path $OldFixture) {
@@ -78,6 +108,34 @@ if (Test-Path $OldFixture) {
 # TASK-028 D-1: the shared scratch-project writer + `--import` runner (no BOM,
 # checked exit code, bounded retry, diagnostics on every failure).
 . (Join-Path $PSScriptRoot 'mcp_import_guard.ps1')
+
+# =============================================================================
+#  TASK-154 section 2.2: the user's editor port is REFUSED, not parameterised.
+#
+#  The decision-maker's own Godot editor listens on 9877 on this machine, and both
+#  this script and mcp032 used to carry that number. Nothing in either script may
+#  occupy it, probe it, or even name it as a reachable value.
+#
+#  The form chosen here is the *explicit refusal guard*: a requests port outside
+#  {9888, 9889} is a hard stop, and so is any occurrence of the user editor's port
+#  literal in `$PSScriptRoot` (where every launcher this script can use is
+#  assembled), so there is no path on which that port is used *silently*.
+#  Parameterising it instead would leave a spelling - `-EditorPort <user port>` -
+#  that reaches the user's editor.
+# =============================================================================
+$TestPorts = @(9888, 9889)
+foreach ($requestedPort in @($EditorPort, $GamePort)) {
+    if (@($TestPorts) -notcontains $requestedPort) {
+        Write-Host ('TASK-154 PORT GUARD: port {0} is refused. This script uses the test ports only: {1}.' -f $requestedPort, (($TestPorts | Sort-Object) -join '/'))
+        Write-Host '  (The decision maker''s own editor port on this machine is never to be occupied or probed.)'
+        exit 4
+    }
+}
+$portLiteralPattern = [regex]::Escape('9877')
+if (-not [string]::IsNullOrEmpty([string]$PSScriptRoot) -and [regex]::IsMatch([string]$PSScriptRoot, $portLiteralPattern)) {
+    Write-Host ('TASK-154 PORT GUARD: the user editor port literal appears in the launch context "{0}"; refusing to run.' -f $PSScriptRoot)
+    exit 4
+}
 
 $script:Checks = New-Object System.Collections.Generic.List[object]
 
@@ -227,12 +285,21 @@ Write-McpUtf8NoBom -Path (Join-Path $Proj 'scenes\main.tscn') -Text $scene
 $userDir = Join-Path $env:APPDATA 'Godot\app_userdata\mcp029_clear_default'
 $bridgeAbs = Join-Path $userDir 'mcp_test_report.json'
 
-$userPidBefore = Get-ListenerPid -Port_ $UserPort
-Check 'port_9877_owner_before' ($userPidBefore -gt 0) ("user Godot on {0}: pid={1} (never touched)" -f $UserPort, $userPidBefore)
+# TASK-154: the two old `port_9877_owner_before/_after` checks are gone with the
+# constant they were about. They asserted "a listener exists on the user's port and
+# kept the same pid", which was an ENVIRONMENT PRECONDITION rather than a result of
+# this task (measured on this machine: no listener, pid = -1, so the check could
+# only ever be red). What replaces them is the launch-time refusal guard above
+# plus the explicit test-port evidence below: "this script only ever asked the
+# engine for 9888/9889" is now a fact about the arguments, not an assumption about
+# a port nobody touches.
+$userPortLiteralPattern = [regex]::Escape('9877')
+Check 'test_ports_only' (($TestPorts.Count -eq 2) -and (@($TestPorts) -contains $EditorPort) -and (@($TestPorts) -contains $GamePort) -and (-not [regex]::IsMatch([string]$PSScriptRoot, $userPortLiteralPattern))) `
+    ("editor={0} game={1}; allowed test ports = [{2}]; the user editor port is refused at launch and is never taught to this script" -f $EditorPort, $GamePort, (($TestPorts | Sort-Object) -join ', '))
 Check 'port_9888_free' ((Get-ListenerPid -Port_ $EditorPort) -eq -1) ("port {0} owner={1}" -f $EditorPort, (Get-ListenerPid -Port_ $EditorPort))
 Check 'port_9889_free' ((Get-ListenerPid -Port_ $GamePort) -eq -1) ("port {0} owner={1}" -f $GamePort, (Get-ListenerPid -Port_ $GamePort))
 # The append-only half of the description override is checked against the *old*
-# wording; if the frozen fixture cannot be read, that check must fail loudly
+# wording; if the frozen baseline cannot be read, that check must fail loudly
 # instead of comparing against an empty prefix.
 Check 'old_fixture_readable' (($oldDescription.Length -gt 0) -and ($oldClearDescription.Length -gt 0)) `
     ("{0}: old description = {1} | old clear.description = {2}" -f $OldFixture, $oldDescription, $oldClearDescription)
@@ -366,8 +433,11 @@ try {
     Stop-Engine -Handle $gameHandle
 }
 
-$userPidAfter = Get-ListenerPid -Port_ $UserPort
-Check 'port_9877_owner_after' ($userPidAfter -eq $userPidBefore) ("pid before={0} after={1}" -f $userPidBefore, $userPidAfter)
+# TASK-154: the `port_9877_owner_after` check that stood here went with
+# `$UserPort`. It is replaced by "both test ports are released again" - a fact this
+# script is responsible for, unlike the state of a port it never touches.
+Check 'test_ports_released' (((Get-ListenerPid -Port_ $EditorPort) -eq -1) -and ((Get-ListenerPid -Port_ $GamePort) -eq -1)) `
+    ("editor {0} owner={1}; game {2} owner={3}" -f $EditorPort, (Get-ListenerPid -Port_ $EditorPort), $GamePort, (Get-ListenerPid -Port_ $GamePort))
 
 $failed = @($script:Checks | Where-Object { -not $_.pass })
 Write-Host ''
