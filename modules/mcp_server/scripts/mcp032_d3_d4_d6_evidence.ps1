@@ -38,10 +38,12 @@
 #
 #  Discipline: response bodies go through `curl.exe -s -o <file>` and their
 #  sha256 is computed from the bytes on disk; request bodies are built with
-#  `ConvertTo-Json` and sent with `--data-binary @file`; ports 9888/9889 only, and
-#  the user's own editor on 9877 is asserted to keep the same pid. This file is
+#  `ConvertTo-Json` and sent with `--data-binary @file`; ports 9888/9889 only.
+#  TASK-154: the decision maker's own editor port is REFUSED at launch (a requested
+#  test port outside {9888, 9889} exits 4 before any process starts) and the port is
+#  no longer enumerated, probed or asserted on by this script. This file is
 #  deliberately pure ASCII (the Chinese fragments it needs are read out of the
-#  contract / the frozen fixture with an explicit UTF-8 decoder, never written as
+#  contract / the frozen baseline with an explicit UTF-8 decoder, never written as
 #  literals into a BOM-less .ps1 that Windows PowerShell 5.1 reads as ANSI).
 #
 #  Usage:
@@ -60,19 +62,78 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
 $Engine = Join-Path $RepoRoot 'bin\godot.windows.editor.x86_64.console.exe'
 $Curl = Join-Path $env:SystemRoot 'System32\curl.exe'
 $Contract = Join-Path $RepoRoot 'modules\mcp_server\docs\tools_list.renamed.json'
-$OldFixture = 'F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json'
+
+# TASK-154: the pre-override wording is read from the ENGINE-REPOSITORY baseline,
+# not from the hof-rs working file.
+#
+# Until TASK-154 this was the absolute path
+# `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json` - a file outside the
+# repository this script belongs to, and one that hof-rs commit `db2eed7` has since
+# re-captured to the 177-tool four-channel shape (measured on this machine: that
+# file now has 177 entries and carries neither `get_test_report` nor
+# `get_game_node_properties`, so the old spelling could only ever produce an empty
+# prefix). The bytes this script needs are the ones frozen inside this repository as
+# `docs/rename-baseline-tools-list.json` (48749 B, 174 entries, sha256
+# `8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54`, no newline):
+# the same artifact `docs/scripts/check_rename_map.py` (TASK-152) and
+# `scripts/gen_renamed_contract.py` (TASK-153) already read, so the entry this
+# script compares against now comes from ONE baseline inside one git history.
+#
+# Equivalence evidence (TASK-154, static - the hof-rs file on this machine is the
+# post-`db2eed7` capture): `get_game_node_properties.description` and the whole
+# `inputSchema` of that entry are BYTE-IDENTICAL in the engine baseline and in
+# `git -C F:\moonbit-hof-rs show db2eed7^:tests/fixtures/mcp/tools_list.json` (a
+# read-only object-store read of the state this script always intended). The path
+# constant is the only thing that changes, so what the script evidences is
+# unchanged.
+$ModuleRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$Docs = Join-Path $ModuleRoot 'docs'
+$OldFixture = Join-Path $Docs 'rename-baseline-tools-list.json'
 if ([string]::IsNullOrEmpty($OutRoot)) { $OutRoot = Join-Path $env:TEMP 'task032-d3-d4-d6' }
 $Root = $OutRoot
 $Ev = Join-Path $Root 'evidence'
 $LogRoot = Join-Path $Root 'logs'
 $Proj = Join-Path $Root 'proj'
-$UserPort = 9877
+# TASK-154: there is no `$UserPort` here any more. The constant it held - the
+# decision maker's editor port - is refused by the launch guard below and is never
+# enumerated, probed or asserted on by this script.
 $utf8 = [Text.Encoding]::UTF8
 
 # TASK-028 D-1: the shared scratch-project writer + `--import` runner.
 . (Join-Path $PSScriptRoot 'mcp_import_guard.ps1')
-# TASK-042 section 1: the shared 9877 classification (see mcp_port_guard.ps1).
-. (Join-Path $PSScriptRoot 'mcp_port_guard.ps1')
+
+# =============================================================================
+#  TASK-154 section 2.2: the user's editor port is REFUSED, not parameterised.
+#
+#  The decision-maker's own Godot editor listens on 9877 on this machine, and this
+#  script used to carry that number and even assert its pid stayed the same across
+#  the run. Nothing here may occupy it, probe it, or admit it as a reachable value.
+#
+#  The form chosen is the *explicit refusal guard*: a requested test port outside
+#  {9888, 9889} is a hard stop, and so is any occurrence of the user editor's port
+#  literal in `$PSScriptRoot` (where every launcher this script can use is
+#  assembled), so there is no path on which that port is used *silently*.
+#  Parameterising it instead would leave a spelling - `-EditorPort <user port>` -
+#  that reaches the user's editor.
+#
+#  The old TASK-042 `mcp_port_guard.ps1` classification is therefore no longer
+#  dot-sourced here: its whole subject was the state of that port. What it really
+#  guaranteed - "this script's engines are only ever launched with the test ports"
+#  - is now decided earlier and more strongly, from the argument values themselves.
+# =============================================================================
+$TestPorts = @(9888, 9889)
+foreach ($requestedPort in @($EditorPort, $GamePort)) {
+    if (@($TestPorts) -notcontains $requestedPort) {
+        Write-Host ('TASK-154 PORT GUARD: port {0} is refused. This script uses the test ports only: {1}.' -f $requestedPort, (($TestPorts | Sort-Object) -join '/'))
+        Write-Host '  (The decision maker''s own editor port on this machine is never to be occupied or probed.)'
+        exit 4
+    }
+}
+$portLiteralPattern = [regex]::Escape('9877')
+if (-not [string]::IsNullOrEmpty([string]$PSScriptRoot) -and [regex]::IsMatch([string]$PSScriptRoot, $portLiteralPattern)) {
+    Write-Host ('TASK-154 PORT GUARD: the user editor port literal appears in the launch context "{0}"; refusing to run.' -f $PSScriptRoot)
+    exit 4
+}
 
 $script:Checks = New-Object System.Collections.Generic.List[object]
 
@@ -188,13 +249,13 @@ function ConvertTo-CompactJson {
 
 function Start-Engine {
     param([string[]]$Arguments, [string]$LogName)
-    $handle = Start-Process -FilePath $Engine -ArgumentList $Arguments -PassThru `
+    # TASK-154: the engine process is started with exactly the arguments given, and
+    # every argument list in this file is built from $EditorPort / $GamePort, which
+    # the launch guard above has already pinned to the test ports. The old TASK-042
+    # `Register-McpPortGuardProcess` bookkeeping is gone with `mcp_port_guard.ps1`.
+    return Start-Process -FilePath $Engine -ArgumentList $Arguments -PassThru `
         -RedirectStandardOutput (Join-Path $LogRoot ($LogName + '.out.log')) `
         -RedirectStandardError (Join-Path $LogRoot ($LogName + '.err.log')) -WindowStyle Hidden
-    # TASK-042 section 1: record the pid *and* the arguments, so "did this script
-    # ever ask for the user's port" is read off the real command line.
-    Register-McpPortGuardProcess -Guard $script:McpPortGuard -EnginePid $handle.Id -Arguments $Arguments
-    return $handle
 }
 
 function Wait-ForPump {
@@ -289,15 +350,19 @@ Check 'd3_parser_positive_control' $controlThrew `
 Check 'd3_parser_control_names_the_pair' ($controlThrew -and $controlMessage.Contains('Material') -and $controlMessage.Contains('material')) `
     ("the refusal names both keys: Material={0} material={1}" -f $controlMessage.Contains('Material'), $controlMessage.Contains('material'))
 
-# TASK-042 section 1: the 9877 judgement is the shared six-way classification,
-# not "a listener must exist" - see mcp_port_guard.ps1 for why that was an
-# environment precondition rather than a regression.
-$script:McpPortGuard = New-McpPortGuard -Port $UserPort -PidBefore (Get-ListenerPid -Port_ $UserPort)
+# TASK-154: the old six-way 9877 classification (`New-McpPortGuard` /
+# `Complete-McpPortGuard` from `mcp_port_guard.ps1`) stood here. It is replaced by
+# the launch-time refusal guard plus these two checks: "this script only ever asked
+# the engine for the test ports" is now a fact about the argument values (checked
+# before any process starts), and "the test ports are released again" is a fact
+# about what this script itself did.
+$userPortLiteralPattern = [regex]::Escape('9877')
+Check 'test_ports_only' (($TestPorts.Count -eq 2) -and (@($TestPorts) -contains $EditorPort) -and (@($TestPorts) -contains $GamePort) -and (-not [regex]::IsMatch([string]$PSScriptRoot, $userPortLiteralPattern))) `
+    ("editor={0} game={1}; allowed test ports = [{2}]; the user editor port is refused at launch and is never taught to this script" -f $EditorPort, $GamePort, (($TestPorts | Sort-Object) -join ', '))
 Check 'port_9888_free' ((Get-ListenerPid -Port_ $EditorPort) -eq -1) ("port {0} owner={1}" -f $EditorPort, (Get-ListenerPid -Port_ $EditorPort))
 Check 'port_9889_free' ((Get-ListenerPid -Port_ $GamePort) -eq -1) ("port {0} owner={1}" -f $GamePort, (Get-ListenerPid -Port_ $GamePort))
 
 $import = Import-McpProject -Engine $Engine -Path $Proj -LogDirectory $LogRoot -Name 'import'
-Register-McpPortGuardCommandLine -Guard $script:McpPortGuard -CommandLine $import.command
 Check 'scratch_project_imported' ($import.exit_code -eq 0) `
     ("--import exit={0} after {1} attempt(s); log={2}" -f $import.exit_code, $import.attempts, $import.log)
 
@@ -512,8 +577,11 @@ try {
     Stop-Engine -Handle $gameHandle
 }
 
-$portGuardResult = Complete-McpPortGuard -Guard $script:McpPortGuard -PidAfter (Get-ListenerPid -Port_ $UserPort)
-Check 'port_9877_guard' $portGuardResult.pass $portGuardResult.evidence
+# TASK-154: the old `port_9877_guard` verdict stood here (it classified the state
+# of the user editor's port). It is replaced by "both test ports are released
+# again" - a fact this script is responsible for, unlike a port it never touches.
+Check 'test_ports_released' (((Get-ListenerPid -Port_ $EditorPort) -eq -1) -and ((Get-ListenerPid -Port_ $GamePort) -eq -1)) `
+    ("editor {0} owner={1}; game {2} owner={3}" -f $EditorPort, (Get-ListenerPid -Port_ $EditorPort), $GamePort, (Get-ListenerPid -Port_ $GamePort))
 
 $failed = @($script:Checks | Where-Object { -not $_.pass })
 Write-Host ''
