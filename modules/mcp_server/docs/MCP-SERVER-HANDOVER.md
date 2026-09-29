@@ -419,6 +419,22 @@
   ⇒ 门红在 `B2 bidirectional diff empty`；受控植入错误映射（映射里改一条 `new_name`）⇒ 门红在
   `D1 L1..L4 over all 174 new_name`；两次植入均逐字节复原（`git status --porcelain` 空、`git diff --stat` 空、
   `git hash-object` == HEAD blob）。`[报告:TASK-152-REPORT.md]`
+- **`_meta.generated_from` 是历史溯源，不是当前输入**（TASK-154 §2.3）：`docs/tools_list.renamed.json`
+  的 `_meta.generated_from` 记录的是**生成当时**的来源（hof-rs 夹具
+  `tests/fixtures/mcp/tools_list.json`），自 TASK-153 起生成器已改读引擎内基准；
+  **该字段为历史溯源，不代表当前输入**。引入它的是提交 `54200f0d77`（2026-09-26），
+  是**冻结工件的一部分**：本批**不得**重生成该工件，它的 blob（`3b1b191d…`）、154272 字节与
+  sha256 `fd00c75e…` 在 `28432f859f` 与本批之后**逐一相同**（证据：`recovery/work/task154/verify_frozen.ps1`
+  的 `hash-object` 对照输出）。同一条道理适用于该工件里其余的历史字段（`_meta.map_sha256` 等）：
+  它们是「这份文件是怎么来的」的记录，不是「现在的输入是什么」的声称。
+- **两个历史取证脚本已去跨仓（TASK-154 §2.1/§2.2）**：`scripts/mcp029_clear_default_evidence.ps1`
+  与 `scripts/mcp032_d3_d4_d6_evidence.ps1` 的旧契约来源从 hof-rs 的**工作文件**改为引擎仓内的同一冻结基准
+  `docs/rename-baseline-tools-list.json`。等价性是**静态可复核的逐字节事实**：该基准与
+  `git -C F:\moonbit-hof-rs cat-file blob 543b49b2…`（即 `db2eed7^` 的夹具，48749 B、
+  sha256 `8f8051c4…`）**整个文件逐字节相同**，故两个脚本读到的四条描述/模式字节一字未变
+  （证据：`recovery/work/task154/equivalence_check.ps1`）。同时删除了两个脚本里对**决策者编辑器端口
+  9877** 的全部引用：脚本以「测试端口集合之外的端口 ⇒ 立即 exit 4」的**拒绝守卫**代替，
+  不再枚举、探测或断言该端口。这两个脚本不在十门路径上，本项不改变任何门的判据。
 
 ### 3.11 其它已声明边界（一并列出，避免漏项）
 
