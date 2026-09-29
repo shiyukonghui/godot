@@ -10,10 +10,7 @@ Checks
 ------
 A. shape          : total == len(tools) == 174
 B. coverage       : old_name set == the frozen old contract's tool names (both
-                    directions empty). The baseline is the engine-internal
-                    frozen copy `docs/rename-baseline-tools-list.json`
-                    (TASK-152); this script reads nothing outside this
-                    repository.
+                    directions empty)
 C. uniqueness     : new_name of every non-merge_into entry is globally unique
 D. lint           : new_name matches ^(editor|running_game|project|os)_[a-z0-9_]+$
                     (channel prefix stripped longest-first), verb in the closed

@@ -409,6 +409,16 @@
   （`git diff --name-only 15bbf1f50e..HEAD -- modules/mcp_server/docs/tool-rename-map.json
   modules/mcp_server/docs/tools_list.renamed.json` 为空）。**不得**为了变绿去改那个冻结常量或恢复 hof-rs 的 fixture
   ——前者会重定基线，后者在禁改区内。
+- **TASK-152 已关闭这条跨仓耦合（门⑤ 现在自包含）**：上面那三条红在 TASK-152 之后**不再出现**。
+  `check_rename_map.py` 的旧契约基准从 hof-rs 的工作文件改为**引擎仓内的冻结副本**
+  `docs/rename-baseline-tools-list.json`（48749 B、174 条、sha256 `8f8051c4…`、无换行符），
+  即 hof-rs 在 `db2eed7` 重采**之前**的逐字节快照（git blob `543b49b2…`，经 `git cat-file blob` **只读**取出）。
+  三个冻结值（sha / 条数 / 集合）一个没改，所以 B0/B1/B2 的**强度不变**，只是字节搬进了被审计的仓库；
+  `B1` 里的字面量 `174` 换成命名常量 `OLD_CONTRACT_TOOL_COUNT`。脚本中**不再有**任何指向 hof-rs 的代码路径
+  （AST 扫描：注释/docstring 之外字符串常量命中 0）。非空洞性：受控植入改名回归（基准里改一条 `name`）
+  ⇒ 门红在 `B2 bidirectional diff empty`；受控植入错误映射（映射里改一条 `new_name`）⇒ 门红在
+  `D1 L1..L4 over all 174 new_name`；两次植入均逐字节复原（`git status --porcelain` 空、`git diff --stat` 空、
+  `git hash-object` == HEAD blob）。`[报告:TASK-152-REPORT.md]`
 
 ### 3.11 其它已声明边界（一并列出，避免漏项）
 
