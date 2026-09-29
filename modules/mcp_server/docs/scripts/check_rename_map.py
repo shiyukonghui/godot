@@ -10,7 +10,10 @@ Checks
 ------
 A. shape          : total == len(tools) == 174
 B. coverage       : old_name set == the frozen old contract's tool names (both
-                    directions empty)
+                    directions empty). The baseline is the engine-internal
+                    frozen copy `docs/rename-baseline-tools-list.json`
+                    (TASK-152); this script reads nothing outside this
+                    repository.
 C. uniqueness     : new_name of every non-merge_into entry is globally unique
 D. lint           : new_name matches ^(editor|running_game|project|os)_[a-z0-9_]+$
                     (channel prefix stripped longest-first), verb in the closed
@@ -74,9 +77,35 @@ MODULE_ROOT = os.path.dirname(DOCS)
 
 DEFAULT_MAP = os.path.join(DOCS, "tool-rename-map.json")
 DEFAULT_CONTRACT = os.path.join(DOCS, "tools_list.renamed.json")
-DEFAULT_OLD_CONTRACT = r"F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json"
+
+# TASK-152: the old-contract baseline is an ENGINE-REPOSITORY artifact.
+#
+# Until TASK-152 this name was bound to the hof-rs working file
+# `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json`, so the gate's verdict
+# depended on a file outside the repository it audits. hof-rs re-captured that
+# fixture in its own DR-42 contract migration (hof-rs commit db2eed7, 174 -> 177
+# tools), which turned B0/B1/B2 red on a tree where nothing this script audits
+# had changed - the cross-repository coupling of D225. The baseline now lives
+# inside the repository as a frozen byte-for-byte copy.
+#
+# Provenance (recorded where the constant is, per TASK-152 section 2A):
+#   path  : docs/rename-baseline-tools-list.json   (this directory)
+#   bytes : 48749     tools: 174     eol: none (the file carries no newline)
+#   sha256: 8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54
+#   source: hof-rs `tests/fixtures/mcp/tools_list.json` at the state immediately
+#           before its DR-42 re-capture (hof-rs commit db2eed7^, git blob
+#           543b49b2583bf06c3aba2a320649a31eda272e3e)
+#   taken : 2026-02-15, with
+#           `git -C F:\moonbit-hof-rs cat-file blob \
+#                543b49b2583bf06c3aba2a320649a31eda272e3e`
+#           (a pure read of the hof-rs object store; nothing on the hof-rs side
+#            was written), then written verbatim into this repository.
+# The three values are identical to the ones this script has always frozen, so
+# the strictness of B0/B1/B2 is unchanged; only the location of the bytes moved.
+DEFAULT_OLD_CONTRACT = os.path.join(DOCS, "rename-baseline-tools-list.json")
 
 OLD_CONTRACT_SHA256 = "8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54"
+OLD_CONTRACT_TOOL_COUNT = 174
 
 # GDR-16 L1: longest prefix first (`running_game_` carries its own underscore).
 CHANNELS = ("running_game", "project", "editor", "os")
@@ -163,7 +192,8 @@ def main():
     entry_names = [t["old_name"] for t in tools]
     only_old = sorted(set(old_names) - set(entry_names))
     only_map = sorted(set(entry_names) - set(old_names))
-    check("B1 old contract tools == 174", len(old_names) == 174, "len=%d" % len(old_names))
+    check("B1 old contract tools == 174", len(old_names) == OLD_CONTRACT_TOOL_COUNT,
+          "len=%d" % len(old_names))
     check("B2 bidirectional diff empty", not only_old and not only_map,
           "contract-only=%s map-only=%s" % (only_old, only_map))
     check("B3 old_name unique", len(set(entry_names)) == 174,
