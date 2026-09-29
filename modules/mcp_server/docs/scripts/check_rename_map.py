@@ -92,7 +92,7 @@ DEFAULT_CONTRACT = os.path.join(DOCS, "tools_list.renamed.json")
 #   source: hof-rs `tests/fixtures/mcp/tools_list.json` at the state immediately
 #           before its DR-42 re-capture (hof-rs commit db2eed7^, git blob
 #           543b49b2583bf06c3aba2a320649a31eda272e3e)
-#   taken : 2026-02-15, with
+#   taken : 2026-09-29, with
 #           `git -C F:\moonbit-hof-rs cat-file blob \
 #                543b49b2583bf06c3aba2a320649a31eda272e3e`
 #           (a pure read of the hof-rs object store; nothing on the hof-rs side
