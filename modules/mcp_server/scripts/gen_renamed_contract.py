@@ -1761,6 +1761,7 @@ ADDED_TOOLS = [
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 MODULE_ROOT = os.path.dirname(HERE)
+DOCS = os.path.join(MODULE_ROOT, "docs")
 
 # ---------------------------------------------------------------------------
 # The verbs an *added* tool may introduce.
@@ -1797,9 +1798,38 @@ ADDED_VERB_EXTENSIONS = {
     "write": "project_write_text_file - the file may or may not exist, so create/edit/set/save all overclaim",
 }
 
-DEFAULT_OLD_CONTRACT = r"F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json"
-DEFAULT_MAP = os.path.join(MODULE_ROOT, "docs", "tool-rename-map.json")
-DEFAULT_OUT = os.path.join(MODULE_ROOT, "docs", "tools_list.renamed.json")
+# TASK-153: the old-contract baseline is an ENGINE-REPOSITORY artifact.
+#
+# Until TASK-153 this name was bound to the hof-rs working file
+# `F:\moonbit-hof-rs\tests\fixtures\mcp\tools_list.json`, so *generating* the
+# renamed contract read a file outside the repository this script belongs to -
+# exactly the cross-repository coupling of D225 that TASK-152 removed from the
+# *checker* (`docs/scripts/check_rename_map.py`). A generator that freezes
+# another repository's working file goes red on that repository's every
+# legitimate evolution, which trains people to ignore red. This script now reads
+# the same frozen, engine-internal copy the checker uses, so contract generation
+# and contract self-check share ONE baseline inside one git history.
+#
+# Provenance (the same artifact TASK-152 froze for the checker; recorded here
+# because this constant pins the same bytes):
+#   path  : docs/rename-baseline-tools-list.json   (this module's docs dir)
+#   bytes : 48749     tools: 174     eol: none (the file carries no newline)
+#   sha256: 8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54
+#   source: hof-rs `tests/fixtures/mcp/tools_list.json` at the state immediately
+#           before its DR-42 re-capture (hof-rs commit db2eed7^, git blob
+#           543b49b2583bf06c3aba2a320649a31eda272e3e)
+#   taken : 2026-09-29 - the date TASK-152 recorded next to this same artifact
+#           (docs/scripts/check_rename_map.py, the TASK-152 comment block);
+#           TASK-153 gathered nothing and asserts no date of its own. TASK-152
+#           added the file in engine commit 069a2e2ea8 after reading it with
+#           git -C F:\moonbit-hof-rs cat-file blob 543b49b2...
+#           (a pure read of the hof-rs object store; nothing on the hof-rs side
+#            was written), then wrote it verbatim into this repository.
+# The frozen sha256 and the 174 count are the ones this script has always used,
+# so its strictness is unchanged; only the location of the bytes moved.
+DEFAULT_OLD_CONTRACT = os.path.join(DOCS, "rename-baseline-tools-list.json")
+DEFAULT_MAP = os.path.join(DOCS, "tool-rename-map.json")
+DEFAULT_OUT = os.path.join(DOCS, "tools_list.renamed.json")
 
 OLD_CONTRACT_SHA256 = "8f8051c4c0f8941089f0b21a193cef7c51fa7c41d7e312b1463ea8593f313c54"
 
